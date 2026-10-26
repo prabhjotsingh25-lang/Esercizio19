@@ -1,4 +1,6 @@
 """Test dell'interfaccia da terminale con sessione e input finti (nessuna rete)."""
+import logging
+
 import httpx
 import openai
 import pytest
@@ -21,7 +23,7 @@ class SessioneFinta:
     def chiedi(self, testo):
         self.domande.append(testo)
         risposta = self.risposte.pop(0)
-        if isinstance(risposta, Exception):
+        if isinstance(risposta, BaseException):
             raise risposta
         return risposta
 
@@ -86,7 +88,6 @@ def test_main_senza_configurazione(monkeypatch, capsys):
 
 
 def test_main_silenzia_i_logger_http(monkeypatch):
-    import logging
     monkeypatch.setenv("LMSTUDIO_BASE_URL", URL)
     monkeypatch.setenv("LMSTUDIO_MODEL", "modello-x")
     monkeypatch.setattr(cli, "load_dotenv", lambda *a, **k: None)
@@ -99,3 +100,9 @@ def test_main_silenzia_i_logger_http(monkeypatch):
     finally:
         for nome, livello in precedenti.items():
             logging.getLogger(nome).setLevel(livello)
+
+
+def test_ctrl_c_durante_la_risposta_chiude_senza_eccezioni():
+    sessione = SessioneFinta([KeyboardInterrupt()])
+    esegui_con(sessione, ["domanda", "mai letta"])
+    assert sessione.domande == ["domanda"]

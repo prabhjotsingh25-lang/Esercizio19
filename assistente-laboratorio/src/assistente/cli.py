@@ -40,6 +40,9 @@ def esegui(sessione: Sessione, base_url: str,
                    "controlla che il server sia avviato.")
         except openai.APIError as errore:
             scrivi(f"Errore dal server del modello: {errore}")
+        except KeyboardInterrupt:  # Ctrl+C durante l'attesa della risposta
+            scrivi("")
+            return
         except GraphRecursionError:
             scrivi("Ho raggiunto il limite di passaggi consentiti per questa domanda: "
                    "prova a riformularla.")

@@ -111,8 +111,10 @@ solo queste prove lo fanno.
 
 - **LM Studio spento o server non avviato**: l'assistente scrive «Non riesco a raggiungere
   LM Studio su ...: controlla che il server sia avviato». Avvia il server locale in LM Studio.
-- **Modello errato**: il server risponde con un errore («Errore dal server del modello: ...»).
-  Verifica `LMSTUDIO_MODEL` confrontandolo con `Invoke-RestMethod http://localhost:1234/v1/models`.
+- **Modello errato**: provato con `LMSTUDIO_MODEL=modello-inesistente` e LM Studio attivo:
+  il server non ha dato errore, ha risposto comunque (con il modello caricato). Un
+  identificativo sbagliato quindi può passare inosservato: se il modello che risponde non è
+  quello atteso, confronta `LMSTUDIO_MODEL` con `Invoke-RestMethod http://localhost:1234/v1/models`.
 - **Configurazione mancante**: l'avvio termina con «Configurazione non valida: ...» (codice 2);
   controlla `.env`.
 - **Il container non raggiunge l'host**: verifica che `compose.yaml` contenga

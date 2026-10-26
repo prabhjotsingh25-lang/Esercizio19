@@ -1,7 +1,7 @@
 # Assistente del laboratorio
 
 Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
-La cartella del progetto è `assistente-laboratorio/`; all'inizio contiene soltanto questo file.
+La cartella del progetto è `assistente-laboratorio/`; questo file sta alla radice della repository (`Lezione 4/`).
 Struttura: `src/assistente/` (config, strumenti, grafo, sessione, modello, cli, `__main__`),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):

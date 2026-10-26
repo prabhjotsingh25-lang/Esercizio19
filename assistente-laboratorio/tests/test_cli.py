@@ -83,3 +83,19 @@ def test_main_senza_configurazione(monkeypatch, capsys):
     monkeypatch.setattr(cli, "load_dotenv", lambda *a, **k: None)
     assert main() == 2
     assert "LMSTUDIO_BASE_URL" in capsys.readouterr().err
+
+
+def test_main_silenzia_i_logger_http(monkeypatch):
+    import logging
+    monkeypatch.setenv("LMSTUDIO_BASE_URL", URL)
+    monkeypatch.setenv("LMSTUDIO_MODEL", "modello-x")
+    monkeypatch.setattr(cli, "load_dotenv", lambda *a, **k: None)
+    monkeypatch.setattr(cli, "esegui", lambda *a, **k: None)
+    precedenti = {n: logging.getLogger(n).level for n in ("httpx", "httpx2")}
+    try:
+        assert main() == 0
+        for nome in precedenti:
+            assert logging.getLogger(nome).level == logging.WARNING
+    finally:
+        for nome, livello in precedenti.items():
+            logging.getLogger(nome).setLevel(livello)

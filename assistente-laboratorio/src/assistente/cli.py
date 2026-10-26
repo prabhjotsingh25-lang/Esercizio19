@@ -55,7 +55,8 @@ def main() -> int:
         return 2
     logging.basicConfig(stream=sys.stderr, level=config.log_level,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    for nome in ("httpx", "httpx2"):  # openai può usare l'uno o l'altro client HTTP
+        logging.getLogger(nome).setLevel(logging.WARNING)
     grafo = costruisci_grafo(crea_modello(config), [crea_strumento_orologio()],
                              config.max_passaggi)
     esegui(Sessione(grafo, config.max_passaggi), config.base_url)

@@ -1,0 +1,17 @@
+# Configurazione reale (contiene l'ambiente locale)
+.env
+
+# Ambienti virtuali
+.venv/
+venv/
+
+# Cache Python e strumenti
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Pesi dei modelli (non vanno mai versionati)
+*.gguf
+*.safetensors
+*.bin

@@ -38,6 +38,21 @@ def _max_passaggi(env: Mapping[str, str]) -> int:
     return valore
 
 
+LIVELLI_LOG = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+
+def _log_level(env: Mapping[str, str]) -> str:
+    grezzo = env.get("LOG_LEVEL", "").strip()
+    if not grezzo:
+        return "INFO"
+    livello = grezzo.upper()
+    if livello not in LIVELLI_LOG:
+        raise ErroreConfigurazione(
+            f"LOG_LEVEL deve essere uno tra {', '.join(LIVELLI_LOG)} (ricevuto: {grezzo!r})"
+        )
+    return livello
+
+
 def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazione:
     """Costruisce la configurazione; con env=None legge os.environ."""
     if env is None:
@@ -46,5 +61,5 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         base_url=_obbligatoria(env, "LMSTUDIO_BASE_URL"),
         modello=_obbligatoria(env, "LMSTUDIO_MODEL"),
         max_passaggi=_max_passaggi(env),
-        log_level=env.get("LOG_LEVEL", "").strip().upper() or "INFO",
+        log_level=_log_level(env),
     )

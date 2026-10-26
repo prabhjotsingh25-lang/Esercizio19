@@ -29,3 +29,10 @@ def test_max_passaggi_non_valido(valore):
     with pytest.raises(ErroreConfigurazione, match="MAX_PASSAGGI_STRUMENTO"):
         carica_configurazione({"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m",
                                "MAX_PASSAGGI_STRUMENTO": valore})
+
+
+@pytest.mark.parametrize("valore", ["VERBOSE", "debugg"])
+def test_log_level_non_valido(valore):
+    with pytest.raises(ErroreConfigurazione, match="LOG_LEVEL"):
+        carica_configurazione({"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m",
+                               "LOG_LEVEL": valore})

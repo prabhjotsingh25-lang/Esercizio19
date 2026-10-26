@@ -1,0 +1,11 @@
+services:
+  assistente:
+    build: .
+    env_file: .env
+    environment:
+      # Dal container l'host si raggiunge con host.docker.internal (LM Studio resta sull'host).
+      LMSTUDIO_BASE_URL: http://host.docker.internal:1234/v1
+    stdin_open: true
+    tty: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

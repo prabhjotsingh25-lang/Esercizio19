@@ -21,12 +21,13 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - si avvia anche con Docker Compose.
 
 ## Confini
-- Implementare solo i requisiti concordati. Altri strumenti, MCP, workflow e RAG arriveranno
+- Implementare solo i requisiti concordati. Altri strumenti, workflow e RAG arriveranno
   nelle lezioni successive: non anticiparli.
 - Niente interfacce grafiche, servizi cloud o framework non concordati.
 - Lavorare solo dentro `assistente-laboratorio/`. La repository contiene altre lezioni:
   non leggerle per copiarne il codice e non modificarle.
-- Lavorare nel branch corrente; nessun branch o worktree nuovo se non richiesto.
+- Lavorare sul branch `feature/assistente-laboratorio`; nessun altro branch o worktree nuovo
+  se non richiesto.
 
 ## Scelte tecniche
 - Python, codice sincrono e moduli piccoli, con una separazione semplice tra
@@ -57,6 +58,7 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   `docs: ...`.
 - Prima di ogni commit: `git status`, controllo del diff, staging selettivo dei soli file pertinenti.
 - Mai versionare credenziali, `.env`, ambienti virtuali, cache o pesi dei modelli.
+- Branch: si lavora su `feature/assistente-laboratorio`, poi si porta in `dev` e infine in `main`.
 - Push soltanto su mia richiesta.
 
 ## Documentazione

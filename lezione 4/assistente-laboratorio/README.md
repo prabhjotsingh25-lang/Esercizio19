@@ -27,7 +27,14 @@ programma esegue davvero:
   `src/assistente/dati/catalogo.csv` (dati di esempio): colonne
   `codice;nome;categoria;descrizione;ubicazione;quantita`, separatore `;`, UTF-8; si può
   modificare con Excel salvando come «CSV UTF-8». Un file rovinato (intestazione diversa,
-  codici duplicati, quantità non numeriche) dà un errore esplicito.
+  codici duplicati, quantità non numeriche) dà un errore esplicito;
+- `note_persistenti`: salva, elenca ed elimina note che restano fra una sessione e l'altra, in
+  un database SQLite (`NOTE_DB`, default `note.sqlite`, escluso da Git e da Docker).
+  L'eliminazione richiede sempre due chiamate: la prima mostra la nota e chiede conferma
+  all'utente, la seconda (`conferma=true`) cancella. Se il modello passa subito
+  `conferma=true`, lo strumento non cancella e chiede comunque conferma. Limite: lo strumento
+  garantisce le due chiamate, non che fra le due il modello abbia davvero chiesto all'utente
+  (le prove reali lo verificano). Gli id delle note cancellate non vengono riusati.
 
 La cronologia vive solo per la durata della sessione.
 
@@ -59,6 +66,7 @@ Struttura:
 - `src/assistente/calcolatrice.py`: strumento calcolatrice sicura;
 - `src/assistente/scadenze.py` e `dati/festivita.json`: strumento giorni e scadenze;
 - `src/assistente/inventario.py` e `dati/catalogo.csv`: strumento catalogo locale;
+- `src/assistente/note.py`: strumento note persistenti (SQLite);
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -93,6 +101,7 @@ Variabili:
 | `VARIANTE_STRUMENTI` | `locale` (default), `http` oppure `mcp` |
 | `STRUMENTI_HTTP_URL` | indirizzo del servizio strumenti, obbligatorio con `http`, es. `http://localhost:8001` |
 | `STRUMENTI_MCP_URL` | indirizzo del server MCP, obbligatorio con `mcp`, es. `http://localhost:8002/mcp` |
+| `NOTE_DB` | file SQLite delle note (default `note.sqlite`). Nelle varianti `http` e `mcp` conta quello del processo del servizio |
 
 L'identificativo del modello va letto dal server, non inventato:
 
@@ -239,6 +248,10 @@ sui log devono comparire prima `ora_corrente` (per la data di oggi) e poi `giorn
 Per il catalogo: chiedi «Avete un multimetro? Dove si trova?» (la risposta deve citare
 l'Armadio A) e «Avete un microscopio elettronico?» (lo strumento risponde «Nessun articolo
 trovato» e il modello non deve inventarlo).
+Per le note: «Ricordami di comprare i fusibili», poi «Che note ho?», poi «Cancella la nota 1»:
+al primo «Cancella» la nota non deve sparire e l'assistente deve chiedere conferma; dopo il
+«sì» la nota viene eliminata. Le prove reali usano un database temporaneo nella variante
+`locale`; nelle varianti `http` e `mcp` scrivono nel database del servizio.
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 
@@ -258,6 +271,9 @@ solo queste prove lo fanno.
   lo riferisce. Avvia il servizio (o, in Docker, usa `--profile http`).
 - **Server MCP spento (variante `mcp`)**: come sopra, lo strumento restituisce «Errore: server MCP
   non raggiungibile su ...». Avvia il server (o, in Docker, usa `--profile mcp`).
+- **Note non disponibili**: «Errore: archivio delle note non disponibile» se la cartella di
+  `NOTE_DB` non esiste o il file non è un database SQLite. In Docker le note stanno nel volume
+  `note` (`/dati/note.sqlite`); `docker compose down -v` lo cancella insieme alle note.
 - **Il container non raggiunge l'host**: verifica che `compose.yaml` contenga
   `extra_hosts: host.docker.internal:host-gateway` e che LM Studio sia in ascolto sulla
   porta 1234. Solo se non basta, in LM Studio puoi attivare «Serve on Local Network».

@@ -19,7 +19,15 @@ programma esegue davvero:
   `src/assistente/dati/festivita.json` (fisse più Pasquetta, anni 2025-2030): per i giorni
   lavorativi fuori da quegli anni lo strumento dà un errore esplicito. Il risultato è sempre
   indicato come indicativo e non normativo. Per aggiungere un anno basta una riga nel file
-  (un test la confronta con la data di Pasqua calcolata).
+  (un test la confronta con la data di Pasqua calcolata);
+- `catalogo_locale`: cerca nell'inventario del laboratorio per testo e/o categoria (senza
+  distinguere maiuscole e accenti, al massimo 10 risultati) oppure mostra il dettaglio di un
+  articolo dato il codice. Se non trova nulla lo dice esplicitamente, con le categorie
+  disponibili: un risultato vuoto non è un errore. L'inventario è il file
+  `src/assistente/dati/catalogo.csv` (dati di esempio): colonne
+  `codice;nome;categoria;descrizione;ubicazione;quantita`, separatore `;`, UTF-8; si può
+  modificare con Excel salvando come «CSV UTF-8». Un file rovinato (intestazione diversa,
+  codici duplicati, quantità non numeriche) dà un errore esplicito.
 
 La cronologia vive solo per la durata della sessione.
 
@@ -45,6 +53,7 @@ Struttura:
 - `src/assistente/convertitore.py`: strumento convertitore di unità;
 - `src/assistente/calcolatrice.py`: strumento calcolatrice sicura;
 - `src/assistente/scadenze.py` e `dati/festivita.json`: strumento giorni e scadenze;
+- `src/assistente/inventario.py` e `dati/catalogo.csv`: strumento catalogo locale;
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -189,6 +198,9 @@ Per il convertitore: chiedi «Quanti metri sono 1,5 km?»; sui log deve comparir
 «Quanto fa (17 + 4) * 3?»; sui log deve comparire `calcolatrice_sicura` con risultato `= 63`.
 Per giorni e scadenze: chiedi «Quanti giorni mancano a Natale di quest'anno? Sono in Italia.»;
 sui log devono comparire prima `ora_corrente` (per la data di oggi) e poi `giorni_scadenze`.
+Per il catalogo: chiedi «Avete un multimetro? Dove si trova?» (la risposta deve citare
+l'Armadio A) e «Avete un microscopio elettronico?» (lo strumento risponde «Nessun articolo
+trovato» e il modello non deve inventarlo).
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 

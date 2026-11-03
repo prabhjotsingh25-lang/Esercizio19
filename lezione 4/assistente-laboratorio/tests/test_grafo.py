@@ -1,7 +1,8 @@
 from finti import ModelloFinto, chiamata, orologio
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.tools import StructuredTool
 
-from assistente.grafo import MESSAGGIO_LIMITE, costruisci_grafo, limite_ricorsione, scegli_prossimo
+from assistente.grafo import MESSAGGIO_LIMITE, MESSAGGIO_SISTEMA, costruisci_grafo, limite_ricorsione, scegli_prossimo
 
 
 def test_instradamento():
@@ -59,3 +60,22 @@ def test_log_della_chiamata(caplog):
     costruisci_grafo(ModelloFinto(risposte=[chiamata("Asia/Tokyo", "1"), AIMessage("ok")]),
                      [orologio], 3).invoke({"messages": [HumanMessage("?")], "passaggi": 0})
     assert "passaggio=1" in caplog.text and "ora_corrente" in caplog.text and "Asia/Tokyo" in caplog.text
+
+
+def _primo_messaggio_al_modello(strumenti) -> SystemMessage:
+    m = ModelloFinto(risposte=[AIMessage("ok")])
+    costruisci_grafo(m, strumenti, 3).invoke({"messages": [HumanMessage("?")], "passaggi": 0})
+    return m.ricevuti[0][0]
+
+
+def test_prompt_di_sistema_non_nomina_strumenti():
+    assert "ora_corrente" not in MESSAGGIO_SISTEMA
+    assert orologio.name not in MESSAGGIO_SISTEMA
+
+
+def test_prompt_di_sistema_identico_con_strumenti_diversi():
+    altro = StructuredTool.from_function(func=lambda testo: testo, name="eco",
+                                         description="Restituisce il testo ricevuto.")
+    primi = [_primo_messaggio_al_modello(s) for s in ([], [orologio], [orologio, altro])]
+    assert all(isinstance(p, SystemMessage) for p in primi)
+    assert {p.content for p in primi} == {MESSAGGIO_SISTEMA}

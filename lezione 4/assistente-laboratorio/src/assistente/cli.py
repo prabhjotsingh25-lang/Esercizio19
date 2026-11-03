@@ -7,6 +7,7 @@ import openai
 from dotenv import load_dotenv
 from langgraph.errors import GraphRecursionError
 
+from assistente.calcolatrice import crea_strumento_calcolatrice
 from assistente.config import ErroreConfigurazione, carica_configurazione
 from assistente.convertitore import crea_strumento_convertitore
 from assistente.grafo import costruisci_grafo
@@ -61,7 +62,8 @@ def main() -> int:
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     for nome in ("httpx", "httpx2"):  # openai può usare l'uno o l'altro client HTTP
         logging.getLogger(nome).setLevel(logging.WARNING)
-    strumenti = [crea_strumento_orologio(), crea_strumento_convertitore()]
+    strumenti = [crea_strumento_orologio(), crea_strumento_convertitore(),
+                 crea_strumento_calcolatrice()]
     grafo = costruisci_grafo(crea_modello(config), strumenti, config.max_passaggi)
     esegui(Sessione(grafo, config.max_passaggi), config.base_url)
     return 0

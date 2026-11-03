@@ -36,3 +36,31 @@ def test_log_level_non_valido(valore):
     with pytest.raises(ErroreConfigurazione, match="LOG_LEVEL"):
         carica_configurazione({"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m",
                                "LOG_LEVEL": valore})
+
+
+def test_variante_di_default_locale():
+    c = carica_configurazione({"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m"})
+    assert (c.variante, c.strumenti_http_url) == ("locale", None)
+
+
+def test_variante_http_con_indirizzo():
+    c = carica_configurazione({"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m",
+                               "VARIANTE_STRUMENTI": " HTTP ",
+                               "STRUMENTI_HTTP_URL": "http://localhost:8001"})
+    assert (c.variante, c.strumenti_http_url) == ("http", "http://localhost:8001")
+
+
+@pytest.mark.parametrize("valore", ["mcp", "remota", "01"])
+def test_variante_non_valida(valore):
+    with pytest.raises(ErroreConfigurazione, match="VARIANTE_STRUMENTI"):
+        carica_configurazione({"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m",
+                               "VARIANTE_STRUMENTI": valore})
+
+
+@pytest.mark.parametrize("indirizzo", [None, "  "])
+def test_variante_http_senza_indirizzo(indirizzo):
+    env = {"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m", "VARIANTE_STRUMENTI": "http"}
+    if indirizzo is not None:
+        env["STRUMENTI_HTTP_URL"] = indirizzo
+    with pytest.raises(ErroreConfigurazione, match="STRUMENTI_HTTP_URL"):
+        carica_configurazione(env)

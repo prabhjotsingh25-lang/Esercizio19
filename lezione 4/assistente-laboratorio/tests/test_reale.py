@@ -5,6 +5,7 @@ import pytest
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, ToolMessage
 
+from assistente.calcolatrice import crea_strumento_calcolatrice
 from assistente.config import ErroreConfigurazione, carica_configurazione
 from assistente.convertitore import crea_strumento_convertitore
 from assistente.grafo import costruisci_grafo
@@ -24,7 +25,8 @@ def sessione():
         config = carica_configurazione()
     except ErroreConfigurazione as errore:
         pytest.skip(f"Configurazione mancante: {errore}")
-    strumenti = [crea_strumento_orologio(), crea_strumento_convertitore()]
+    strumenti = [crea_strumento_orologio(), crea_strumento_convertitore(),
+                 crea_strumento_calcolatrice()]
     grafo = costruisci_grafo(crea_modello(config), strumenti, config.max_passaggi)
     return Sessione(grafo, config.max_passaggi)
 
@@ -67,3 +69,10 @@ def test_conversione_incompatibile_non_inventa(sessione):
     sessione.chiedi("Converti 3 kg in metri.")
     risultati = _strumenti_del_turno(sessione)
     assert all(r.startswith("Errore:") for r in risultati), f"risultato inventato: {risultati}"
+
+
+def test_calcolo_con_la_calcolatrice(sessione):
+    risposta = sessione.chiedi("Quanto fa (17 + 4) * 3?")
+    risultati = _strumenti_del_turno(sessione)
+    assert any(r.endswith("= 63") for r in risultati), f"calcolatrice non usata come atteso: {risultati}"
+    assert "63" in risposta, f"63 assente nella risposta: {risposta!r}"

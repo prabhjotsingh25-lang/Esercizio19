@@ -12,7 +12,14 @@ programma esegue davvero:
   il punto) valutate senza `eval`, su una whitelist dell'albero sintattico. Variabili, funzioni e
   ogni altro costrutto sono rifiutati con un errore esplicito, come la divisione per zero e gli
   esponenti oltre 1000. Calcoli in virgola mobile, risultato a 12 cifre significative: oltre
-  circa 15 cifre gli interi non sono più esatti.
+  circa 15 cifre gli interi non sono più esatti;
+- `giorni_scadenze`: conta i giorni fra due date (`AAAA-MM-GG`) oppure calcola una scadenza
+  aggiungendo o togliendo giorni, di calendario o solo lavorativi (esclusi sabati, domeniche e
+  festività). Le festività nazionali italiane, escluse le patronali, stanno nel file locale
+  `src/assistente/dati/festivita.json` (fisse più Pasquetta, anni 2025-2030): per i giorni
+  lavorativi fuori da quegli anni lo strumento dà un errore esplicito. Il risultato è sempre
+  indicato come indicativo e non normativo. Per aggiungere un anno basta una riga nel file
+  (un test la confronta con la data di Pasqua calcolata).
 
 La cronologia vive solo per la durata della sessione.
 
@@ -37,6 +44,7 @@ Struttura:
 - `src/assistente/strumenti.py`: strumento orologio;
 - `src/assistente/convertitore.py`: strumento convertitore di unità;
 - `src/assistente/calcolatrice.py`: strumento calcolatrice sicura;
+- `src/assistente/scadenze.py` e `dati/festivita.json`: strumento giorni e scadenze;
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -179,6 +187,8 @@ Prova manuale: avvia l'assistente (locale o Docker), chiedi «Che ore sono a Tok
 Per il convertitore: chiedi «Quanti metri sono 1,5 km?»; sui log deve comparire
 `convertitore_unita` con risultato `1.5 km = 1500 m`. Per la calcolatrice: chiedi
 «Quanto fa (17 + 4) * 3?»; sui log deve comparire `calcolatrice_sicura` con risultato `= 63`.
+Per giorni e scadenze: chiedi «Quanti giorni mancano a Natale di quest'anno? Sono in Italia.»;
+sui log devono comparire prima `ora_corrente` (per la data di oggi) e poi `giorni_scadenze`.
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 

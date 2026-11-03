@@ -21,13 +21,19 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - si avvia anche con Docker Compose.
 
 ## Confini
-- Implementare solo i requisiti concordati. Altri strumenti, workflow e RAG arriveranno
-  nelle lezioni successive: non anticiparli.
-- Niente interfacce grafiche, servizi cloud o framework non concordati.
+- Implementare solo i requisiti concordati. Workflow e RAG arriveranno nelle lezioni
+  successive: non anticiparli.
+- Lezione 5 (Blocco 5, MCP e strumenti condivisi): si aggiungono sei strumenti, uno alla volta,
+  in tre varianti di integrazione: 01 chiamata locale, 02 servizio FastAPI con wrapper HTTP,
+  03 server FastMCP con client/adattatore. All'agente si espone una sola variante per volta,
+  scelta da configurazione. `ora_corrente` resta lo strumento di riferimento e non va rifatto.
+  Firma, argomenti ed errori di ogni strumento vanno concordati prima di implementarlo.
+- MCP (FastMCP), FastAPI, Uvicorn e httpx sono ammessi, ciascuno solo dal task della variante
+  che lo richiede. Niente interfacce grafiche, servizi cloud o altri framework non concordati.
 - Lavorare solo dentro `assistente-laboratorio/`. La repository contiene altre lezioni:
   non leggerle per copiarne il codice e non modificarle.
-- Lavorare sul branch `feature/assistente-laboratorio`; nessun altro branch o worktree nuovo
-  se non richiesto.
+- Un branch `feat/<nome>` per task, creato sempre da `dev`; nessun worktree se non richiesto.
+  Non toccare `main`.
 
 ## Scelte tecniche
 - Python, codice sincrono e moduli piccoli, con una separazione semplice tra
@@ -50,6 +56,9 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - Test automatici ripetibili che non richiedono un modello attivo (grafo, cronologia,
   instradamento, strumento con istante controllato).
 - Prove reali con LM Studio e con Docker tenute separate e attivate esplicitamente.
+- Per ogni strumento, test sui casi validi e su quelli di errore.
+- La cronologia iniziale (prompt di sistema compreso) deve essere comparabile fra le tre
+  varianti: si confrontano percorso e correttezza, non timestamp identici.
 - Una risposta simulata non dimostra che il modello locale sappia usare lo strumento.
 - Nel resoconto indicare che cosa è stato eseguito, con quale esito, e che cosa resta da provare.
 
@@ -58,7 +67,9 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   `docs: ...`.
 - Prima di ogni commit: `git status`, controllo del diff, staging selettivo dei soli file pertinenti.
 - Mai versionare credenziali, `.env`, ambienti virtuali, cache o pesi dei modelli.
-- Branch: si lavora su `feature/assistente-laboratorio`, poi si porta in `dev` e infine in `main`.
+- Branch: un `feat/<nome>` per task, creato da `dev`; commit piccoli (`feat:`, `test:`, `docs:`,
+  `refactor:`). A task finito mostrare cosa è stato fatto e come è stato testato, e fare il merge
+  in `dev` solo dopo il mio ok. `main` non si tocca.
 - Push soltanto su mia richiesta.
 
 ## Documentazione

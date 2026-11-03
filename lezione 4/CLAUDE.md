@@ -3,13 +3,18 @@
 Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
-Struttura: `src/assistente/` (config, strumenti, grafo, sessione, modello, cli, `__main__`),
+Struttura: `src/assistente/` (config, grafo, sessione, modello, cli, `__main__`; strumenti in
+moduli propri; `catalogo`, `varianti` e un modulo per variante di integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
 - test offline: `.\.venv\Scripts\python.exe -m pytest -v`
 - prove reali con LM Studio: `.\.venv\Scripts\python.exe -m pytest -m reale -v`
+  (usano la variante di `VARIANTE_STRUMENTI`)
 - avvio locale: `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente`
-- avvio Docker: `docker compose run --rm assistente`
+- servizio strumenti (variante `http`):
+  `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.servizio_http:app --port 8001`
+- avvio Docker: `docker compose run --rm assistente`; variante `http`:
+  `docker compose --profile http run --rm -e VARIANTE_STRUMENTI=http assistente`
 
 ## Obiettivo
 Un'applicazione da terminale in Python che conversa con un modello locale e:
@@ -28,6 +33,10 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   03 server FastMCP con client/adattatore. All'agente si espone una sola variante per volta,
   scelta da configurazione. `ora_corrente` resta lo strumento di riferimento e non va rifatto.
   Firma, argomenti ed errori di ogni strumento vanno concordati prima di implementarlo.
+  Ogni strumento ha una sola logica e una sola definizione (`catalogo.py`); le varianti
+  cambiano solo il canale, così nome, descrizione, schema e prompt restano identici e la
+  cronologia è confrontabile. La variante indicata per uno strumento è il task in cui nasce
+  quel canale; un canale nuovo espone tutti gli strumenti del catalogo.
 - MCP (FastMCP), FastAPI, Uvicorn e httpx sono ammessi, ciascuno solo dal task della variante
   che lo richiede. Niente interfacce grafiche, servizi cloud o altri framework non concordati.
 - Lavorare solo dentro `assistente-laboratorio/`. La repository contiene altre lezioni:

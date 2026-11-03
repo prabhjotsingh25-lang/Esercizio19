@@ -13,8 +13,13 @@ Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
 - avvio locale: `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente`
 - servizio strumenti (variante `http`):
   `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.servizio_http:app --port 8001`
-- avvio Docker: `docker compose run --rm assistente`; variante `http`:
-  `docker compose --profile http run --rm -e VARIANTE_STRUMENTI=http assistente`
+- server MCP (variante `mcp`):
+  `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.server_mcp:app --port 8002`
+- avvio Docker: `docker compose run --rm assistente`; varianti `http` e `mcp`:
+  `docker compose --profile http run --rm -e VARIANTE_STRUMENTI=http assistente`,
+  `docker compose --profile mcp run --rm -e VARIANTE_STRUMENTI=mcp assistente`
+- le prove reali dipendono da un modello non deterministico: un fallimento isolato va ripetuto
+  e diagnosticato prima di cambiare il codice.
 
 ## Obiettivo
 Un'applicazione da terminale in Python che conversa con un modello locale e:

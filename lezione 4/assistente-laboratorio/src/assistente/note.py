@@ -74,17 +74,18 @@ def _elimina(conn: sqlite3.Connection, id_nota: int | None, conferma: bool) -> s
     if riga is None:
         return f"Nessuna nota con id {id_nota}."
     testo = riga[0]
-    if not conferma:
-        conn.execute("INSERT OR REPLACE INTO conferme_richieste (id_nota) VALUES (?)", (id_nota,))
-        return (f'Stai per eliminare la nota {id_nota}: "{testo}". Chiedi conferma all\'utente '
-                "e non procedere da solo; se l'utente conferma, richiama con azione=elimina, "
-                f"id={id_nota} e conferma=true.")
-    richiesta = conn.execute("DELETE FROM conferme_richieste WHERE id_nota = ?", (id_nota,))
-    if richiesta.rowcount == 0:
-        raise _Rifiuto(f"prima di eliminare la nota {id_nota} serve chiedere conferma: richiama "
-                       "senza conferma, mostra la nota all'utente e attendi il suo sì.")
-    conn.execute("DELETE FROM note WHERE id = ?", (id_nota,))
-    return f'Nota {id_nota} eliminata: "{testo}".'
+    if conferma:
+        richiesta = conn.execute("DELETE FROM conferme_richieste WHERE id_nota = ?", (id_nota,))
+        if richiesta.rowcount == 1:  # secondo passo: c'era già una richiesta di conferma
+            conn.execute("DELETE FROM note WHERE id = ?", (id_nota,))
+            return f'Nota {id_nota} eliminata: "{testo}".'
+    # Primo passo, anche se il modello ha già passato conferma=true (per esempio dopo aver
+    # chiesto conferma a parole): non si cancella mai alla prima chiamata.
+    conn.execute("INSERT OR REPLACE INTO conferme_richieste (id_nota) VALUES (?)", (id_nota,))
+    premessa = "Prima di eliminare serve la conferma dell'utente. " if conferma else ""
+    return (f'{premessa}Stai per eliminare la nota {id_nota}: "{testo}". Chiedi conferma '
+            "all'utente e non procedere da solo; se l'utente conferma, richiama con "
+            f"azione=elimina, id={id_nota} e conferma=true.")
 
 
 def gestisci_note(azione: str, testo: str = "", id: int | None = None, conferma: bool = False,

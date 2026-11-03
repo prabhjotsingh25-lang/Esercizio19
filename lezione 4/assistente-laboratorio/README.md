@@ -36,7 +36,10 @@ configurazione (`VARIANTE_STRUMENTI`); all'agente ne viene esposta una sola per 
 
 - `locale` (01, default): le funzioni Python sono chiamate direttamente dal programma;
 - `http` (02): gli strumenti girano in un servizio FastAPI e l'agente li chiama tramite un
-  wrapper HTTP (`httpx`).
+  wrapper HTTP (`httpx`);
+- `mcp` (03): gli strumenti sono pubblicati da un server FastMCP (trasporto HTTP, endpoint
+  `/mcp`) e l'agente li chiama tramite un adattatore basato sul client FastMCP. Ogni chiamata
+  apre e chiude una sessione MCP: semplice, al costo di qualche richiesta in più.
 
 Le definizioni (nome, descrizione, schema degli argomenti) vengono tutte dallo stesso catalogo,
 quindi il modello vede gli stessi strumenti e lo stesso prompt di sistema in ogni variante:
@@ -49,6 +52,8 @@ Struttura:
 - `src/assistente/varianti.py`: scelta della variante da configurazione;
 - `src/assistente/servizio_http.py`: servizio FastAPI degli strumenti (variante 02);
 - `src/assistente/variante_http.py`: wrapper HTTP verso il servizio (variante 02);
+- `src/assistente/server_mcp.py`: server FastMCP degli strumenti (variante 03);
+- `src/assistente/variante_mcp.py`: adattatore client MCP (variante 03);
 - `src/assistente/strumenti.py`: strumento orologio;
 - `src/assistente/convertitore.py`: strumento convertitore di unità;
 - `src/assistente/calcolatrice.py`: strumento calcolatrice sicura;
@@ -85,8 +90,9 @@ Variabili:
 | `LMSTUDIO_MODEL` | identificativo del modello, così come lo restituisce il server |
 | `MAX_PASSAGGI_STRUMENTO` | passaggi massimi di strumento per domanda (default 3) |
 | `LOG_LEVEL` | livello dei log su stderr (default `INFO`) |
-| `VARIANTE_STRUMENTI` | `locale` (default) oppure `http` |
+| `VARIANTE_STRUMENTI` | `locale` (default), `http` oppure `mcp` |
 | `STRUMENTI_HTTP_URL` | indirizzo del servizio strumenti, obbligatorio con `http`, es. `http://localhost:8001` |
+| `STRUMENTI_MCP_URL` | indirizzo del server MCP, obbligatorio con `mcp`, es. `http://localhost:8002/mcp` |
 
 L'identificativo del modello va letto dal server, non inventato:
 
@@ -133,6 +139,18 @@ Invoke-RestMethod -Method Post http://localhost:8001/strumenti/convertitore_unit
 Poi, nel `.env`, imposta `VARIANTE_STRUMENTI=http` e `STRUMENTI_HTTP_URL=http://localhost:8001`
 e avvia l'assistente come sopra.
 
+### Variante `mcp` (server FastMCP)
+
+In un secondo terminale avvia il server MCP (ascolta solo su `127.0.0.1`, endpoint `/mcp`):
+
+```powershell
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.server_mcp:app --port 8002
+```
+
+Poi, nel `.env`, imposta `VARIANTE_STRUMENTI=mcp` e `STRUMENTI_MCP_URL=http://localhost:8002/mcp`
+e avvia l'assistente come sopra. Nel log del server ogni chiamata di strumento compare come tre
+richieste `POST /mcp` (apertura della sessione, notifica, chiamata).
+
 ## Avvio con Docker Compose
 
 LM Studio resta sull'host; il container lo raggiunge tramite `host.docker.internal`
@@ -164,6 +182,15 @@ docker compose --profile http down
 
 L'ultimo comando ferma il servizio rimasto attivo in background.
 
+Variante `mcp`: allo stesso modo, il servizio `strumenti-mcp` parte solo con il profilo `mcp` ed
+è raggiungibile dall'assistente come `http://strumenti-mcp:8002/mcp`.
+
+```powershell
+docker compose --profile mcp build
+"Quanto fa (17 + 4) * 3?`n/esci" | docker compose --profile mcp run --rm -T -e VARIANTE_STRUMENTI=mcp assistente
+docker compose --profile mcp down
+```
+
 ## Test automatici
 
 Non richiedono LM Studio attivo (le prove `reale` sono escluse di default):
@@ -188,7 +215,18 @@ $env:VARIANTE_STRUMENTI = "http"; $env:STRUMENTI_HTTP_URL = "http://localhost:80
 .\.venv\Scripts\python.exe -m pytest -m reale -v
 ```
 
-Nel log del servizio devono comparire le richieste `POST /strumenti/...`.
+Nel log del servizio devono comparire le richieste `POST /strumenti/...`. Per la variante `mcp`,
+con il server MCP avviato:
+
+```powershell
+$env:VARIANTE_STRUMENTI = "mcp"; $env:STRUMENTI_MCP_URL = "http://localhost:8002/mcp"
+.\.venv\Scripts\python.exe -m pytest -m reale -v
+```
+
+Le prove reali dipendono da un modello non deterministico: un fallimento isolato va ripetuto
+prima di attribuirlo al codice. Per esempio `test_ora_senza_luogo` è fallito una volta su 13
+esecuzioni (il modello ha tentato una chiamata con argomenti non validi, fermata dalla
+validazione prima di raggiungere il server), con risultati identici nelle varianti.
 
 Prova manuale: avvia l'assistente (locale o Docker), chiedi «Che ore sono a Tokyo?» e poi
 «E a Roma?». Sui log (stderr) devono comparire due chiamate `ora_corrente`, con
@@ -213,10 +251,13 @@ solo queste prove lo fanno.
   identificativo sbagliato quindi può passare inosservato: se il modello che risponde non è
   quello atteso, confronta `LMSTUDIO_MODEL` con `Invoke-RestMethod http://localhost:1234/v1/models`.
 - **Configurazione mancante**: l'avvio termina con «Configurazione non valida: ...» (codice 2);
-  controlla `.env`. Con `VARIANTE_STRUMENTI=http` serve anche `STRUMENTI_HTTP_URL`.
+  controlla `.env`. Con `VARIANTE_STRUMENTI=http` serve anche `STRUMENTI_HTTP_URL`, con `mcp`
+  serve `STRUMENTI_MCP_URL`.
 - **Servizio strumenti spento (variante `http`)**: l'assistente non si blocca; lo strumento
   restituisce al modello «Errore: servizio strumenti non raggiungibile su ...», e il modello
   lo riferisce. Avvia il servizio (o, in Docker, usa `--profile http`).
+- **Server MCP spento (variante `mcp`)**: come sopra, lo strumento restituisce «Errore: server MCP
+  non raggiungibile su ...». Avvia il server (o, in Docker, usa `--profile mcp`).
 - **Il container non raggiunge l'host**: verifica che `compose.yaml` contenga
   `extra_hosts: host.docker.internal:host-gateway` e che LM Studio sia in ascolto sulla
   porta 1234. Solo se non basta, in LM Studio puoi attivare «Serve on Local Network».

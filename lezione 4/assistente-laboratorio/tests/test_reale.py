@@ -81,3 +81,18 @@ def test_giorni_lavorativi(sessione):
     assert any(r.startswith("Dal 2026-12-21 al 2026-12-31: 7 giorni lavorativi") for r in risultati), (
         f"giorni_scadenze non usato come atteso: {risultati}")
     assert "7" in risposta, f"7 assente nella risposta: {risposta!r}"
+
+
+def test_catalogo_articolo_presente(sessione):
+    risposta = sessione.chiedi("Avete un multimetro in laboratorio? Dove si trova?")
+    risultati = _strumenti_del_turno(sessione)
+    assert any("MUL-01" in r for r in risultati), f"catalogo_locale non usato come atteso: {risultati}"
+    assert "Armadio A" in risposta, f"ubicazione assente nella risposta: {risposta!r}"
+
+
+def test_catalogo_articolo_assente(sessione):
+    sessione.chiedi("Avete un microscopio elettronico in laboratorio?")
+    risultati = _strumenti_del_turno(sessione)
+    assert risultati, "il modello ha risposto senza consultare il catalogo"
+    assert all(r.startswith(("Nessun articolo", "Errore:")) for r in risultati), (
+        f"risultato inatteso per un articolo assente: {risultati}")

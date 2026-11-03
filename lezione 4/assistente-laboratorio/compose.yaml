@@ -5,7 +5,21 @@ services:
     environment:
       # Dal container l'host si raggiunge con host.docker.internal (LM Studio resta sull'host).
       LMSTUDIO_BASE_URL: http://host.docker.internal:1234/v1
+      # Usato solo con VARIANTE_STRUMENTI=http: il servizio della rete di Compose.
+      STRUMENTI_HTTP_URL: http://strumenti-http:8001
     stdin_open: true
     tty: true
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      strumenti-http:
+        condition: service_started
+        required: false  # avviato solo con --profile http
+
+  # Variante 02: servizio FastAPI degli strumenti. Stessa immagine, comando diverso.
+  # Nessuna porta pubblicata sull'host: è raggiungibile solo dalla rete di Compose.
+  strumenti-http:
+    build: .
+    profiles: [http]
+    command: ["python", "-m", "uvicorn", "assistente.servizio_http:app",
+              "--host", "0.0.0.0", "--port", "8001"]

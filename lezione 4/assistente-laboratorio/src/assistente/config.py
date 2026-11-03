@@ -16,6 +16,7 @@ class Configurazione:
     log_level: str = "INFO"
     variante: str = "locale"
     strumenti_http_url: str | None = None
+    strumenti_mcp_url: str | None = None
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -55,7 +56,7 @@ def _log_level(env: Mapping[str, str]) -> str:
     return livello
 
 
-VARIANTI = ("locale", "http")
+VARIANTI = ("locale", "http", "mcp")
 
 
 def _variante(env: Mapping[str, str]) -> str:
@@ -82,4 +83,5 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         log_level=_log_level(env),
         variante=variante,
         strumenti_http_url=_obbligatoria(env, "STRUMENTI_HTTP_URL") if variante == "http" else None,
+        strumenti_mcp_url=_obbligatoria(env, "STRUMENTI_MCP_URL") if variante == "mcp" else None,
     )

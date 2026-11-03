@@ -1,14 +1,21 @@
 # Assistente del laboratorio
 
 Applicazione da terminale in Python che conversa con un modello locale servito da LM Studio.
-Il flusso è un grafo LangGraph esplicito; il modello può chiedere lo strumento `ora_corrente`
-(orologio con fuso orario IANA esplicito, per esempio `Asia/Tokyo`), che il programma esegue
-davvero. La cronologia vive solo per la durata della sessione.
+Il flusso è un grafo LangGraph esplicito; il modello può chiedere degli strumenti, che il
+programma esegue davvero:
+
+- `ora_corrente`: orologio con fuso orario IANA esplicito, per esempio `Asia/Tokyo`;
+- `convertitore_unita`: conversione fra unità di un elenco chiuso (lunghezza `mm cm m km in ft mi`,
+  massa `mg g kg t oz lb`, volume `ml l`, temperatura `C F K`). Le conversioni fra grandezze
+  diverse, i valori non finiti e le temperature sotto lo zero assoluto danno un errore esplicito.
+
+La cronologia vive solo per la durata della sessione.
 
 Struttura:
 
 - `src/assistente/config.py`: lettura e validazione delle variabili d'ambiente;
 - `src/assistente/strumenti.py`: strumento orologio;
+- `src/assistente/convertitore.py`: strumento convertitore di unità;
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -104,6 +111,8 @@ Richiedono LM Studio attivo e `.env` configurato; si attivano esplicitamente:
 Prova manuale: avvia l'assistente (locale o Docker), chiedi «Che ore sono a Tokyo?» e poi
 «E a Roma?». Sui log (stderr) devono comparire due chiamate `ora_corrente`, con
 `Asia/Tokyo` e poi `Europe/Rome`, e le risposte devono usare l'ora restituita.
+Per il convertitore: chiedi «Quanti metri sono 1,5 km?»; sui log deve comparire
+`convertitore_unita` con risultato `1.5 km = 1500 m`.
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 

@@ -50,7 +50,7 @@ def test_variante_http_con_indirizzo():
     assert (c.variante, c.strumenti_http_url) == ("http", "http://localhost:8001")
 
 
-@pytest.mark.parametrize("valore", ["mcp", "remota", "01"])
+@pytest.mark.parametrize("valore", ["grpc", "remota", "01"])
 def test_variante_non_valida(valore):
     with pytest.raises(ErroreConfigurazione, match="VARIANTE_STRUMENTI"):
         carica_configurazione({"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m",
@@ -63,4 +63,22 @@ def test_variante_http_senza_indirizzo(indirizzo):
     if indirizzo is not None:
         env["STRUMENTI_HTTP_URL"] = indirizzo
     with pytest.raises(ErroreConfigurazione, match="STRUMENTI_HTTP_URL"):
+        carica_configurazione(env)
+
+
+def test_variante_mcp_con_indirizzo():
+    c = carica_configurazione({"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m",
+                               "VARIANTE_STRUMENTI": "MCP",
+                               "STRUMENTI_MCP_URL": "http://localhost:8002/mcp"})
+    assert (c.variante, c.strumenti_mcp_url, c.strumenti_http_url) == (
+        "mcp", "http://localhost:8002/mcp", None)
+
+
+@pytest.mark.parametrize("indirizzo", [None, "  "])
+def test_variante_mcp_senza_indirizzo(indirizzo):
+    env = {"LMSTUDIO_BASE_URL": "u", "LMSTUDIO_MODEL": "m", "VARIANTE_STRUMENTI": "mcp",
+           "STRUMENTI_HTTP_URL": "http://localhost:8001"}
+    if indirizzo is not None:
+        env["STRUMENTI_MCP_URL"] = indirizzo
+    with pytest.raises(ErroreConfigurazione, match="STRUMENTI_MCP_URL"):
         carica_configurazione(env)

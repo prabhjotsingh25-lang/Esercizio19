@@ -1,6 +1,7 @@
 """Confronto fra varianti: stesso copione, stesso percorso e stessi risultati."""
 import pytest
 from fastapi.testclient import TestClient
+from fastmcp import Client
 from finti import ISTANTE, ModelloFinto
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.utils.function_calling import convert_to_openai_tool
@@ -8,8 +9,10 @@ from langchain_core.utils.function_calling import convert_to_openai_tool
 from assistente.catalogo import strumenti_locali
 from assistente.config import Configurazione
 from assistente.grafo import costruisci_grafo
+from assistente.server_mcp import crea_server
 from assistente.servizio_http import crea_app
 from assistente.variante_http import crea_strumenti_http
+from assistente.variante_mcp import crea_strumenti_mcp
 from assistente.varianti import strumenti_per_variante
 
 
@@ -19,8 +22,11 @@ def _adesso():
 
 def _varianti():
     client = TestClient(crea_app(strumenti_locali(_adesso)))
+    server = crea_server(strumenti_locali(_adesso))
     return {"locale": strumenti_locali(_adesso),
-            "http": crea_strumenti_http("http://servizio", strumenti_locali(_adesso), client=client)}
+            "http": crea_strumenti_http("http://servizio", strumenti_locali(_adesso), client=client),
+            "mcp": crea_strumenti_mcp("http://servizio-mcp/mcp", strumenti_locali(_adesso),
+                                      crea_client=lambda: Client(server))}
 
 
 def _copione():
@@ -57,24 +63,27 @@ def _traccia(messaggi):
 def test_stesse_definizioni_fra_varianti():
     definizioni = {nome: [convert_to_openai_tool(s) for s in strumenti]
                    for nome, strumenti in _varianti().items()}
-    assert definizioni["locale"] == definizioni["http"]
+    assert definizioni["locale"] == definizioni["http"] == definizioni["mcp"]
 
 
 def test_stessa_cronologia_fra_varianti():
     risultati = {nome: _esegui(strumenti) for nome, strumenti in _varianti().items()}
-    (m_loc, out_loc), (m_http, out_http) = risultati["locale"], risultati["http"]
-    assert _traccia(out_loc["messages"]) == _traccia(out_http["messages"])
-    assert out_loc["passaggi"] == out_http["passaggi"] == 2
-    assert [_traccia(r) for r in m_loc.ricevuti] == [_traccia(r) for r in m_http.ricevuti]
+    m_loc, out_loc = risultati["locale"]
+    for nome in ("http", "mcp"):
+        modello, uscita = risultati[nome]
+        assert _traccia(uscita["messages"]) == _traccia(out_loc["messages"]), nome
+        assert uscita["passaggi"] == out_loc["passaggi"] == 2, nome
+        assert [_traccia(r) for r in modello.ricevuti] == [_traccia(r) for r in m_loc.ricevuti], nome
     contenuti = [c for _, c, _ in _traccia(out_loc["messages"])]
     assert "(17 + 4) * 3 = 63" in contenuti and "Errore: divisione per zero." in contenuti
     assert any(c.startswith("2026-12-07 + 2 giorni lavorativi = 2026-12-10") for c in contenuti)
     assert any(c.startswith("Nessun articolo trovato per 'microscopio'") for c in contenuti)
 
 
-@pytest.mark.parametrize("variante", ["locale", "http"])
+@pytest.mark.parametrize("variante", ["locale", "http", "mcp"])
 def test_scelta_da_configurazione(variante):
-    config = Configurazione("u", "m", variante=variante, strumenti_http_url="http://servizio:8001")
+    config = Configurazione("u", "m", variante=variante, strumenti_http_url="http://servizio:8001",
+                            strumenti_mcp_url="http://servizio-mcp:8002/mcp")
     nomi = [s.name for s in strumenti_per_variante(config)]
     assert nomi == ["ora_corrente", "convertitore_unita", "calcolatrice_sicura", "giorni_scadenze",
                     "catalogo_locale"]

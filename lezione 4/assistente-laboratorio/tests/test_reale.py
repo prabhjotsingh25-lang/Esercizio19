@@ -73,3 +73,11 @@ def test_calcolo_con_la_calcolatrice(sessione):
     risultati = _strumenti_del_turno(sessione)
     assert any(r.endswith("= 63") for r in risultati), f"calcolatrice non usata come atteso: {risultati}"
     assert "63" in risposta, f"63 assente nella risposta: {risposta!r}"
+
+
+def test_giorni_lavorativi(sessione):
+    risposta = sessione.chiedi("Quanti giorni lavorativi ci sono dal 2026-12-21 al 2026-12-31?")
+    risultati = _strumenti_del_turno(sessione)
+    assert any(r.startswith("Dal 2026-12-21 al 2026-12-31: 7 giorni lavorativi") for r in risultati), (
+        f"giorni_scadenze non usato come atteso: {risultati}")
+    assert "7" in risposta, f"7 assente nella risposta: {risposta!r}"

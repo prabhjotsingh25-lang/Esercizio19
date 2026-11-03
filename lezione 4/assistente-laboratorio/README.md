@@ -16,9 +16,24 @@ programma esegue davvero:
 
 La cronologia vive solo per la durata della sessione.
 
+Gli strumenti si possono raggiungere con varianti di integrazione diverse, scelte da
+configurazione (`VARIANTE_STRUMENTI`); all'agente ne viene esposta una sola per volta:
+
+- `locale` (01, default): le funzioni Python sono chiamate direttamente dal programma;
+- `http` (02): gli strumenti girano in un servizio FastAPI e l'agente li chiama tramite un
+  wrapper HTTP (`httpx`).
+
+Le definizioni (nome, descrizione, schema degli argomenti) vengono tutte dallo stesso catalogo,
+quindi il modello vede gli stessi strumenti e lo stesso prompt di sistema in ogni variante:
+cambia solo il canale.
+
 Struttura:
 
 - `src/assistente/config.py`: lettura e validazione delle variabili d'ambiente;
+- `src/assistente/catalogo.py`: catalogo degli strumenti, fonte unica delle definizioni;
+- `src/assistente/varianti.py`: scelta della variante da configurazione;
+- `src/assistente/servizio_http.py`: servizio FastAPI degli strumenti (variante 02);
+- `src/assistente/variante_http.py`: wrapper HTTP verso il servizio (variante 02);
 - `src/assistente/strumenti.py`: strumento orologio;
 - `src/assistente/convertitore.py`: strumento convertitore di unità;
 - `src/assistente/calcolatrice.py`: strumento calcolatrice sicura;
@@ -53,6 +68,8 @@ Variabili:
 | `LMSTUDIO_MODEL` | identificativo del modello, così come lo restituisce il server |
 | `MAX_PASSAGGI_STRUMENTO` | passaggi massimi di strumento per domanda (default 3) |
 | `LOG_LEVEL` | livello dei log su stderr (default `INFO`) |
+| `VARIANTE_STRUMENTI` | `locale` (default) oppure `http` |
+| `STRUMENTI_HTTP_URL` | indirizzo del servizio strumenti, obbligatorio con `http`, es. `http://localhost:8001` |
 
 L'identificativo del modello va letto dal server, non inventato:
 
@@ -78,7 +95,26 @@ $env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente
 ```
 
 Comandi nell'applicazione: `/nuova` avvia una nuova conversazione, `/esci` termina
-(anche Ctrl+C o fine input). Risposte su stdout, log su stderr.
+(anche Ctrl+C o fine input). Risposte su stdout, log su stderr. All'avvio il log indica la
+variante in uso e gli strumenti esposti.
+
+### Variante `http` (servizio FastAPI)
+
+In un secondo terminale avvia il servizio degli strumenti (ascolta solo su `127.0.0.1`):
+
+```powershell
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.servizio_http:app --port 8001
+```
+
+Controllo rapido del servizio:
+
+```powershell
+(Invoke-RestMethod http://localhost:8001/strumenti).nome
+Invoke-RestMethod -Method Post http://localhost:8001/strumenti/convertitore_unita -ContentType "application/json" -Body '{"valore": 1.5, "da": "km", "a": "m"}'
+```
+
+Poi, nel `.env`, imposta `VARIANTE_STRUMENTI=http` e `STRUMENTI_HTTP_URL=http://localhost:8001`
+e avvia l'assistente come sopra.
 
 ## Avvio con Docker Compose
 
@@ -98,6 +134,19 @@ con input da pipe):
 "Che ore sono a Tokyo?`nE a Roma?`n/esci" | docker compose run --rm -T assistente
 ```
 
+Variante `http`: il servizio `strumenti-http` (stessa immagine, comando `uvicorn`) parte solo
+con il profilo `http`, non pubblica porte sull'host ed è raggiungibile dall'assistente come
+`http://strumenti-http:8001` (impostato in `compose.yaml`). Senza profilo l'avvio resta quello
+di sopra, con la variante `locale`.
+
+```powershell
+docker compose --profile http build
+"Quanto fa (17 + 4) * 3?`n/esci" | docker compose --profile http run --rm -T -e VARIANTE_STRUMENTI=http assistente
+docker compose --profile http down
+```
+
+L'ultimo comando ferma il servizio rimasto attivo in background.
+
 ## Test automatici
 
 Non richiedono LM Studio attivo (le prove `reale` sono escluse di default):
@@ -113,6 +162,16 @@ Richiedono LM Studio attivo e `.env` configurato; si attivano esplicitamente:
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -m reale -v
 ```
+
+Le prove usano la variante indicata da `VARIANTE_STRUMENTI`. Per la variante `http`, con il
+servizio avviato:
+
+```powershell
+$env:VARIANTE_STRUMENTI = "http"; $env:STRUMENTI_HTTP_URL = "http://localhost:8001"
+.\.venv\Scripts\python.exe -m pytest -m reale -v
+```
+
+Nel log del servizio devono comparire le richieste `POST /strumenti/...`.
 
 Prova manuale: avvia l'assistente (locale o Docker), chiedi «Che ore sono a Tokyo?» e poi
 «E a Roma?». Sui log (stderr) devono comparire due chiamate `ora_corrente`, con
@@ -132,7 +191,10 @@ solo queste prove lo fanno.
   identificativo sbagliato quindi può passare inosservato: se il modello che risponde non è
   quello atteso, confronta `LMSTUDIO_MODEL` con `Invoke-RestMethod http://localhost:1234/v1/models`.
 - **Configurazione mancante**: l'avvio termina con «Configurazione non valida: ...» (codice 2);
-  controlla `.env`.
+  controlla `.env`. Con `VARIANTE_STRUMENTI=http` serve anche `STRUMENTI_HTTP_URL`.
+- **Servizio strumenti spento (variante `http`)**: l'assistente non si blocca; lo strumento
+  restituisce al modello «Errore: servizio strumenti non raggiungibile su ...», e il modello
+  lo riferisce. Avvia il servizio (o, in Docker, usa `--profile http`).
 - **Il container non raggiunge l'host**: verifica che `compose.yaml` contenga
   `extra_hosts: host.docker.internal:host-gateway` e che LM Studio sia in ascolto sulla
   porta 1234. Solo se non basta, in LM Studio puoi attivare «Serve on Local Network».

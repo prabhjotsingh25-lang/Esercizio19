@@ -63,11 +63,14 @@ def test_eliminazione_in_due_passi(db):
     assert _note(db, "elenca") == "Nessuna nota salvata."
 
 
-def test_conferma_senza_primo_passo_non_cancella(db):
+def test_conferma_senza_primo_passo_diventa_il_primo_passo(db):
+    # Il modello a volte chiede conferma a parole e poi chiama subito con conferma=true:
+    # lo strumento non cancella, fa il primo passo e chiede di nuovo conferma.
     _note(db, "aggiungi", testo="da tenere")
     assert _note(db, "elimina", id=1, conferma=True).startswith(
-        "Errore: prima di eliminare la nota 1 serve chiedere conferma")
+        'Prima di eliminare serve la conferma dell\'utente. Stai per eliminare la nota 1: "da tenere".')
     assert "da tenere" in _note(db, "elenca")
+    assert _note(db, "elimina", id=1, conferma=True) == 'Nota 1 eliminata: "da tenere".'
 
 
 def test_la_conferma_vale_una_volta_sola(db):
@@ -75,7 +78,15 @@ def test_la_conferma_vale_una_volta_sola(db):
     _note(db, "elimina", id=1)
     _note(db, "elimina", id=1, conferma=True)
     _note(db, "aggiungi", testo="b")  # id 2: gli id non vengono riusati
-    assert _note(db, "elimina", id=2, conferma=True).startswith("Errore: prima di eliminare la nota 2")
+    assert _note(db, "elimina", id=2, conferma=True).startswith("Prima di eliminare serve la conferma")
+    assert "b" in _note(db, "elenca")
+
+
+def test_servono_sempre_due_chiamate(db):
+    _note(db, "aggiungi", testo="a")
+    for conferma in (True, False):
+        assert "Stai per eliminare la nota 1" in _note(db, "elimina", id=1, conferma=conferma)
+        assert "- 1 ·" in _note(db, "elenca")
 
 
 def test_gli_id_non_vengono_riusati(db):

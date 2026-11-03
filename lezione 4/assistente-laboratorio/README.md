@@ -7,7 +7,12 @@ programma esegue davvero:
 - `ora_corrente`: orologio con fuso orario IANA esplicito, per esempio `Asia/Tokyo`;
 - `convertitore_unita`: conversione fra unità di un elenco chiuso (lunghezza `mm cm m km in ft mi`,
   massa `mg g kg t oz lb`, volume `ml l`, temperatura `C F K`). Le conversioni fra grandezze
-  diverse, i valori non finiti e le temperature sotto lo zero assoluto danno un errore esplicito.
+  diverse, i valori non finiti e le temperature sotto lo zero assoluto danno un errore esplicito;
+- `calcolatrice_sicura`: espressioni aritmetiche (`+ - * / % **`, segno, parentesi, decimali con
+  il punto) valutate senza `eval`, su una whitelist dell'albero sintattico. Variabili, funzioni e
+  ogni altro costrutto sono rifiutati con un errore esplicito, come la divisione per zero e gli
+  esponenti oltre 1000. Calcoli in virgola mobile, risultato a 12 cifre significative: oltre
+  circa 15 cifre gli interi non sono più esatti.
 
 La cronologia vive solo per la durata della sessione.
 
@@ -16,6 +21,7 @@ Struttura:
 - `src/assistente/config.py`: lettura e validazione delle variabili d'ambiente;
 - `src/assistente/strumenti.py`: strumento orologio;
 - `src/assistente/convertitore.py`: strumento convertitore di unità;
+- `src/assistente/calcolatrice.py`: strumento calcolatrice sicura;
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -112,7 +118,8 @@ Prova manuale: avvia l'assistente (locale o Docker), chiedi «Che ore sono a Tok
 «E a Roma?». Sui log (stderr) devono comparire due chiamate `ora_corrente`, con
 `Asia/Tokyo` e poi `Europe/Rome`, e le risposte devono usare l'ora restituita.
 Per il convertitore: chiedi «Quanti metri sono 1,5 km?»; sui log deve comparire
-`convertitore_unita` con risultato `1.5 km = 1500 m`.
+`convertitore_unita` con risultato `1.5 km = 1500 m`. Per la calcolatrice: chiedi
+«Quanto fa (17 + 4) * 3?»; sui log deve comparire `calcolatrice_sicura` con risultato `= 63`.
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 

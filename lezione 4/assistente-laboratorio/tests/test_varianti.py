@@ -32,7 +32,10 @@ def _copione():
         chiamate(("calcolatrice_sicura", {"espressione": "(17 + 4) * 3"}, "3"),
                  ("calcolatrice_sicura", {"espressione": "1 / 0"}, "4"),
                  ("ora_corrente", {}, "5"),
-                 ("meteo", {"citta": "Roma"}, "6")),
+                 ("meteo", {"citta": "Roma"}, "6"),
+                 ("giorni_scadenze", {"data_inizio": "2026-12-07", "giorni": 2,
+                                      "solo_lavorativi": True}, "7"),
+                 ("giorni_scadenze", {"data_inizio": "2026-02-30", "giorni": 1}, "8")),
         AIMessage("Fatto."),
     ]
 
@@ -62,10 +65,11 @@ def test_stessa_cronologia_fra_varianti():
     assert [_traccia(r) for r in m_loc.ricevuti] == [_traccia(r) for r in m_http.ricevuti]
     contenuti = [c for _, c, _ in _traccia(out_loc["messages"])]
     assert "(17 + 4) * 3 = 63" in contenuti and "Errore: divisione per zero." in contenuti
+    assert any(c.startswith("2026-12-07 + 2 giorni lavorativi = 2026-12-10") for c in contenuti)
 
 
 @pytest.mark.parametrize("variante", ["locale", "http"])
 def test_scelta_da_configurazione(variante):
     config = Configurazione("u", "m", variante=variante, strumenti_http_url="http://servizio:8001")
     nomi = [s.name for s in strumenti_per_variante(config)]
-    assert nomi == ["ora_corrente", "convertitore_unita", "calcolatrice_sicura"]
+    assert nomi == ["ora_corrente", "convertitore_unita", "calcolatrice_sicura", "giorni_scadenze"]

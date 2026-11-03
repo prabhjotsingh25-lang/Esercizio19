@@ -1,0 +1,24 @@
+codice;nome;categoria;descrizione;ubicazione;quantita
+MUL-01;Multimetro digitale;misura;Misura tensione, corrente e resistenza, autorange;Armadio A, ripiano 2;6
+MUL-02;Multimetro analogico;misura;Multimetro a lancetta per esercitazioni;Armadio A, ripiano 2;3
+OSC-01;Oscilloscopio digitale a 2 canali;misura;Banda 100 MHz, con sonde 10x;Banco docente;2
+GEN-01;Generatore di funzioni;misura;Onde sinusoidali, quadre e triangolari fino a 20 MHz;Banco docente;2
+ALI-01;Alimentatore da banco;alimentazione;Uscita regolabile 0-30 V, 0-5 A;Armadio B, ripiano 1;8
+ALI-02;Portabatterie 4xAA;alimentazione;Portabatterie con interruttore e cavetti;Cassettiera C, cassetto 1;15
+ARD-01;Arduino Uno R3;microcontrollori;Scheda con ATmega328P e cavo USB;Cassettiera B, cassetto 1;12
+ARD-02;Arduino Nano;microcontrollori;Formato ridotto per breadboard;Cassettiera B, cassetto 1;10
+ESP-01;ESP32 DevKit;microcontrollori;Microcontrollore con Wi-Fi e Bluetooth;Cassettiera B, cassetto 2;8
+RPI-01;Raspberry Pi 4 (4 GB);microcontrollori;Computer a scheda singola con alimentatore;Armadio B, ripiano 2;4
+BRD-01;Breadboard 830 punti;componenti;Basetta sperimentale senza saldature;Cassettiera C, cassetto 2;25
+RES-01;Kit resistenze;componenti;Assortimento da 10 Ω a 1 MΩ, serie E12;Cassettiera C, cassetto 3;5
+LED-01;Kit LED colorati;componenti;LED da 5 mm rossi, verdi, gialli e blu;Cassettiera C, cassetto 3;5
+CAP-01;Kit condensatori;componenti;Ceramici ed elettrolitici, valori assortiti;Cassettiera C, cassetto 4;4
+SEN-01;Sensore di temperatura DS18B20;sensori;Sonda impermeabile con cavo da 1 m;Cassettiera B, cassetto 3;10
+SEN-02;Sensore a ultrasuoni HC-SR04;sensori;Misura distanze da 2 a 400 cm;Cassettiera B, cassetto 3;10
+SEN-03;Sensore di umidità DHT22;sensori;Temperatura e umidità relativa;Cassettiera B, cassetto 3;0
+SAL-01;Stazione saldante;saldatura;Temperatura regolabile, punta fine;Banco saldatura;4
+SAL-02;Filo di stagno senza piombo;saldatura;Diametro 0,8 mm, bobina da 100 g;Banco saldatura;6
+CAV-01;Cavetti jumper maschio-maschio;cavi;Confezione da 40 cavetti colorati;Cassettiera C, cassetto 2;10
+CAV-02;Cavi a coccodrillo;cavi;Coppie di cavi con pinze isolate;Cassettiera C, cassetto 5;20
+SIC-01;Occhiali di protezione;sicurezza;Da indossare durante saldatura e taglio;Armadio sicurezza;20
+SIC-02;Estintore a CO2;sicurezza;Adatto ad apparecchiature elettriche;Vicino alla porta;1

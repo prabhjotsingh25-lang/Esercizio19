@@ -5,13 +5,11 @@ import pytest
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, ToolMessage
 
-from assistente.calcolatrice import crea_strumento_calcolatrice
 from assistente.config import ErroreConfigurazione, carica_configurazione
-from assistente.convertitore import crea_strumento_convertitore
 from assistente.grafo import costruisci_grafo
 from assistente.modello import crea_modello
 from assistente.sessione import Sessione
-from assistente.strumenti import crea_strumento_orologio
+from assistente.varianti import strumenti_per_variante
 
 pytestmark = pytest.mark.reale
 
@@ -25,8 +23,7 @@ def sessione():
         config = carica_configurazione()
     except ErroreConfigurazione as errore:
         pytest.skip(f"Configurazione mancante: {errore}")
-    strumenti = [crea_strumento_orologio(), crea_strumento_convertitore(),
-                 crea_strumento_calcolatrice()]
+    strumenti = strumenti_per_variante(config)
     grafo = costruisci_grafo(crea_modello(config), strumenti, config.max_passaggi)
     return Sessione(grafo, config.max_passaggi)
 

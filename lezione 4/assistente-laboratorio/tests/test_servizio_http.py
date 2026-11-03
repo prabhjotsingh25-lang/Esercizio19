@@ -17,7 +17,7 @@ def test_elenco_strumenti(client):
     assert risposta.status_code == 200
     nomi = [s["nome"] for s in risposta.json()]
     assert nomi == ["ora_corrente", "convertitore_unita", "calcolatrice_sicura", "giorni_scadenze",
-                    "catalogo_locale"]
+                    "catalogo_locale", "note_persistenti"]
     assert all(s["descrizione"] and s["schema"]["properties"] for s in risposta.json())
 
 

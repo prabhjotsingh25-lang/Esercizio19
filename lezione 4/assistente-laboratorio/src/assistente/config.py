@@ -14,6 +14,8 @@ class Configurazione:
     modello: str
     max_passaggi: int = 3
     log_level: str = "INFO"
+    variante: str = "locale"
+    strumenti_http_url: str | None = None
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -53,13 +55,31 @@ def _log_level(env: Mapping[str, str]) -> str:
     return livello
 
 
+VARIANTI = ("locale", "http")
+
+
+def _variante(env: Mapping[str, str]) -> str:
+    grezzo = env.get("VARIANTE_STRUMENTI", "").strip()
+    if not grezzo:
+        return "locale"
+    variante = grezzo.lower()
+    if variante not in VARIANTI:
+        raise ErroreConfigurazione(
+            f"VARIANTE_STRUMENTI deve essere uno tra {', '.join(VARIANTI)} (ricevuto: {grezzo!r})"
+        )
+    return variante
+
+
 def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazione:
     """Costruisce la configurazione; con env=None legge os.environ."""
     if env is None:
         env = os.environ
+    variante = _variante(env)
     return Configurazione(
         base_url=_obbligatoria(env, "LMSTUDIO_BASE_URL"),
         modello=_obbligatoria(env, "LMSTUDIO_MODEL"),
         max_passaggi=_max_passaggi(env),
         log_level=_log_level(env),
+        variante=variante,
+        strumenti_http_url=_obbligatoria(env, "STRUMENTI_HTTP_URL") if variante == "http" else None,
     )

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, ToolMessage
 
 from assistente.config import ErroreConfigurazione, carica_configurazione
+from assistente.convertitore import crea_strumento_convertitore
 from assistente.grafo import costruisci_grafo
 from assistente.modello import crea_modello
 from assistente.sessione import Sessione
@@ -23,8 +24,8 @@ def sessione():
         config = carica_configurazione()
     except ErroreConfigurazione as errore:
         pytest.skip(f"Configurazione mancante: {errore}")
-    grafo = costruisci_grafo(crea_modello(config), [crea_strumento_orologio()],
-                             config.max_passaggi)
+    strumenti = [crea_strumento_orologio(), crea_strumento_convertitore()]
+    grafo = costruisci_grafo(crea_modello(config), strumenti, config.max_passaggi)
     return Sessione(grafo, config.max_passaggi)
 
 
@@ -53,3 +54,16 @@ def test_tokyo_poi_roma(sessione):
 def test_ora_senza_luogo(sessione):
     sessione.chiedi("Che ore sono?")
     assert _strumenti_del_turno(sessione) == []
+
+
+def test_conversione_km_in_metri(sessione):
+    risposta = sessione.chiedi("Quanti metri sono 1,5 km?")
+    risultati = _strumenti_del_turno(sessione)
+    assert "1.5 km = 1500 m" in risultati, f"conversione non eseguita come atteso: {risultati}"
+    assert "1500" in risposta.replace(".", "").replace(" ", ""), f"1500 assente: {risposta!r}"
+
+
+def test_conversione_incompatibile_non_inventa(sessione):
+    sessione.chiedi("Converti 3 kg in metri.")
+    risultati = _strumenti_del_turno(sessione)
+    assert all(r.startswith("Errore:") for r in risultati), f"risultato inventato: {risultati}"

@@ -17,8 +17,11 @@ _ORA = re.compile(r"T(\d{2}:\d{2}):\d{2}")
 
 
 @pytest.fixture
-def sessione():
+def sessione(tmp_path, monkeypatch):
     load_dotenv(".env", override=False)
+    # Variante locale: note in un database temporaneo. Nelle varianti http e mcp le note
+    # vanno nel database del servizio (NOTE_DB impostata all'avvio del servizio).
+    monkeypatch.setenv("NOTE_DB", str(tmp_path / "note.sqlite"))
     try:
         config = carica_configurazione()
     except ErroreConfigurazione as errore:
@@ -96,3 +99,28 @@ def test_catalogo_articolo_assente(sessione):
     assert risultati, "il modello ha risposto senza consultare il catalogo"
     assert all(r.startswith(("Nessun articolo", "Errore:")) for r in risultati), (
         f"risultato inatteso per un articolo assente: {risultati}")
+
+
+def test_note_salvataggio(sessione):
+    sessione.chiedi("Ricordami di comprare i fusibili da 5 A.")
+    risultati = _strumenti_del_turno(sessione)
+    assert any(r.startswith("Nota ") and "salvata" in r and "fusibili" in r for r in risultati), (
+        f"nota non salvata: {risultati}")
+
+
+def test_note_eliminazione_chiede_conferma(sessione):
+    sessione.chiedi("Salva una nota con questo testo: verificare cancellazione 42.")
+    salvate = [r for r in _strumenti_del_turno(sessione) if re.match(r"Nota \d+ salvata", r)]
+    assert salvate, "nota di prova non salvata"
+    id_nota = re.match(r"Nota (\d+) salvata", salvate[0]).group(1)
+
+    sessione.chiedi(f"Cancella la nota {id_nota}.")
+    turno = _strumenti_del_turno(sessione)
+    assert not any(r.startswith(f"Nota {id_nota} eliminata") for r in turno), (
+        f"nota eliminata senza la conferma dell'utente: {turno}")
+    assert any(f"Stai per eliminare la nota {id_nota}" in r for r in turno), (
+        f"richiesta di conferma assente: {turno}")
+
+    sessione.chiedi("Sì, confermo.")
+    assert any(r.startswith(f"Nota {id_nota} eliminata") for r in _strumenti_del_turno(sessione)), (
+        "nota non eliminata dopo la conferma")

@@ -44,7 +44,12 @@ def _copione():
                  ("giorni_scadenze", {"data_inizio": "2026-02-30", "giorni": 1}, "8"),
                  ("catalogo_locale", {"testo": "multimetro"}, "9"),
                  ("catalogo_locale", {"testo": "microscopio"}, "10"),
-                 ("catalogo_locale", {"codice": "MUL-01", "testo": "x"}, "11")),
+                 ("catalogo_locale", {"codice": "MUL-01", "testo": "x"}, "11"),
+                 ("note_persistenti", {"azione": "aggiungi", "testo": "comprare i fusibili"}, "12"),
+                 ("note_persistenti", {"azione": "elenca"}, "13"),
+                 ("note_persistenti", {"azione": "elimina", "id": 1}, "14"),
+                 ("note_persistenti", {"azione": "elimina", "id": 1, "conferma": True}, "15"),
+                 ("note_persistenti", {"azione": "elimina", "id": 1, "conferma": True}, "16")),
         AIMessage("Fatto."),
     ]
 
@@ -66,8 +71,11 @@ def test_stesse_definizioni_fra_varianti():
     assert definizioni["locale"] == definizioni["http"] == definizioni["mcp"]
 
 
-def test_stessa_cronologia_fra_varianti():
-    risultati = {nome: _esegui(strumenti) for nome, strumenti in _varianti().items()}
+def test_stessa_cronologia_fra_varianti(tmp_path, monkeypatch):
+    risultati = {}
+    for nome, strumenti in _varianti().items():
+        monkeypatch.setenv("NOTE_DB", str(tmp_path / f"{nome}.sqlite"))  # ogni variante parte vuota
+        risultati[nome] = _esegui(strumenti)
     m_loc, out_loc = risultati["locale"]
     for nome in ("http", "mcp"):
         modello, uscita = risultati[nome]
@@ -78,6 +86,8 @@ def test_stessa_cronologia_fra_varianti():
     assert "(17 + 4) * 3 = 63" in contenuti and "Errore: divisione per zero." in contenuti
     assert any(c.startswith("2026-12-07 + 2 giorni lavorativi = 2026-12-10") for c in contenuti)
     assert any(c.startswith("Nessun articolo trovato per 'microscopio'") for c in contenuti)
+    assert 'Nota 1 eliminata: "comprare i fusibili".' in contenuti
+    assert "Nessuna nota con id 1." in contenuti
 
 
 @pytest.mark.parametrize("variante", ["locale", "http", "mcp"])
@@ -86,4 +96,4 @@ def test_scelta_da_configurazione(variante):
                             strumenti_mcp_url="http://servizio-mcp:8002/mcp")
     nomi = [s.name for s in strumenti_per_variante(config)]
     assert nomi == ["ora_corrente", "convertitore_unita", "calcolatrice_sicura", "giorni_scadenze",
-                    "catalogo_locale"]
+                    "catalogo_locale", "note_persistenti"]

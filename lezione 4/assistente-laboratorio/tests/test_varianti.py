@@ -2,11 +2,11 @@
 import pytest
 from fastapi.testclient import TestClient
 from fastmcp import Client
-from finti import ISTANTE, ModelloFinto
+from finti import ISTANTE, ModelloFinto, meteo_finto
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
-from assistente.catalogo import strumenti_locali
+from assistente.catalogo import strumenti_locali as _strumenti_locali
 from assistente.config import Configurazione
 from assistente.grafo import costruisci_grafo
 from assistente.server_mcp import crea_server
@@ -18,6 +18,11 @@ from assistente.varianti import strumenti_per_variante
 
 def _adesso():
     return ISTANTE
+
+
+def strumenti_locali(adesso):
+    """Catalogo con Open-Meteo finto: il confronto non usa internet."""
+    return _strumenti_locali(adesso, trasporto_meteo=meteo_finto())
 
 
 def _varianti():
@@ -49,7 +54,9 @@ def _copione():
                  ("note_persistenti", {"azione": "elenca"}, "13"),
                  ("note_persistenti", {"azione": "elimina", "id": 1}, "14"),
                  ("note_persistenti", {"azione": "elimina", "id": 1, "conferma": True}, "15"),
-                 ("note_persistenti", {"azione": "elimina", "id": 1, "conferma": True}, "16")),
+                 ("note_persistenti", {"azione": "elimina", "id": 1, "conferma": True}, "16"),
+                 ("meteo_api", {"luogo": "Roma"}, "17"),
+                 ("meteo_api", {"luogo": ""}, "18")),
         AIMessage("Fatto."),
     ]
 
@@ -88,6 +95,7 @@ def test_stessa_cronologia_fra_varianti(tmp_path, monkeypatch):
     assert any(c.startswith("Nessun articolo trovato per 'microscopio'") for c in contenuti)
     assert 'Nota 1 eliminata: "comprare i fusibili".' in contenuti
     assert "Nessuna nota con id 1." in contenuti
+    assert any(c.startswith("Meteo per Roma (Lazio, Italia)") for c in contenuti)
 
 
 @pytest.mark.parametrize("variante", ["locale", "http", "mcp"])
@@ -96,4 +104,4 @@ def test_scelta_da_configurazione(variante):
                             strumenti_mcp_url="http://servizio-mcp:8002/mcp")
     nomi = [s.name for s in strumenti_per_variante(config)]
     assert nomi == ["ora_corrente", "convertitore_unita", "calcolatrice_sicura", "giorni_scadenze",
-                    "catalogo_locale", "note_persistenti"]
+                    "catalogo_locale", "note_persistenti", "meteo_api"]

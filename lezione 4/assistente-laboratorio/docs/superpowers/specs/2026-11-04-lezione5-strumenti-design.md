@@ -139,6 +139,8 @@ Errori: luogo vuoto o oltre 100 caratteri, luogo non trovato, servizio non raggi
   domande inviate da file allo stdin del container: in `locale` meteo di domani a Roma,
   salvataggio ed elenco di una nota; in `http` e `mcp` meteo di Tokyo ed elenco delle note,
   con la nota salvata nella conversazione `locale` (volume condiviso). Tutto corretto.
+  Eliminazione di una nota in Docker (`locale`): al primo «Cancella» lo strumento non cancella
+  e l'assistente chiede conferma; dopo «Sì, confermo» la nota viene eliminata.
 
 ## 8. Realizzazione (in ordine, un branch per task)
 
@@ -151,4 +153,3 @@ Ogni canale nuovo, nel task in cui nasce, espone tutti gli strumenti già presen
 
 - Prova manuale da terminale con note e meteo, digitando le domande (la prova in Docker le ha
   inviate da file: stesso programma, ma senza una persona che scrive).
-- Prova reale dell'eliminazione di una nota dentro Docker (provata solo fuori da Docker).

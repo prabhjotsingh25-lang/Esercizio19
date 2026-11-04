@@ -148,8 +148,15 @@ Errori: luogo vuoto o oltre 100 caratteri, luogo non trovato, servizio non raggi
 `feat/calcolatrice-sicura`, `feat/variante-http`, `feat/giorni-scadenze`,
 `feat/catalogo-locale`, `feat/variante-mcp`, `feat/note-persistenti`, `feat/meteo-api`.
 Ogni canale nuovo, nel task in cui nasce, espone tutti gli strumenti già presenti nel catalogo.
+Dopo il lavoro, due branch di sola documentazione: `feat/docs-lezione5` (questa specifica) e
+`feat/docs-eliminazione-docker`.
+
+Pubblicazione (2026-11-04, su richiesta esplicita dell'utente): push di `dev` su `origin`, merge
+fast-forward di `dev` in `main` (da `c4818ee` a `919f27f`, 47 commit, senza commit di merge),
+305 test offline passati su `main`, push di `main` dopo un ok esplicito. I branch `feat/` e
+`feature/assistente-laboratorio` restano fino alla consegna e non vanno cancellati.
 
 ## 9. Da fare
 
 - Prova manuale da terminale con note e meteo, digitando le domande (la prova in Docker le ha
-  inviate da file: stesso programma, ma senza una persona che scrive).
+  inviate da file: stesso programma, ma senza una persona che scrive). La fa l'utente.

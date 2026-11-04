@@ -126,5 +126,6 @@ def crea_strumento_note(percorso: Path | None = None,
                      "l'altra. azione=aggiungi con testo salva una nota; azione=elenca mostra "
                      "le note con il loro id; azione=elimina con id avvia l'eliminazione: la "
                      "prima chiamata non cancella ma chiede conferma, e solo dopo il sì "
-                     "dell'utente si richiama con conferma=true."),
+                     "dell'utente si richiama con conferma=true. Usala anche quando l'utente "
+                     "chiede di ricordare qualcosa (per esempio \"ricordami di...\")."),
     )

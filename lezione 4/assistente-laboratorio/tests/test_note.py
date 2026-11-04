@@ -149,6 +149,7 @@ def test_strumento_langchain(db):
     assert schema["properties"]["azione"]["enum"] == ["aggiungi", "elenca", "elimina"]
     assert set(schema["properties"]) == {"azione", "testo", "id", "conferma"}
     assert "conferma" in strumento.description
+    assert "ricordami" in strumento.description  # «ricordami di...» va salvato come nota
     with pytest.raises(Exception, match="validation error"):
         strumento.invoke({"azione": "modifica"})
 

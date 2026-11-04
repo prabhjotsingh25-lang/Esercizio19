@@ -124,3 +124,23 @@ def test_note_eliminazione_chiede_conferma(sessione):
     sessione.chiedi("Sì, confermo.")
     assert any(r.startswith(f"Nota {id_nota} eliminata") for r in _strumenti_del_turno(sessione)), (
         "nota non eliminata dopo la conferma")
+
+
+def test_meteo_domani(sessione):
+    # Richiede internet (Open-Meteo). "domani" verifica che il modello usi la riga giusta.
+    risposta = sessione.chiedi("Che tempo farà domani a Roma?")
+    risultati = [r for r in _strumenti_del_turno(sessione) if r.startswith("Meteo per Roma")]
+    assert risultati, f"meteo_api non usato come atteso: {_strumenti_del_turno(sessione)}"
+    domani = re.search(r"\(domani\): min (-?\d+) °C, max (-?\d+) °C", risultati[0])
+    assert domani.group(2) in risposta, (
+        f"massima di domani ({domani.group(2)} °C) assente nella risposta: {risposta!r}")
+
+
+def test_meteo_luogo_inesistente_non_inventa(sessione):
+    # Un nome plausibile ma inesistente: con una parola senza senso («Zzyzxqwvk») il modello
+    # chiede subito chiarimenti senza chiamare lo strumento, e l'errore non viene provato.
+    risposta = sessione.chiedi("Che tempo fa a Montefracassone?")
+    risultati = _strumenti_del_turno(sessione)
+    assert risultati, "il modello ha risposto senza consultare il servizio meteo"
+    assert all(r.startswith("Errore:") for r in risultati), f"risultato inatteso: {risultati}"
+    assert "°" not in risposta, f"temperatura inventata nella risposta: {risposta!r}"

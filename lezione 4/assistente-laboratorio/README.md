@@ -35,6 +35,14 @@ programma esegue davvero:
   `conferma=true`, lo strumento non cancella e chiede comunque conferma. Limite: lo strumento
   garantisce le due chiamate, non che fra le due il modello abbia davvero chiesto all'utente
   (le prove reali lo verificano). Gli id delle note cancellate non vengono riusati.
+- `meteo_api`: meteo attuale e previsione di oggi, domani e dopodomani per una città, con i
+  dati di [Open-Meteo](https://open-meteo.com) (gratuito, senza chiave API, serve internet).
+  Il nome della città diventa coordinate con il geocoding di Open-Meteo (primo risultato; nel
+  testo compaiono regione e paese, così si vede quale luogo è stato scelto); se il modello
+  passa anche il paese («Roma, Italia») si usa solo la parte prima della virgola. Orari
+  nell'ora locale del luogo. Città sconosciuta, servizio non raggiungibile (timeout 10 s) o
+  risposta incompleta danno un errore esplicito, mai dati inventati. In `http` e `mcp` la
+  richiesta a Open-Meteo parte dal processo del servizio.
 
 La cronologia vive solo per la durata della sessione.
 
@@ -67,6 +75,7 @@ Struttura:
 - `src/assistente/scadenze.py` e `dati/festivita.json`: strumento giorni e scadenze;
 - `src/assistente/inventario.py` e `dati/catalogo.csv`: strumento catalogo locale;
 - `src/assistente/note.py`: strumento note persistenti (SQLite);
+- `src/assistente/meteo.py`: strumento meteo (Open-Meteo, via `httpx`);
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -202,7 +211,8 @@ docker compose --profile mcp down
 
 ## Test automatici
 
-Non richiedono LM Studio attivo (le prove `reale` sono escluse di default):
+Non richiedono LM Studio attivo né internet (le prove `reale` sono escluse di default;
+Open-Meteo è simulato con `httpx.MockTransport`):
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -v
@@ -210,7 +220,8 @@ Non richiedono LM Studio attivo (le prove `reale` sono escluse di default):
 
 ## Prove reali
 
-Richiedono LM Studio attivo e `.env` configurato; si attivano esplicitamente:
+Richiedono LM Studio attivo e `.env` configurato (le prove del meteo anche internet); si
+attivano esplicitamente:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -m reale -v
@@ -252,6 +263,10 @@ Per le note: «Ricordami di comprare i fusibili», poi «Che note ho?», poi «C
 al primo «Cancella» la nota non deve sparire e l'assistente deve chiedere conferma; dopo il
 «sì» la nota viene eliminata. Le prove reali usano un database temporaneo nella variante
 `locale`; nelle varianti `http` e `mcp` scrivono nel database del servizio.
+Per il meteo: chiedi «Che tempo farà domani a Roma?»; sui log deve comparire `meteo_api` e la
+risposta deve usare la riga «(domani)». Con «Che tempo fa a Montefracassone?» (luogo
+inesistente) lo strumento risponde «Errore: luogo ... non trovato» e il modello non deve
+inventare temperature.
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 
@@ -274,6 +289,11 @@ solo queste prove lo fanno.
 - **Note non disponibili**: «Errore: archivio delle note non disponibile» se la cartella di
   `NOTE_DB` non esiste o il file non è un database SQLite. In Docker le note stanno nel volume
   `note` (`/dati/note.sqlite`); `docker compose down -v` lo cancella insieme alle note.
+- **Meteo non disponibile**: «Errore: servizio meteo non raggiungibile» se manca internet,
+  Open-Meteo è lento (oltre 10 s) o risponde con un errore (per esempio troppe richieste);
+  «Errore: risposta del servizio meteo non valida» se la risposta è incompleta. Verifica con
+  `Invoke-RestMethod "https://geocoding-api.open-meteo.com/v1/search?name=Roma&count=1&language=it"`
+  (senza `language=it` «Roma» viene cercata in inglese e il primo risultato è la Romania).
 - **Il container non raggiunge l'host**: verifica che `compose.yaml` contenga
   `extra_hosts: host.docker.internal:host-gateway` e che LM Studio sia in ascolto sulla
   porta 1234. Solo se non basta, in LM Studio puoi attivare «Serve on Local Network».

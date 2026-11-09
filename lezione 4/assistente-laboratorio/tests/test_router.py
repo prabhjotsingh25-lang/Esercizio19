@@ -52,3 +52,12 @@ def test_output_non_valido_diventa_conversazione_con_warning(caplog):
     for _ in range(2):
         assert router([HumanMessage("?")]).categoria == "conversazione"
     assert caplog.text.count("output del router non valido") == 2
+
+
+def test_finestra_salta_le_indicazioni_del_revisore():
+    storia = [HumanMessage("Che ore sono a Tokyo e quanto fa 2+2?"), AIMessage("Sono le 18."),
+              HumanMessage("Revisione: manca il calcolo.", name="revisore"),
+              AIMessage("Sono le 18 e 2+2 fa 4."), HumanMessage("Grazie!")]
+    testo = messaggi_per_router(storia, AMBITO)[-1].content
+    assert "Revisione:" not in testo
+    assert "Assistente: Sono le 18." in testo  # la bozza rifiutata resta visibile

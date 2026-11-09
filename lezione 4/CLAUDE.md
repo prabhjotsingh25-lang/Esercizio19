@@ -3,8 +3,9 @@
 Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
-Struttura: `src/assistente/` (config, router, grafo, sessione, modello, cli, `__main__`; strumenti in
-moduli propri; `catalogo`, `varianti` e un modulo per variante di integrazione),
+Struttura: `src/assistente/` (config, contesto, router, revisore, grafo, sessione, modello, cli,
+`__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per variante di
+integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
 - test offline: `.\.venv\Scripts\python.exe -m pytest -v`
@@ -29,6 +30,8 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - offre uno strumento orologio con fuso orario esplicito, richiesto dal modello tramite tool calling
   ed eseguito davvero dal programma;
 - prima dell'agente, un router rifiuta le domande fuori dall'ambito descritto in `AMBITO_AGENTE`;
+- dopo l'agente, un revisore controlla che la risposta sia coerente con la domanda e, se no,
+  lo fa riprovare (al massimo `MAX_REVISIONI` volte);
 - si avvia anche con Docker Compose.
 
 ## Confini

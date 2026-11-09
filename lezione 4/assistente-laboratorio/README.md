@@ -52,11 +52,26 @@ strutturato (motivo e categoria `conversazione` / `fuori_ambito`) e vede l'ambit
 6 messaggi di testo della conversazione e la domanda; non vede gli strumenti e non decide se
 servono, lo fa l'agente come prima. Le domande fuori ambito ricevono un rifiuto fisso senza
 che l'agente venga chiamato; domanda e rifiuto restano nella cronologia. Se l'output del
-router non è valido, la domanda passa all'agente (con un WARNING nel log):
+router non è valido, la domanda passa all'agente (con un WARNING nel log).
+
+Prima di restituirla, un **revisore** controlla che la risposta finale dell'agente risponda alla
+domanda, a tutte le sue parti (output strutturato: motivo e `coerente` sì/no). Vede la domanda
+originale del turno, la risposta proposta e gli ultimi 6 messaggi di testo come contesto; non
+vede gli strumenti, quindi giudica la coerenza e non l'esattezza dei dati (una richiesta di
+chiarimento pertinente è coerente). Se la risposta non è coerente, il motivo entra nella
+cronologia come messaggio utente con `name="revisore"` e l'agente riprova; bozza rifiutata e
+indicazione restano in cronologia. Dopo `MAX_REVISIONI` nuovi tentativi (default 1) si
+restituisce l'ultima risposta, con un WARNING nel log. Il rifiuto del router e il messaggio di
+limite degli strumenti non vengono revisionati; un output non valido del revisore vale
+«coerente» (WARNING nel log):
 
 ```
-START -> router --conversazione--> modello <-> strumenti -> END
-                \--fuori_ambito--> rifiuto -> END
+START -> router --conversazione--> modello <-> strumenti
+                |                     | risposta finale
+                |                     v
+                |                  revisore --coerente / limite--> END
+                |                     '--non coerente--> indicazione -> modello
+                '--fuori_ambito--> rifiuto -> END
 ```
 
 Gli strumenti si possono raggiungere con varianti di integrazione diverse, scelte da
@@ -90,6 +105,8 @@ Struttura:
 - `src/assistente/note.py`: strumento note persistenti (SQLite);
 - `src/assistente/meteo.py`: strumento meteo (Open-Meteo, via `httpx`);
 - `src/assistente/router.py`: router (ambito della domanda, output strutturato);
+- `src/assistente/revisore.py`: revisore (coerenza della risposta, output strutturato);
+- `src/assistente/contesto.py`: finestra dei messaggi di testo usata da router e revisore;
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -120,7 +137,8 @@ Variabili:
 | `LMSTUDIO_BASE_URL` | indirizzo del server, es. `http://localhost:1234/v1` |
 | `LMSTUDIO_MODEL` | identificativo del modello, così come lo restituisce il server |
 | `AMBITO_AGENTE` | obbligatoria: descrizione di che cosa fa l'assistente, usata dal router (testo di esempio in `.env.example`, fra virgolette) |
-| `MAX_PASSAGGI_STRUMENTO` | passaggi massimi di strumento per domanda (default 3) |
+| `MAX_PASSAGGI_STRUMENTO` | passaggi massimi di strumento per domanda (default 3), contati su tutti i tentativi |
+| `MAX_REVISIONI` | nuovi tentativi che il revisore può chiedere per domanda (default 1) |
 | `LOG_LEVEL` | livello dei log su stderr (default `INFO`) |
 | `VARIANTE_STRUMENTI` | `locale` (default), `http` oppure `mcp` |
 | `STRUMENTI_HTTP_URL` | indirizzo del servizio strumenti, obbligatorio con `http`, es. `http://localhost:8001` |
@@ -288,6 +306,13 @@ modello`, poi `router categoria=fuori_ambito ... -> rifiuto` seguito da `rifiuto
 riga `agente:`; la seconda risposta è il messaggio di rifiuto fisso. Le prove reali
 `test_router_*` controllano gli stessi log; tutte le altre prove reali passano dal router, quindi
 verificano anche che non rifiuti domande valide.
+Per il revisore: chiedi «Che ore sono a Tokyo e quanto fa (17 + 4) * 3?». Sui log deve
+comparire `revisore coerente=sì ... -> fine` se la risposta copre entrambe le parti, oppure
+`revisore coerente=no motivo=... -> agente (revisione 1/1)` seguito da una nuova chiamata
+all'agente. Il modello vero non si può costringere a una risposta parziale: il ciclo rifiuto →
+nuova risposta è provato dai test simulati, da `test_revisore_rifiuta_una_risposta_parziale`
+(revisore vero su una risposta preparata) e da `test_agente_riprova_dopo_l_indicazione_del_revisore`
+(agente vero che riceve l'indicazione).
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 
@@ -306,6 +331,10 @@ solo queste prove lo fanno.
   spiega la scelta. Se capita spesso per un tipo di domanda, descrivilo meglio in
   `AMBITO_AGENTE`. Con `output del router non valido` nel log, il modello non ha prodotto una
   classificazione e la domanda è passata comunque all'agente.
+- **Risposta rifiutata dal revisore**: nel log `revisore coerente=no motivo=...` spiega il
+  rifiuto. `limite di N revisioni raggiunto` (WARNING) indica che anche l'ultima risposta non
+  è stata giudicata coerente ed è stata restituita comunque. Ogni revisione costa almeno due
+  chiamate al modello: con un modello lento si può tenere `MAX_REVISIONI=1`.
 - **Servizio strumenti spento (variante `http`)**: l'assistente non si blocca; lo strumento
   restituisce al modello «Errore: servizio strumenti non raggiungibile su ...», e il modello
   lo riferisce. Avvia il servizio (o, in Docker, usa `--profile http`).

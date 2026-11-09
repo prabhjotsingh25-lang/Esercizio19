@@ -18,6 +18,7 @@ class Configurazione:
     strumenti_http_url: str | None = None
     strumenti_mcp_url: str | None = None
     ambito: str = ""  # cosa fa l'assistente: il router lo usa per le domande fuori ambito
+    max_revisioni: int = 1  # nuovi tentativi chiesti dal revisore per ogni domanda
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -27,18 +28,16 @@ def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
     return valore
 
 
-def _max_passaggi(env: Mapping[str, str]) -> int:
-    grezzo = env.get("MAX_PASSAGGI_STRUMENTO", "").strip()
+def _intero_positivo(env: Mapping[str, str], nome: str, default: int) -> int:
+    grezzo = env.get(nome, "").strip()
     if not grezzo:
-        return 3
+        return default
     try:
         valore = int(grezzo)
     except ValueError:
         valore = 0
     if valore < 1:
-        raise ErroreConfigurazione(
-            f"MAX_PASSAGGI_STRUMENTO deve essere un intero >= 1 (ricevuto: {grezzo!r})"
-        )
+        raise ErroreConfigurazione(f"{nome} deve essere un intero >= 1 (ricevuto: {grezzo!r})")
     return valore
 
 
@@ -80,10 +79,11 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
     return Configurazione(
         base_url=_obbligatoria(env, "LMSTUDIO_BASE_URL"),
         modello=_obbligatoria(env, "LMSTUDIO_MODEL"),
-        max_passaggi=_max_passaggi(env),
+        max_passaggi=_intero_positivo(env, "MAX_PASSAGGI_STRUMENTO", 3),
         log_level=_log_level(env),
         variante=variante,
         strumenti_http_url=_obbligatoria(env, "STRUMENTI_HTTP_URL") if variante == "http" else None,
         strumenti_mcp_url=_obbligatoria(env, "STRUMENTI_MCP_URL") if variante == "mcp" else None,
         ambito=_obbligatoria(env, "AMBITO_AGENTE"),
+        max_revisioni=_intero_positivo(env, "MAX_REVISIONI", 1),
     )

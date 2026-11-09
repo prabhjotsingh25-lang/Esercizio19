@@ -2,7 +2,11 @@ from finti import ModelloFinto, chiamata, orologio
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 
-from assistente.grafo import MESSAGGIO_LIMITE, MESSAGGIO_SISTEMA, costruisci_grafo, limite_ricorsione, scegli_prossimo
+from assistente.grafo import (
+    MESSAGGIO_LIMITE, MESSAGGIO_RIFIUTO, MESSAGGIO_SISTEMA, costruisci_grafo, limite_ricorsione,
+    scegli_dopo_router, scegli_prossimo)
+from assistente.router import Classificazione
+from assistente.sessione import Sessione
 
 
 def test_instradamento():
@@ -79,3 +83,60 @@ def test_prompt_di_sistema_identico_con_strumenti_diversi():
     primi = [_primo_messaggio_al_modello(s) for s in ([], [orologio], [orologio, altro])]
     assert all(isinstance(p, SystemMessage) for p in primi)
     assert {p.content for p in primi} == {MESSAGGIO_SISTEMA}
+
+
+# --- Router (step 1): risposte del router simulate, nessun modello per la classificazione ---
+
+def router_finto(categoria, motivo="motivo di prova", ricevuti=None):
+    """Router simulato: restituisce sempre la stessa classificazione e annota cosa riceve."""
+    def classifica(messaggi):
+        if ricevuti is not None:
+            ricevuti.append(list(messaggi))
+        return Classificazione(motivo=motivo, categoria=categoria)
+    return classifica
+
+
+def test_scegli_dopo_router():
+    assert scegli_dopo_router({"categoria": "conversazione"}) == "modello"
+    assert scegli_dopo_router({"categoria": "fuori_ambito"}) == "rifiuto"
+
+
+def test_router_conversazione_passa_all_agente(caplog):
+    caplog.set_level("INFO")
+    ricevuti = []
+    m = ModelloFinto(risposte=[chiamata("Asia/Tokyo", "1"), AIMessage("A Tokyo sono le 18:30.")])
+    router = router_finto("conversazione", "chiede l'ora, che è nell'ambito", ricevuti)
+    out = costruisci_grafo(m, [orologio], 3, router=router).invoke(
+        {"messages": [HumanMessage("Che ore sono a Tokyo?")], "passaggi": 0})
+    assert ricevuti[0][-1].content == "Che ore sono a Tokyo?"
+    assert out["messages"][-1].content == "A Tokyo sono le 18:30."
+    assert out["passaggi"] == 1 and len(m.ricevuti) == 2  # l'agente ha usato lo strumento
+    assert ("router categoria=conversazione motivo=chiede l'ora, che è nell'ambito -> agente"
+            in caplog.text)
+    assert "agente: chiamata al modello" in caplog.text
+
+
+def test_router_fuori_ambito_rifiuta_senza_chiamare_l_agente(caplog):
+    caplog.set_level("DEBUG")
+    m = ModelloFinto(risposte=[])  # se l'agente venisse chiamato: IndexError
+    router = router_finto("fuori_ambito", "chiede una poesia")
+    out = costruisci_grafo(m, [orologio], 3, router=router).invoke(
+        {"messages": [HumanMessage("Scrivimi una poesia sul mare")], "passaggi": 0})
+    assert [type(x) for x in out["messages"]] == [HumanMessage, AIMessage]
+    assert out["messages"][-1].content == MESSAGGIO_RIFIUTO
+    assert m.ricevuti == [] and out["passaggi"] == 0
+    assert "router categoria=fuori_ambito motivo=chiede una poesia -> rifiuto" in caplog.text
+    assert "agente:" not in caplog.text and "strumento passaggio" not in caplog.text
+
+
+def test_rifiuto_resta_in_cronologia_e_il_turno_dopo_riparte_dal_router():
+    categorie = iter(["fuori_ambito", "conversazione"])
+    m = ModelloFinto(risposte=[AIMessage("Ciao!")])
+    grafo = costruisci_grafo(m, [orologio], 3,
+                             router=lambda messaggi: Classificazione(motivo="x",
+                                                                     categoria=next(categorie)))
+    s = Sessione(grafo, 3)
+    assert s.chiedi("Scrivimi una poesia") == MESSAGGIO_RIFIUTO
+    assert s.chiedi("Ciao") == "Ciao!"
+    assert [x.content for x in s.cronologia] == [
+        "Scrivimi una poesia", MESSAGGIO_RIFIUTO, "Ciao", "Ciao!"]

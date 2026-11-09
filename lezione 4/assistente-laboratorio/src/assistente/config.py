@@ -17,6 +17,7 @@ class Configurazione:
     variante: str = "locale"
     strumenti_http_url: str | None = None
     strumenti_mcp_url: str | None = None
+    ambito: str = ""  # cosa fa l'assistente: il router lo usa per le domande fuori ambito
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -84,4 +85,5 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         variante=variante,
         strumenti_http_url=_obbligatoria(env, "STRUMENTI_HTTP_URL") if variante == "http" else None,
         strumenti_mcp_url=_obbligatoria(env, "STRUMENTI_MCP_URL") if variante == "mcp" else None,
+        ambito=_obbligatoria(env, "AMBITO_AGENTE"),
     )

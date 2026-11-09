@@ -46,6 +46,19 @@ programma esegue davvero:
 
 La cronologia vive solo per la durata della sessione.
 
+Prima dell'agente un **router** decide se la domanda rientra nell'ambito dell'assistente,
+descritto in configurazione (`AMBITO_AGENTE`). Il router usa lo stesso modello con output
+strutturato (motivo e categoria `conversazione` / `fuori_ambito`) e vede l'ambito, gli ultimi
+6 messaggi di testo della conversazione e la domanda; non vede gli strumenti e non decide se
+servono, lo fa l'agente come prima. Le domande fuori ambito ricevono un rifiuto fisso senza
+che l'agente venga chiamato; domanda e rifiuto restano nella cronologia. Se l'output del
+router non è valido, la domanda passa all'agente (con un WARNING nel log):
+
+```
+START -> router --conversazione--> modello <-> strumenti -> END
+                \--fuori_ambito--> rifiuto -> END
+```
+
 Gli strumenti si possono raggiungere con varianti di integrazione diverse, scelte da
 configurazione (`VARIANTE_STRUMENTI`); all'agente ne viene esposta una sola per volta:
 
@@ -76,6 +89,7 @@ Struttura:
 - `src/assistente/inventario.py` e `dati/catalogo.csv`: strumento catalogo locale;
 - `src/assistente/note.py`: strumento note persistenti (SQLite);
 - `src/assistente/meteo.py`: strumento meteo (Open-Meteo, via `httpx`);
+- `src/assistente/router.py`: router (ambito della domanda, output strutturato);
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -105,6 +119,7 @@ Variabili:
 | --- | --- |
 | `LMSTUDIO_BASE_URL` | indirizzo del server, es. `http://localhost:1234/v1` |
 | `LMSTUDIO_MODEL` | identificativo del modello, così come lo restituisce il server |
+| `AMBITO_AGENTE` | obbligatoria: descrizione di che cosa fa l'assistente, usata dal router (testo di esempio in `.env.example`, fra virgolette) |
 | `MAX_PASSAGGI_STRUMENTO` | passaggi massimi di strumento per domanda (default 3) |
 | `LOG_LEVEL` | livello dei log su stderr (default `INFO`) |
 | `VARIANTE_STRUMENTI` | `locale` (default), `http` oppure `mcp` |
@@ -267,6 +282,12 @@ Per il meteo: chiedi «Che tempo farà domani a Roma?»; sui log deve comparire 
 risposta deve usare la riga «(domani)». Con «Che tempo fa a Montefracassone?» (luogo
 inesistente) lo strumento risponde «Errore: luogo ... non trovato» e il modello non deve
 inventare temperature.
+Per il router: chiedi «Che ore sono a Tokyo?» e poi «Scrivimi una poesia sul mare.». Sui log
+deve comparire `router categoria=conversazione ... -> agente` seguito da `agente: chiamata al
+modello`, poi `router categoria=fuori_ambito ... -> rifiuto` seguito da `rifiuto: ...` e nessuna
+riga `agente:`; la seconda risposta è il messaggio di rifiuto fisso. Le prove reali
+`test_router_*` controllano gli stessi log; tutte le altre prove reali passano dal router, quindi
+verificano anche che non rifiuti domande valide.
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 
@@ -279,8 +300,12 @@ solo queste prove lo fanno.
   identificativo sbagliato quindi può passare inosservato: se il modello che risponde non è
   quello atteso, confronta `LMSTUDIO_MODEL` con `Invoke-RestMethod http://localhost:1234/v1/models`.
 - **Configurazione mancante**: l'avvio termina con «Configurazione non valida: ...» (codice 2);
-  controlla `.env`. Con `VARIANTE_STRUMENTI=http` serve anche `STRUMENTI_HTTP_URL`, con `mcp`
+  controlla `.env` (serve anche `AMBITO_AGENTE`: copiala da `.env.example`). Con `VARIANTE_STRUMENTI=http` serve anche `STRUMENTI_HTTP_URL`, con `mcp`
   serve `STRUMENTI_MCP_URL`.
+- **Domanda valida rifiutata dal router**: nel log `router categoria=fuori_ambito motivo=...`
+  spiega la scelta. Se capita spesso per un tipo di domanda, descrivilo meglio in
+  `AMBITO_AGENTE`. Con `output del router non valido` nel log, il modello non ha prodotto una
+  classificazione e la domanda è passata comunque all'agente.
 - **Servizio strumenti spento (variante `http`)**: l'assistente non si blocca; lo strumento
   restituisce al modello «Errore: servizio strumenti non raggiungibile su ...», e il modello
   lo riferisce. Avvia il servizio (o, in Docker, usa `--profile http`).

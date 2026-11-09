@@ -1,12 +1,17 @@
-"""Grafo LangGraph: nodi `modello`, `strumenti` e `limite`, con instradamento esplicito."""
+"""Grafo LangGraph: nodi `router`, `rifiuto`, `modello`, `strumenti` e `limite`.
+
+L'instradamento è esplicito: archi condizionali dopo il router e dopo il modello.
+"""
 import logging
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, NotRequired, TypedDict
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, AnyMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
+
+from assistente.router import Router
 
 log = logging.getLogger("assistente.grafo")
 
@@ -26,12 +31,22 @@ MESSAGGIO_LIMITE = (
     "Ho raggiunto il limite di passaggi dello strumento per questa domanda "
     "e mi sono fermato. Prova a riformulare la richiesta."
 )
+MESSAGGIO_RIFIUTO = (
+    "Mi dispiace, questa richiesta è fuori dal mio ambito. Posso aiutarti con orari, "
+    "scadenze, calcoli e conversioni, catalogo, note e meteo: chiedimi pure."
+)
 _NON_ESEGUITO = "Non eseguito: limite di passaggi raggiunto."
 
 
 class Stato(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     passaggi: int
+    categoria: NotRequired[str]  # decisa dal router: conversazione o fuori_ambito
+
+
+def scegli_dopo_router(stato: Stato) -> Literal["modello", "rifiuto"]:
+    """Dopo il router: la conversazione va all'agente, il resto al rifiuto."""
+    return "rifiuto" if stato["categoria"] == "fuori_ambito" else "modello"
 
 
 def scegli_prossimo(stato: Stato, max_passaggi: int) -> Literal["strumenti", "limite", "__end__"]:
@@ -47,14 +62,18 @@ def limite_ricorsione(max_passaggi: int) -> int:
     return 2 * max_passaggi + 5
 
 
-def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_passaggi: int):
-    """Compila il grafo: START -> modello -> (strumenti -> modello | limite -> END | END)."""
+def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_passaggi: int,
+                     router: Router | None = None):
+    """Compila il grafo: START -> modello -> (strumenti -> modello | limite -> END | END).
+
+    Con un router: START -> router -> (modello -> ... | rifiuto -> END).
+    """
     modello_con_strumenti = modello.bind_tools(strumenti)
     per_nome = {s.name: s for s in strumenti}
 
     def nodo_modello(stato: Stato) -> dict:
         messaggi = [SystemMessage(MESSAGGIO_SISTEMA), *stato["messages"]]
-        log.debug("chiamata al modello con %d messaggi", len(messaggi))
+        log.info("agente: chiamata al modello con %d messaggi", len(messaggi))
         risposta = modello_con_strumenti.invoke(messaggi)
         log.debug("risposta del modello: %r", risposta)
         return {"messages": [risposta]}
@@ -83,11 +102,29 @@ def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_pass
                   for c in stato["messages"][-1].tool_calls]
         return {"messages": [*chiuse, AIMessage(MESSAGGIO_LIMITE)]}
 
+    def nodo_router(stato: Stato) -> dict:
+        esito = router(stato["messages"])
+        destinazione = "rifiuto" if esito.categoria == "fuori_ambito" else "agente"
+        log.info("router categoria=%s motivo=%s -> %s", esito.categoria, esito.motivo, destinazione)
+        return {"categoria": esito.categoria}
+
+    def nodo_rifiuto(stato: Stato) -> dict:
+        log.info("rifiuto: domanda fuori ambito, l'agente non viene chiamato")
+        return {"messages": [AIMessage(MESSAGGIO_RIFIUTO)]}
+
     grafo = StateGraph(Stato)
     grafo.add_node("modello", nodo_modello)
     grafo.add_node("strumenti", nodo_strumenti)
     grafo.add_node("limite", nodo_limite)
-    grafo.add_edge(START, "modello")
+    if router is None:
+        grafo.add_edge(START, "modello")
+    else:
+        grafo.add_node("router", nodo_router)
+        grafo.add_node("rifiuto", nodo_rifiuto)
+        grafo.add_edge(START, "router")
+        grafo.add_conditional_edges("router", scegli_dopo_router,
+                                    {"modello": "modello", "rifiuto": "rifiuto"})
+        grafo.add_edge("rifiuto", END)
     grafo.add_conditional_edges(
         "modello", lambda stato: scegli_prossimo(stato, max_passaggi),
         {"strumenti": "strumenti", "limite": "limite", "__end__": END})

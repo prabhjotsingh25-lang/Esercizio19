@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, ToolMessage
 
 from assistente.config import ErroreConfigurazione, carica_configurazione
-from assistente.grafo import costruisci_grafo
+from assistente.grafo import MESSAGGIO_RIFIUTO, costruisci_grafo
 from assistente.modello import crea_modello
+from assistente.router import crea_router
 from assistente.sessione import Sessione
 from assistente.varianti import strumenti_per_variante
 
@@ -27,7 +28,9 @@ def sessione(tmp_path, monkeypatch):
     except ErroreConfigurazione as errore:
         pytest.skip(f"Configurazione mancante: {errore}")
     strumenti = strumenti_per_variante(config)
-    grafo = costruisci_grafo(crea_modello(config), strumenti, config.max_passaggi)
+    modello = crea_modello(config)
+    grafo = costruisci_grafo(modello, strumenti, config.max_passaggi,
+                             router=crea_router(modello, config.ambito))
     return Sessione(grafo, config.max_passaggi)
 
 
@@ -144,3 +147,18 @@ def test_meteo_luogo_inesistente_non_inventa(sessione):
     assert risultati, "il modello ha risposto senza consultare il servizio meteo"
     assert all(r.startswith("Errore:") for r in risultati), f"risultato inatteso: {risultati}"
     assert "°" not in risposta, f"temperatura inventata nella risposta: {risposta!r}"
+
+
+def test_router_domanda_in_ambito_passa_all_agente(sessione, caplog):
+    caplog.set_level("INFO", logger="assistente")
+    sessione.chiedi("Che ore sono a Tokyo?")
+    assert "router categoria=conversazione" in caplog.text, caplog.text
+    assert "agente: chiamata al modello" in caplog.text
+
+
+def test_router_domanda_fuori_ambito_rifiutata(sessione, caplog):
+    caplog.set_level("INFO", logger="assistente")
+    risposta = sessione.chiedi("Scrivimi una poesia sul mare.")
+    assert "router categoria=fuori_ambito" in caplog.text, caplog.text
+    assert risposta == MESSAGGIO_RIFIUTO
+    assert "agente:" not in caplog.text, "il nodo agente è stato eseguito"

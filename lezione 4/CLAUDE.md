@@ -3,7 +3,7 @@
 Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
-Struttura: `src/assistente/` (config, grafo, sessione, modello, cli, `__main__`; strumenti in
+Struttura: `src/assistente/` (config, router, grafo, sessione, modello, cli, `__main__`; strumenti in
 moduli propri; `catalogo`, `varianti` e un modulo per variante di integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
@@ -28,11 +28,16 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - conserva la cronologia della conversazione per la durata della sessione (nessuna persistenza);
 - offre uno strumento orologio con fuso orario esplicito, richiesto dal modello tramite tool calling
   ed eseguito davvero dal programma;
+- prima dell'agente, un router rifiuta le domande fuori dall'ambito descritto in `AMBITO_AGENTE`;
 - si avvia anche con Docker Compose.
 
 ## Confini
-- Implementare solo i requisiti concordati. Workflow e RAG arriveranno nelle lezioni
-  successive: non anticiparli.
+- Implementare solo i requisiti concordati. RAG arriverà nelle lezioni successive: non anticiparlo.
+- Evoluzione in 9 step (router, revisore, riassunto della cronologia, resource, prompt MCP,
+  agente come servizio HTTP, back-end con PostgreSQL, front-end, Docker Compose): uno per volta,
+  senza anticipare i successivi; per ogni step specifica e piano approvati prima del codice,
+  evidenze nei log o nei test, poi commit proposto e attesa di «avanti». Si estende il progetto
+  esistente, non lo si riscrive.
 - Lezione 5 (Blocco 5, MCP e strumenti condivisi): si aggiungono sei strumenti, uno alla volta,
   in tre varianti di integrazione: 01 chiamata locale, 02 servizio FastAPI con wrapper HTTP,
   03 server FastMCP con client/adattatore. All'agente si espone una sola variante per volta,

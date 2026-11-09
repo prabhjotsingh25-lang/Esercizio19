@@ -10,6 +10,7 @@ from langgraph.errors import GraphRecursionError
 from assistente.config import ErroreConfigurazione, carica_configurazione
 from assistente.grafo import costruisci_grafo
 from assistente.modello import crea_modello
+from assistente.router import crea_router
 from assistente.sessione import Sessione
 from assistente.varianti import strumenti_per_variante
 
@@ -63,6 +64,8 @@ def main() -> int:
     strumenti = strumenti_per_variante(config)
     logging.getLogger("assistente").info("variante strumenti: %s (%s)", config.variante,
                                          ", ".join(s.name for s in strumenti))
-    grafo = costruisci_grafo(crea_modello(config), strumenti, config.max_passaggi)
+    modello = crea_modello(config)
+    grafo = costruisci_grafo(modello, strumenti, config.max_passaggi,
+                             router=crea_router(modello, config.ambito))
     esegui(Sessione(grafo, config.max_passaggi), config.base_url)
     return 0

@@ -7,9 +7,9 @@ from assistente.grafo import limite_ricorsione
 class Sessione:
     """Tiene la cronologia della conversazione per la durata del processo."""
 
-    def __init__(self, grafo, max_passaggi: int):
+    def __init__(self, grafo, max_passaggi: int, max_revisioni: int = 0):
         self._grafo = grafo
-        self._config = {"recursion_limit": limite_ricorsione(max_passaggi)}
+        self._config = {"recursion_limit": limite_ricorsione(max_passaggi, max_revisioni)}
         self.cronologia: list[BaseMessage] = []
 
     def chiedi(self, testo: str) -> str:
@@ -18,7 +18,7 @@ class Sessione:
         La cronologia cambia solo se l'invocazione riesce; le eccezioni passano al chiamante.
         """
         uscita = self._grafo.invoke(
-            {"messages": [*self.cronologia, HumanMessage(testo)], "passaggi": 0},
+            {"messages": [*self.cronologia, HumanMessage(testo)], "passaggi": 0, "revisioni": 0},
             config=self._config)
         self.cronologia = list(uscita["messages"])
         return self.cronologia[-1].content

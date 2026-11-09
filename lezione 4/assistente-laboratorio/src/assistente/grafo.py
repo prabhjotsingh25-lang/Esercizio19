@@ -1,6 +1,6 @@
-"""Grafo LangGraph: nodi `router`, `rifiuto`, `modello`, `strumenti` e `limite`.
+"""Grafo LangGraph: nodi `router`, `rifiuto`, `modello`, `strumenti`, `limite` e `revisore`.
 
-L'instradamento è esplicito: archi condizionali dopo il router e dopo il modello.
+L'instradamento è esplicito: archi condizionali dopo il router, il modello e il revisore.
 """
 import logging
 from typing import Annotated, Literal, NotRequired, TypedDict
@@ -11,6 +11,8 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
+from assistente.contesto import e_indicazione
+from assistente.revisore import Revisore, indicazione
 from assistente.router import Router
 
 log = logging.getLogger("assistente.grafo")
@@ -42,11 +44,17 @@ class Stato(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     passaggi: int
     categoria: NotRequired[str]  # decisa dal router: conversazione o fuori_ambito
+    revisioni: NotRequired[int]  # nuovi tentativi chiesti dal revisore in questo turno
 
 
 def scegli_dopo_router(stato: Stato) -> Literal["modello", "rifiuto"]:
     """Dopo il router: la conversazione va all'agente, il resto al rifiuto."""
     return "rifiuto" if stato["categoria"] == "fuori_ambito" else "modello"
+
+
+def scegli_dopo_revisore(stato: Stato) -> Literal["modello", "__end__"]:
+    """Dopo il revisore: se ha lasciato un'indicazione l'agente riprova, altrimenti fine."""
+    return "modello" if e_indicazione(stato["messages"][-1]) else "__end__"
 
 
 def scegli_prossimo(stato: Stato, max_passaggi: int) -> Literal["strumenti", "limite", "__end__"]:
@@ -57,16 +65,22 @@ def scegli_prossimo(stato: Stato, max_passaggi: int) -> Literal["strumenti", "li
     return "limite" if stato["passaggi"] >= max_passaggi else "strumenti"
 
 
-def limite_ricorsione(max_passaggi: int) -> int:
-    """Limite di ricorsione di LangGraph, con margine rispetto ai passaggi consentiti."""
-    return 2 * max_passaggi + 5
+def limite_ricorsione(max_passaggi: int, max_revisioni: int = 0) -> int:
+    """Limite di ricorsione di LangGraph, con margine rispetto a passaggi e revisioni consentiti.
+
+    Ogni passaggio di strumento costa 2 nodi (strumenti, modello), ogni revisione 2 (revisore,
+    modello); il margine copre router, primo modello, ultimo revisore e limite.
+    """
+    return 2 * max_passaggi + 2 * max_revisioni + 5
 
 
 def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_passaggi: int,
-                     router: Router | None = None):
+                     router: Router | None = None, revisore: Revisore | None = None,
+                     max_revisioni: int = 1):
     """Compila il grafo: START -> modello -> (strumenti -> modello | limite -> END | END).
 
     Con un router: START -> router -> (modello -> ... | rifiuto -> END).
+    Con un revisore la risposta finale passa da lui: revisore -> (END | modello).
     """
     modello_con_strumenti = modello.bind_tools(strumenti)
     per_nome = {s.name: s for s in strumenti}
@@ -112,6 +126,21 @@ def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_pass
         log.info("rifiuto: domanda fuori ambito, l'agente non viene chiamato")
         return {"messages": [AIMessage(MESSAGGIO_RIFIUTO)]}
 
+    def nodo_revisore(stato: Stato) -> dict:
+        esito = revisore(stato["messages"])
+        revisioni = stato.get("revisioni", 0)
+        if esito.coerente:
+            log.info("revisore coerente=sì motivo=%s -> fine", esito.motivo)
+            return {"revisioni": revisioni}
+        if revisioni >= max_revisioni:
+            log.info("revisore coerente=no motivo=%s", esito.motivo)
+            log.warning("limite di %d revisioni raggiunto: restituisco l'ultima risposta",
+                        max_revisioni)
+            return {"revisioni": revisioni}
+        log.info("revisore coerente=no motivo=%s -> agente (revisione %d/%d)",
+                 esito.motivo, revisioni + 1, max_revisioni)
+        return {"messages": [indicazione(esito.motivo)], "revisioni": revisioni + 1}
+
     grafo = StateGraph(Stato)
     grafo.add_node("modello", nodo_modello)
     grafo.add_node("strumenti", nodo_strumenti)
@@ -125,9 +154,14 @@ def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_pass
         grafo.add_conditional_edges("router", scegli_dopo_router,
                                     {"modello": "modello", "rifiuto": "rifiuto"})
         grafo.add_edge("rifiuto", END)
+    if revisore is not None:
+        grafo.add_node("revisore", nodo_revisore)
+        grafo.add_conditional_edges("revisore", scegli_dopo_revisore,
+                                    {"modello": "modello", "__end__": END})
     grafo.add_conditional_edges(
         "modello", lambda stato: scegli_prossimo(stato, max_passaggi),
-        {"strumenti": "strumenti", "limite": "limite", "__end__": END})
+        {"strumenti": "strumenti", "limite": "limite",
+         "__end__": END if revisore is None else "revisore"})
     grafo.add_edge("strumenti", "modello")
     grafo.add_edge("limite", END)
     return grafo.compile()

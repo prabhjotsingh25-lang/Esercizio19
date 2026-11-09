@@ -5,6 +5,7 @@ from langchain_core.tools import StructuredTool
 from assistente.grafo import (
     MESSAGGIO_LIMITE, MESSAGGIO_RIFIUTO, MESSAGGIO_SISTEMA, costruisci_grafo, limite_ricorsione,
     scegli_dopo_router, scegli_prossimo)
+from assistente.revisore import Revisione
 from assistente.router import Classificazione
 from assistente.sessione import Sessione
 
@@ -140,3 +141,113 @@ def test_rifiuto_resta_in_cronologia_e_il_turno_dopo_riparte_dal_router():
     assert s.chiedi("Ciao") == "Ciao!"
     assert [x.content for x in s.cronologia] == [
         "Scrivimi una poesia", MESSAGGIO_RIFIUTO, "Ciao", "Ciao!"]
+
+
+# --- Revisore (step 2): giudizi del revisore simulati ---
+
+def revisore_finto(*giudizi, ricevuti=None):
+    """Revisore simulato: restituisce i giudizi (coerente, motivo) in ordine, poi l'ultimo."""
+    elenco = list(giudizi)
+
+    def rivedi(messaggi):
+        if ricevuti is not None:
+            ricevuti.append(list(messaggi))
+        coerente, motivo = elenco.pop(0) if len(elenco) > 1 else elenco[0]
+        return Revisione(motivo=motivo, coerente=coerente)
+    return rivedi
+
+
+DUE_PARTI = "Che ore sono a Tokyo e quanto fa (17+4)*3?"
+
+
+def test_risposta_parziale_rifiutata_e_poi_completa(caplog):
+    caplog.set_level("INFO")
+    ricevuti = []
+    m = ModelloFinto(risposte=[AIMessage("A Tokyo sono le 18:30."),
+                               AIMessage("A Tokyo sono le 18:30 e (17+4)*3 fa 63.")])
+    revisore = revisore_finto((False, "manca il risultato di (17+4)*3"),
+                              (True, "risponde a entrambe le parti"), ricevuti=ricevuti)
+    out = costruisci_grafo(m, [orologio], 3, revisore=revisore).invoke(
+        {"messages": [HumanMessage(DUE_PARTI)], "passaggi": 0, "revisioni": 0})
+    contenuti = [x.content for x in out["messages"]]
+    assert contenuti[0] == DUE_PARTI and contenuti[1] == "A Tokyo sono le 18:30."
+    assert out["messages"][2].name == "revisore" and "manca il risultato" in contenuti[2]
+    assert contenuti[3] == "A Tokyo sono le 18:30 e (17+4)*3 fa 63." and len(contenuti) == 4
+    assert out["revisioni"] == 1 and len(ricevuti) == 2
+    assert m.ricevuti[1][-1].name == "revisore"  # l'agente riprova vedendo l'indicazione
+    assert ("revisore coerente=no motivo=manca il risultato di (17+4)*3 -> agente (revisione 1/1)"
+            in caplog.text)
+    assert "revisore coerente=sì motivo=risponde a entrambe le parti -> fine" in caplog.text
+
+
+def test_risposta_coerente_approvata_al_primo_passaggio(caplog):
+    caplog.set_level("INFO")
+    ricevuti = []
+    m = ModelloFinto(risposte=[chiamata("Asia/Tokyo", "1"), AIMessage("A Tokyo sono le 18:30.")])
+    out = costruisci_grafo(m, [orologio], 3,
+                           revisore=revisore_finto((True, "risponde"), ricevuti=ricevuti)).invoke(
+        {"messages": [HumanMessage("Che ore sono a Tokyo?")], "passaggi": 0, "revisioni": 0})
+    assert out["messages"][-1].content == "A Tokyo sono le 18:30."
+    assert len(ricevuti) == 1 and out["revisioni"] == 0
+    assert ricevuti[0][-1].content == "A Tokyo sono le 18:30."  # rivede la risposta finale
+    assert "revisore coerente=sì" in caplog.text and "revisore coerente=no" not in caplog.text
+
+
+def test_revisore_che_rifiuta_sempre_si_ferma_al_limite(caplog):
+    caplog.set_level("INFO")
+    ricevuti = []
+    m = ModelloFinto(risposte=[AIMessage("uno"), AIMessage("due"), AIMessage("tre")])
+    out = costruisci_grafo(m, [orologio], 3, max_revisioni=2,
+                           revisore=revisore_finto((False, "non va"), ricevuti=ricevuti)).invoke(
+        {"messages": [HumanMessage("?")], "passaggi": 0, "revisioni": 0})
+    assert out["messages"][-1].content == "tre"  # al limite: l'ultima risposta
+    assert len(m.ricevuti) == 3 and len(ricevuti) == 3 and out["revisioni"] == 2
+    assert [x.name for x in out["messages"] if isinstance(x, HumanMessage)] == [
+        None, "revisore", "revisore"]
+    assert "(revisione 1/2)" in caplog.text and "(revisione 2/2)" in caplog.text
+    assert "limite di 2 revisioni raggiunto: restituisco l'ultima risposta" in caplog.text
+    assert any(r.levelname == "WARNING" and "limite di 2 revisioni" in r.message
+               for r in caplog.records)
+
+
+def test_rifiuto_del_router_e_limite_strumenti_non_sono_revisionati():
+    ricevuti = []
+    revisore = revisore_finto((False, "non va"), ricevuti=ricevuti)
+    out = costruisci_grafo(ModelloFinto(risposte=[]), [orologio], 3, revisore=revisore,
+                           router=router_finto("fuori_ambito")).invoke(
+        {"messages": [HumanMessage("poesia")], "passaggi": 0, "revisioni": 0})
+    assert out["messages"][-1].content == MESSAGGIO_RIFIUTO
+    m = ModelloFinto(risposte=[chiamata("Asia/Tokyo", "1"), chiamata("Asia/Tokyo", "2")])
+    out = costruisci_grafo(m, [orologio], 1, revisore=revisore).invoke(
+        {"messages": [HumanMessage("?")], "passaggi": 0, "revisioni": 0})
+    assert out["messages"][-1].content == MESSAGGIO_LIMITE
+    assert ricevuti == []
+
+
+def test_passaggi_degli_strumenti_non_si_azzerano_al_nuovo_tentativo():
+    m = ModelloFinto(risposte=[chiamata("Asia/Tokyo", "1"), AIMessage("parziale"),
+                               chiamata("Asia/Tokyo", "2"), AIMessage("completa")])
+    out = costruisci_grafo(m, [orologio], 3,
+                           revisore=revisore_finto((False, "parziale"), (True, "ok"))).invoke(
+        {"messages": [HumanMessage("?")], "passaggi": 0, "revisioni": 0})
+    assert out["messages"][-1].content == "completa" and out["passaggi"] == 2
+
+
+def test_sessione_azzera_le_revisioni_a_ogni_turno():
+    m = ModelloFinto(risposte=[AIMessage("a1"), AIMessage("a2"), AIMessage("b1"), AIMessage("b2")])
+    giudizi = revisore_finto((False, "no"), (True, "sì"), (False, "no"), (True, "sì"))
+    s = Sessione(costruisci_grafo(m, [orologio], 3, revisore=giudizi), 3)
+    assert s.chiedi("a") == "a2"
+    assert s.chiedi("b") == "b2"  # con revisioni non azzerate, al limite resterebbe "b1"
+    assert [x.content for x in s.cronologia if x.name == "revisore"] != []  # restano in cronologia
+    assert len(s.cronologia) == 8
+
+
+def test_limite_di_ricorsione_basta_nel_caso_peggiore():
+    # router + strumento + revisore che rifiuta sempre: 9 nodi con 1 passaggio e 2 revisioni
+    m = ModelloFinto(risposte=[chiamata("Asia/Tokyo", "1"), AIMessage("a"), AIMessage("b"),
+                               AIMessage("c")])
+    grafo = costruisci_grafo(m, [orologio], 1, router=router_finto("conversazione"),
+                             revisore=revisore_finto((False, "no")), max_revisioni=2)
+    assert Sessione(grafo, 1, max_revisioni=2).chiedi("?") == "c"
+    assert limite_ricorsione(1, 2) == 11 and limite_ricorsione(3) == 11

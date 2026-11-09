@@ -4,13 +4,14 @@ from collections.abc import Callable, Sequence
 from typing import Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
+
+from assistente.contesto import FINESTRA, contesto_testuale
 
 log = logging.getLogger("assistente.router")
 
-# Messaggi di testo precedenti (domande e risposte, senza strumenti) che il router vede.
-FINESTRA = 6
+__all__ = ["FINESTRA", "Classificazione", "Router", "crea_router", "messaggi_per_router"]
 
 ISTRUZIONI_ROUTER = (
     "Sei il router di un assistente. Non rispondere alla domanda: classificala soltanto.\n"
@@ -33,24 +34,10 @@ class Classificazione(BaseModel):
 Router = Callable[[Sequence[BaseMessage]], Classificazione]
 
 
-def _testo(messaggio: BaseMessage) -> str | None:
-    """Testo di una domanda o di una risposta finale; None per strumenti e messaggi vuoti."""
-    if isinstance(messaggio, HumanMessage) or (
-            isinstance(messaggio, AIMessage) and not messaggio.tool_calls):
-        if isinstance(messaggio.content, str) and messaggio.content.strip():
-            return messaggio.content.strip()
-    return None
-
-
 def messaggi_per_router(messaggi: Sequence[BaseMessage], ambito: str) -> list[BaseMessage]:
     """Prompt del router: ambito, ultimi FINESTRA messaggi di testo e domanda da classificare."""
     *precedenti, domanda = messaggi
-    righe = []
-    for m in precedenti:
-        testo = _testo(m)
-        if testo is not None:
-            righe.append(f"{'Utente' if isinstance(m, HumanMessage) else 'Assistente'}: {testo}")
-    contesto = "\n".join(righe[-FINESTRA:]) or "(nessuna)"
+    contesto = contesto_testuale(precedenti)
     return [SystemMessage(ISTRUZIONI_ROUTER.format(ambito=ambito)),
             HumanMessage(f"Conversazione precedente:\n{contesto}\n\n"
                          f"Domanda da classificare:\n{domanda.content}")]

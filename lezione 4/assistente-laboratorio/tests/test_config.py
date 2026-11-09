@@ -89,3 +89,14 @@ def test_variante_mcp_senza_indirizzo(indirizzo):
 def test_ambito_letto_e_ripulito():
     c = carica_configurazione({**BASE, "AMBITO_AGENTE": "  orari e meteo  "})
     assert c.ambito == "orari e meteo"
+
+
+def test_max_revisioni_default_e_valore():
+    assert carica_configurazione(dict(BASE)).max_revisioni == 1
+    assert carica_configurazione({**BASE, "MAX_REVISIONI": " 2 "}).max_revisioni == 2
+
+
+@pytest.mark.parametrize("valore", ["due", "0", "-1"])
+def test_max_revisioni_non_valido(valore):
+    with pytest.raises(ErroreConfigurazione, match="MAX_REVISIONI"):
+        carica_configurazione({**BASE, "MAX_REVISIONI": valore})

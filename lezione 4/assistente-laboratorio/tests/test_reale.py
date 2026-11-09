@@ -3,11 +3,12 @@ import re
 
 import pytest
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from assistente.config import ErroreConfigurazione, carica_configurazione
 from assistente.grafo import MESSAGGIO_RIFIUTO, costruisci_grafo
 from assistente.modello import crea_modello
+from assistente.revisore import Revisione, crea_revisore
 from assistente.router import crea_router
 from assistente.sessione import Sessione
 from assistente.varianti import strumenti_per_variante
@@ -30,8 +31,10 @@ def sessione(tmp_path, monkeypatch):
     strumenti = strumenti_per_variante(config)
     modello = crea_modello(config)
     grafo = costruisci_grafo(modello, strumenti, config.max_passaggi,
-                             router=crea_router(modello, config.ambito))
-    return Sessione(grafo, config.max_passaggi)
+                             router=crea_router(modello, config.ambito),
+                             revisore=crea_revisore(modello),
+                             max_revisioni=config.max_revisioni)
+    return Sessione(grafo, config.max_passaggi, config.max_revisioni)
 
 
 def _strumenti_del_turno(sessione: Sessione) -> list[str]:
@@ -162,3 +165,57 @@ def test_router_domanda_fuori_ambito_rifiutata(sessione, caplog):
     assert "router categoria=fuori_ambito" in caplog.text, caplog.text
     assert risposta == MESSAGGIO_RIFIUTO
     assert "agente:" not in caplog.text, "il nodo agente è stato eseguito"
+
+
+DUE_PARTI = "Che ore sono a Tokyo e quanto fa (17 + 4) * 3?"
+
+
+@pytest.fixture
+def config_reale():
+    load_dotenv(".env", override=False)
+    try:
+        return carica_configurazione()
+    except ErroreConfigurazione as errore:
+        pytest.skip(f"Configurazione mancante: {errore}")
+
+
+def test_revisore_rifiuta_una_risposta_parziale(config_reale, caplog):
+    revisore = crea_revisore(crea_modello(config_reale))
+    esito = revisore([HumanMessage(DUE_PARTI), AIMessage("A Tokyo sono le 23:15.")])
+    print(f"revisore: coerente={esito.coerente} motivo={esito.motivo}")
+    assert esito.coerente is False, esito.motivo
+    assert "output del revisore non valido" not in caplog.text
+
+
+def test_revisore_approva_una_risposta_completa(config_reale, caplog):
+    revisore = crea_revisore(crea_modello(config_reale))
+    esito = revisore([HumanMessage(DUE_PARTI),
+                      AIMessage("A Tokyo sono le 23:15 e (17 + 4) * 3 fa 63.")])
+    print(f"revisore: coerente={esito.coerente} motivo={esito.motivo}")
+    assert esito.coerente is True, esito.motivo
+    assert "output del revisore non valido" not in caplog.text
+
+
+def test_agente_riprova_dopo_l_indicazione_del_revisore(config_reale, caplog):
+    # Revisore simulato che rifiuta la prima risposta: verifica che il modello vero accetti
+    # l'indicazione come messaggio utente con name="revisore" e riscriva la risposta.
+    caplog.set_level("INFO", logger="assistente")
+    giudizi = [Revisione(motivo="La risposta non indica il risultato di (17 + 4) * 3.",
+                         coerente=False),
+               Revisione(motivo="ok", coerente=True)]
+    modello = crea_modello(config_reale)
+    grafo = costruisci_grafo(modello, strumenti_per_variante(config_reale),
+                             config_reale.max_passaggi, revisore=lambda m: giudizi.pop(0))
+    sessione = Sessione(grafo, config_reale.max_passaggi, 1)
+    risposta = sessione.chiedi(DUE_PARTI)
+    nomi = [m.name for m in sessione.cronologia if isinstance(m, HumanMessage)]
+    assert nomi == [None, "revisore"], nomi
+    assert caplog.text.count("agente: chiamata al modello") >= 2
+    assert "63" in risposta, f"63 assente nella nuova risposta: {risposta!r}"
+
+
+def test_domanda_in_due_parti(sessione, caplog):
+    caplog.set_level("INFO", logger="assistente")
+    risposta = sessione.chiedi(DUE_PARTI)
+    assert "revisore coerente=" in caplog.text, caplog.text
+    assert "63" in risposta, f"63 assente nella risposta: {risposta!r}"

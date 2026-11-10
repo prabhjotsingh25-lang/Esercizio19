@@ -377,9 +377,31 @@ creato se manca): `.\.venv\Scripts\python.exe -m pytest -m postgres -v`.
 
 ## Avvio con Docker Compose
 
-LM Studio resta sull'host; il container lo raggiunge tramite `host.docker.internal`
+LM Studio resta sull'host; i container lo raggiungono tramite `host.docker.internal`
 (impostato in `compose.yaml`, che sovrascrive `LMSTUDIO_BASE_URL` del `.env`).
-Il `.env` serve comunque per `LMSTUDIO_MODEL`.
+Il `.env` serve comunque per `LMSTUDIO_MODEL`, `AMBITO_AGENTE` e `POSTGRES_PASSWORD`.
+
+### Applicazione completa (chat web)
+
+```powershell
+docker compose up -d --build        # postgres, agente, backend, frontend
+Invoke-RestMethod http://localhost:8080/stato
+start http://localhost:8090         # la chat nel browser
+docker compose down                 # ferma tutto; le chat restano nel volume pgdati
+```
+
+Servizi: `postgres` (postgres:16, volume `pgdati`, nessuna porta sull'host), `agente` (variante
+`locale`, nessuna porta sull'host), `backend` (`127.0.0.1:8080`) e `frontend`
+(`127.0.0.1:8090`). Nei container i servizi ascoltano su `0.0.0.0` e si parlano con i nomi di
+Compose (`http://agente:8000`, `postgres:5432`); `BACKEND_URL` e `FRONTEND_ORIGINE` invece sono
+indirizzi visti dal browser (`http://localhost:8080`, `http://localhost:8090`) e devono usare
+lo stesso nome (`localhost`), altrimenti il CORS blocca le richieste: apri la chat da
+`http://localhost:8090`, non da `127.0.0.1`. Il back-end parte quando PostgreSQL è pronto
+(healthcheck). Nei container non c'è un `preferenze.json`: si usano le preferenze predefinite
+(WARNING nel log). Questo PostgreSQL è separato da quello avviato a mano con `docker run`
+(porta 55432). Log: `docker compose logs -f backend agente`.
+
+### CLI nel container
 
 ```powershell
 docker compose build

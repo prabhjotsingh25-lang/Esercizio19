@@ -372,6 +372,13 @@ solo queste prove lo fanno.
 
 ## Diagnosi
 
+- **Calcolo fatto a mente invece che con lo strumento**: comportamento noto del modello piccolo
+  (`gemma-4-e2b`) quando ci sono le preferenze in cima al prompt di sistema. Misurato su tre
+  domande (12 * 7, 3 km in metri, 137 * 49): senza preferenze strumento usato 3 volte su 3, con
+  le preferenze 0-2 su 3 qualunque formulazione e posizione. Nel log manca la riga `strumento
+  passaggio=...`; il risultato di solito è giusto ma non è garantito. Con un modello più grande
+  il problema dovrebbe ridursi; un controllo nel revisore è in valutazione.
+
 - **Preferenze ignorate**: nel log a inizio sessione `preferenze: ... non disponibili (...):
   uso le predefinite` (WARNING) spiega il motivo: file assente, JSON o campo non valido (per
   esempio un fuso orario inesistente), server MCP non raggiungibile. In Docker, senza un file

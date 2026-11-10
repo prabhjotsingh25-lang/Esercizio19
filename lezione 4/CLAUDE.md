@@ -63,6 +63,18 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - Un branch `feat/<nome>` per task, creato sempre da `dev`; nessun worktree se non richiesto.
   Non toccare `main`.
 
+## Comportamenti noti
+- **Preferenze e strumenti con il modello piccolo** (`gemma-4-e2b`, misurato il 2026-11-10 su
+  «Quanto fa 12 * 7?», «Converti 3 km in metri.», «Quanto fa 137 * 49?»): senza preferenze
+  l'agente usa lo strumento 3 volte su 3; con il blocco delle preferenze in cima al prompt di
+  sistema 0-2 su 3, qualunque formulazione dello stile; con le preferenze in fondo 0 su 3 (la
+  posizione non conta). Di solito il risultato a mente è giusto, ma non sempre (una volta
+  «96»). L'ora usa sempre `ora_corrente`. Il testo dello stile sintetico è «risposta finale
+  breve ed essenziale (usa comunque gli strumenti)».
+  Possibile fix, da valutare dopo lo step 5 con specifica a parte: un controllo nel revisore
+  («la risposta contiene un calcolo o una conversione ma nel turno non c'è nessuno strumento →
+  rifai usando lo strumento»).
+
 ## Scelte tecniche
 - Python, codice sincrono e moduli piccoli, con una separazione semplice tra
   grafo, collegamento al modello, strumenti e interfaccia da terminale.

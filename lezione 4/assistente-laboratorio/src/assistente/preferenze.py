@@ -18,7 +18,7 @@ log = logging.getLogger("assistente.preferenze")
 URI_PREFERENZE = "utente://preferenze"
 PERCORSO_PREDEFINITO = Path("preferenze.json")
 LINGUE = {"it": "italiano", "en": "inglese", "fr": "francese", "de": "tedesco", "es": "spagnolo"}
-STILI = {"sintetico": "rispondi con una sola frase breve, senza spiegazioni",
+STILI = {"sintetico": "risposta finale breve ed essenziale (usa comunque gli strumenti)",
          "dettagliato": "rispondi in due o tre frasi: dai il risultato e spiega come lo hai "
                         "ottenuto (quale strumento o quale calcolo hai usato)"}
 

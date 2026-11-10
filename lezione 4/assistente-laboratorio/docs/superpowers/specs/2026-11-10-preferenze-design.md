@@ -52,3 +52,7 @@ legge una sola volta a inizio sessione e le mette in cima al prompt di sistema d
   rispettata («12 * 7 equals 84.»), lo stile no, perché il testo era vago. Il testo dello stile
   ora è concreto («una sola frase breve, senza spiegazioni» / «due o tre frasi: risultato e come
   lo hai ottenuto»): 13 contro 109 caratteri. Nessuna decisione cambia.
+- Fix trovato nello step 5: con «una sola frase breve, senza spiegazioni» l'agente rispondeva a
+  mente ai calcoli (strumento 0-1 volte su 3, contro 3 su 3 senza preferenze). Testo dello stile
+  sintetico ora: «risposta finale breve ed essenziale (usa comunque gli strumenti)». Il limite
+  resta in parte (0-2 su 3, posizione ininfluente): annotato come comportamento noto in CLAUDE.md.

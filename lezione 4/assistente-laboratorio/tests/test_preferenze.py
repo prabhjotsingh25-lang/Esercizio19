@@ -65,3 +65,12 @@ def test_lettore_rilegge_a_ogni_chiamata(tmp_path):
     assert leggi().lingua == "en"
     file.write_text('{"lingua": "fr"}', encoding="utf-8")
     assert leggi().lingua == "fr"  # /nuova rilegge il file
+
+
+def test_stile_sintetico_non_scoraggia_gli_strumenti():
+    # Regressione: «una sola frase breve, senza spiegazioni» faceva rispondere a mente il modello
+    # piccolo (calcolatrice usata 0-1 volte su 3). Il testo chiede brevità solo per la risposta
+    # finale e ricorda gli strumenti; il modello vero resta comunque non garantito (README).
+    testo = prompt_preferenze(PREDEFINITE)
+    assert "risposta finale breve ed essenziale (usa comunque gli strumenti)" in testo
+    assert "senza spiegazioni" not in testo

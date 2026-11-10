@@ -1,5 +1,6 @@
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-m 'not reale'"
-markers = ["reale: prove con LM Studio attivo, da attivare con -m reale"]
+addopts = "-m 'not reale and not postgres'"
+markers = ["reale: prove con LM Studio attivo, da attivare con -m reale",
+           "postgres: prove con PostgreSQL vero (DATABASE_URL in .env), da attivare con -m postgres"]

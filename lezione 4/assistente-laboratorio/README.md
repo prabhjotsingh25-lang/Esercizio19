@@ -104,6 +104,38 @@ cronologia contiene solo i turni recenti e il resto sta nel campo `riassunto`, d
 insieme. Questa cronologia passa sempre la validazione in ingresso (provato da
 `test_cronologia_dopo_una_revisione_si_rimanda_senza_422`).
 
+**Back-end con PostgreSQL.** `python -m assistente.backend` avvia su `BACKEND_HOST`:
+`BACKEND_PORTA` (default `127.0.0.1:8080`, nessuna autenticazione) il servizio che salva le
+conversazioni in PostgreSQL (`DATABASE_URL`, driver pg8000) e chiama l'agente su `AGENTE_URL`.
+Tabelle in `src/assistente/schema.sql`, create all'avvio se mancano. Per ogni conversazione:
+titolo (prime parole della prima domanda, senza chiamare il modello), preferenze (dal corpo di
+`POST /conversazioni` o lette una volta dalla fonte dell'host: resource MCP o file; si cambiano
+con `PUT /conversazioni/{id}/preferenze`), lo **stato dell'agente** (cronologia e riassunto,
+salvati così come li restituisce l'agente e rimandati al turno dopo) e lo **storico completo**
+dei messaggi (tabella `messaggi`, solo in aggiunta: la compressione dell'agente non lo tocca).
+`GET /conversazioni` dà titolo e data dell'ultimo messaggio, dal più recente.
+
+L'invio (`POST /conversazioni/{id}/messaggi`, `.../prompt`) è **sincrono**: salva la domanda,
+chiama l'agente, salva e restituisce domanda e risposta. Un turno può superare i 7 minuti:
+il back-end aspetta l'agente fino a `AGENTE_TIMEOUT` (default 900 s; connessione 10 s, così un
+agente spento si vede subito). **Front-end e proxy dovranno avere timeout alti** (almeno
+`AGENTE_TIMEOUT`), altrimenti si passerà allo streaming. Un solo turno alla volta per
+conversazione: un secondo invio riceve 409.
+
+Se l'agente non risponde o dà errore, **la domanda resta salvata** con `stato: "errore"` e il
+motivo in `errore` (da mostrare); non si aggiunge nessuna risposta e lo stato dell'agente non
+cambia. Codici: agente non raggiungibile 503, nessuna risposta entro il timeout 504, errori
+dell'agente con il loro codice e il messaggio preceduto da `agente:` (per esempio 503
+`agente: strumenti non disponibili: ...`). Per riprovare senza duplicare la domanda:
+`POST /conversazioni/{id}/riprova` rimanda l'ultima domanda in errore (stesso testo o stesso
+prompt); 409 se l'ultima domanda non è in errore. Una domanda nuova dopo un errore è permessa:
+quella in errore resta nello storico ma non va all'agente. Un prompt non valido (422) invece
+non viene salvato. Le domande rimaste `in_attesa` per un arresto del back-end passano a
+`errore` al riavvio, e si possono riprovare. Contratto: `/docs`, `/openapi.json` e
+`docs/openapi-backend.json` (rigenerabile con `python -m assistente.backend --openapi
+docs/openapi-backend.json`); verso l'agente il back-end usa solo percorsi e campi di
+`docs/openapi-agente.json`, verificati da un test.
+
 All'inizio di ogni turno un nodo **riassunto** controlla la lunghezza della cronologia: oltre
 `SOGLIA_RIASSUNTO` messaggi (default 20, strumenti compresi) i messaggi vecchi vengono tolti e
 sostituiti da un riassunto, e restano intatti almeno gli ultimi `MESSAGGI_RECENTI` (default 6).
@@ -174,7 +206,10 @@ Struttura:
 - `src/assistente/agente.py`: agente senza stato (turno sul grafo, strumenti usati, prompt),
   usato dal servizio e dalla CLI in-process;
 - `src/assistente/servizio_agente.py`: servizio HTTP dell'agente (FastAPI);
-- `src/assistente/cliente_agente.py`: client dell'API per la CLI (`AGENTE_URL`);
+- `src/assistente/cliente_agente.py`: client dell'API dell'agente (CLI e back-end);
+- `src/assistente/backend.py`: back-end FastAPI (conversazioni, turni sincroni, riprova);
+- `src/assistente/archivio.py` e `schema.sql`: archivio delle conversazioni (PostgreSQL con
+  pg8000, oppure in memoria per i test);
 - `src/assistente/preferenze.py`: preferenze dell'utente (schema, validazione, file, prompt);
 - `src/assistente/variante_mcp.py`: adattatore client MCP (variante 03);
 - `src/assistente/strumenti.py`: strumento orologio;
@@ -230,6 +265,9 @@ Variabili:
 | `PREFERENZE_FILE` | file JSON delle preferenze (default `preferenze.json`). Nella variante `mcp` conta quello del processo del server MCP |
 | `AGENTE_HOST`, `AGENTE_PORTA` | indirizzo d'ascolto del servizio dell'agente (default `127.0.0.1`, `8000`) |
 | `AGENTE_URL` | facoltativa: se c'è, la CLI usa l'API dell'agente a questo indirizzo |
+| `AGENTE_TIMEOUT` | secondi di attesa di una risposta dell'agente (default 900) |
+| `DATABASE_URL` | PostgreSQL del back-end, con la password (solo nel `.env`) |
+| `BACKEND_HOST`, `BACKEND_PORTA` | indirizzo d'ascolto del back-end (default `127.0.0.1`, `8080`) |
 | `NOTE_DB` | file SQLite delle note (default `note.sqlite`). Nelle varianti `http` e `mcp` conta quello del processo del servizio |
 
 L'identificativo del modello va letto dal server, non inventato:
@@ -301,6 +339,24 @@ $env:AGENTE_URL = "http://127.0.0.1:8000"; .\.venv\Scripts\python.exe -m assiste
 ```
 
 Documentazione interattiva su `http://127.0.0.1:8000/docs`.
+
+### Back-end con PostgreSQL
+
+PostgreSQL 16 in un container (porta host 55432: la 5432 può essere già occupata); la password
+è quella di `POSTGRES_PASSWORD` nel `.env`, la stessa di `DATABASE_URL`:
+
+```powershell
+docker run -d --name assistente-postgres -e POSTGRES_USER=assistente -e POSTGRES_DB=assistente `
+  -e POSTGRES_PASSWORD=<la password del .env> -p 127.0.0.1:55432:5432 `
+  -v assistente-pg:/var/lib/postgresql/data postgres:16
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.servizio_agente   # agente
+$env:AGENTE_URL = "http://127.0.0.1:8000"; .\.venv\Scripts\python.exe -m assistente.backend
+Invoke-RestMethod http://127.0.0.1:8080/stato
+```
+
+Il driver è pg8000 (solo Python): psycopg 3 con la sua DLL è bloccato su questo Windows da un
+criterio di controllo delle applicazioni. Prove con PostgreSQL vero (database `assistente_test`,
+creato se manca): `.\.venv\Scripts\python.exe -m pytest -m postgres -v`.
 
 ## Avvio con Docker Compose
 
@@ -442,6 +498,12 @@ Una risposta simulata nei test non dimostra che il modello sappia usare lo strum
 solo queste prove lo fanno.
 
 ## Diagnosi
+
+- **Back-end**: `GET /stato` dice se database e agente rispondono (con i componenti
+  dell'agente). Una domanda con `stato: "errore"` mostra in `errore` il motivo (agente spento,
+  timeout, strumenti non disponibili); si riprova con `POST /conversazioni/{id}/riprova`.
+  «database non raggiungibile» all'avvio o in `/stato`: controlla il container
+  (`docker ps`) e `DATABASE_URL`.
 
 - **Servizio dell'agente**: `GET /stato` dice quale componente non risponde (`modello` o
   `strumenti`, con il motivo). La CLI client scrive «Non riesco a raggiungere l'agente su ...»

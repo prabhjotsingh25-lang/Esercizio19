@@ -140,3 +140,18 @@ def test_agente_http_default_e_valori():
 def test_agente_porta_non_valida(valore):
     with pytest.raises(ErroreConfigurazione, match="AGENTE_PORTA"):
         carica_configurazione({**BASE, "AGENTE_PORTA": valore})
+
+
+def test_backend_default_e_valori():
+    c = carica_configurazione(dict(BASE))
+    assert (c.database_url, c.backend_host, c.backend_porta, c.agente_timeout) == (
+        None, "127.0.0.1", 8080, 900)
+    c = carica_configurazione({**BASE, "DATABASE_URL": " postgresql://u:p@h:1/d ",
+                               "BACKEND_PORTA": "8090", "AGENTE_TIMEOUT": "1200"})
+    assert (c.database_url, c.backend_porta, c.agente_timeout) == ("postgresql://u:p@h:1/d", 8090, 1200)
+
+
+@pytest.mark.parametrize("nome, valore", [("AGENTE_TIMEOUT", "0"), ("BACKEND_PORTA", "99999")])
+def test_backend_valori_non_validi(nome, valore):
+    with pytest.raises(ErroreConfigurazione, match=nome):
+        carica_configurazione({**BASE, nome: valore})

@@ -25,6 +25,10 @@ class Configurazione:
     agente_host: str = "127.0.0.1"  # servizio HTTP dell'agente (step 9: 0.0.0.0 in Compose)
     agente_porta: int = 8000
     agente_url: str | None = None  # se presente, la CLI è un client dell'API dell'agente
+    agente_timeout: int = 900  # secondi di attesa di una risposta dell'agente (back-end, CLI)
+    database_url: str | None = None  # PostgreSQL del back-end (con la password: solo in .env)
+    backend_host: str = "127.0.0.1"
+    backend_porta: int = 8080
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -110,4 +114,8 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         agente_host=env.get("AGENTE_HOST", "").strip() or "127.0.0.1",
         agente_porta=_porta(env, "AGENTE_PORTA", 8000),
         agente_url=env.get("AGENTE_URL", "").strip().rstrip("/") or None,
+        agente_timeout=_intero_positivo(env, "AGENTE_TIMEOUT", 900),
+        database_url=env.get("DATABASE_URL", "").strip() or None,
+        backend_host=env.get("BACKEND_HOST", "").strip() or "127.0.0.1",
+        backend_porta=_porta(env, "BACKEND_PORTA", 8080),
     )

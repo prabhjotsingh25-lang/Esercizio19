@@ -4,7 +4,8 @@ Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
 Struttura: `src/assistente/` (config, contesto, preferenze, prompt, riassunto, router, revisore,
-grafo, agente, servizio_agente, cliente_agente, sessione, modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
+grafo, agente, servizio_agente, cliente_agente, backend, archivio (+ `schema.sql`), sessione,
+modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
 variante di integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
@@ -16,6 +17,9 @@ Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
   `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.servizio_http:app --port 8001`
 - servizio HTTP dell'agente: `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.servizio_agente`
   (contratto: `... -m assistente.servizio_agente --openapi docs/openapi-agente.json`)
+- back-end: PostgreSQL in container (`docker run ... postgres:16`, porta host 55432), poi
+  `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.backend`; prove con il
+  database vero: `.\.venv\Scripts\python.exe -m pytest -m postgres -v`
 - server MCP (variante `mcp`):
   `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.server_mcp:app --port 8002`
 - avvio Docker: `docker compose run --rm assistente`; varianti `http` e `mcp`:
@@ -45,6 +49,8 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - è anche un servizio HTTP senza stato (`servizio_agente.py`, contratto OpenAPI in
   `docs/openapi-agente.json`); la CLI ne è client con `AGENTE_URL`, altrimenti lo esegue nel
   processo con lo stesso modulo `agente.py`;
+- ha un back-end FastAPI che salva le conversazioni in PostgreSQL (pg8000, SQL scritto a mano)
+  e chiama l'agente in modo sincrono (contratto in `docs/openapi-backend.json`);
 - si avvia anche con Docker Compose.
 
 ## Confini
@@ -64,7 +70,7 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   cronologia è confrontabile. La variante indicata per uno strumento è il task in cui nasce
   quel canale; un canale nuovo espone tutti gli strumenti del catalogo.
 - MCP (FastMCP), FastAPI, Uvicorn e httpx sono ammessi, ciascuno solo dal task della variante
-  che lo richiede. Niente interfacce grafiche, servizi cloud o altri framework non concordati.
+  che lo richiede; pg8000 dallo step 7 (psycopg 3 è bloccato su questo Windows). Niente interfacce grafiche, servizi cloud o altri framework non concordati.
 - Lavorare solo dentro `assistente-laboratorio/`. La repository contiene altre lezioni:
   non leggerle per copiarne il codice e non modificarle.
 - Un branch `feat/<nome>` per task, creato sempre da `dev`; nessun worktree se non richiesto.

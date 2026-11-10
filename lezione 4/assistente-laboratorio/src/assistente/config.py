@@ -22,6 +22,9 @@ class Configurazione:
     soglia_riassunto: int = 20  # oltre questi messaggi, quelli vecchi diventano un riassunto
     messaggi_recenti: int = 6  # messaggi recenti che restano intatti (almeno)
     preferenze_file: str = "preferenze.json"  # letto dall'host nelle varianti locale e http
+    agente_host: str = "127.0.0.1"  # servizio HTTP dell'agente (step 9: 0.0.0.0 in Compose)
+    agente_porta: int = 8000
+    agente_url: str | None = None  # se presente, la CLI è un client dell'API dell'agente
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -41,6 +44,13 @@ def _intero_positivo(env: Mapping[str, str], nome: str, default: int) -> int:
         valore = 0
     if valore < 1:
         raise ErroreConfigurazione(f"{nome} deve essere un intero >= 1 (ricevuto: {grezzo!r})")
+    return valore
+
+
+def _porta(env: Mapping[str, str], nome: str, default: int) -> int:
+    valore = _intero_positivo(env, nome, default)
+    if valore > 65535:
+        raise ErroreConfigurazione(f"{nome} deve essere una porta fra 1 e 65535 (ricevuto: {valore})")
     return valore
 
 
@@ -97,4 +107,7 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         soglia_riassunto=soglia,
         messaggi_recenti=recenti,
         preferenze_file=env.get("PREFERENZE_FILE", "").strip() or "preferenze.json",
+        agente_host=env.get("AGENTE_HOST", "").strip() or "127.0.0.1",
+        agente_porta=_porta(env, "AGENTE_PORTA", 8000),
+        agente_url=env.get("AGENTE_URL", "").strip().rstrip("/") or None,
     )

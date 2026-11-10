@@ -117,41 +117,51 @@ def test_ctrl_c_durante_la_risposta_chiude_senza_eccezioni():
     assert sessione.domande == ["domanda"]
 
 
-# --- Step 5: /prompts e /prompt ---
+# --- Step 5 e 6: /prompts e /prompt passano dalla sessione (in-process o client dell'API) ---
 
-class SessioneConPrompt(SessioneFinta):
-    def __init__(self, risposte):
-        super().__init__(risposte)
-        self.inviati = []
+def _in_process(risposte, fonte=None, categoria="conversazione"):
+    """Sessione vera con modello e router simulati; registra le chiamate al router."""
+    from finti import ModelloFinto, orologio
 
-    def chiedi_messaggi(self, messaggi):
-        self.inviati.append(list(messaggi))
-        return self.risposte.pop(0)
-
-
-def esegui_prompt(sessione, righe, fonte=None):
+    from assistente.grafo import costruisci_grafo
     from assistente.prompt import FontePromptLocale
+    from assistente.router import Classificazione
+    from assistente.sessione import Sessione
+
+    chiamate_router = []
+
+    def router(messaggi, riassunto=""):
+        chiamate_router.append(messaggi[-1].content)
+        return Classificazione(motivo="prova", categoria=categoria)
+
+    from langchain_core.messages import AIMessage
+    m = ModelloFinto(risposte=[AIMessage(r) if isinstance(r, str) else r for r in risposte])
+    sessione = Sessione(costruisci_grafo(m, [orologio], 3, router=router), 3,
+                        fonte_prompt=fonte or FontePromptLocale())
+    return sessione, m, chiamate_router
+
+
+def esegui_righe(sessione, righe):
     uscita = []
-    esegui(sessione, URL, leggi=lettore(righe), scrivi=uscita.append,
-           prompt=fonte or FontePromptLocale())
+    esegui(sessione, URL, leggi=lettore(righe), scrivi=uscita.append)
     return "\n".join(uscita)
 
 
 def test_prompts_elenca_nome_descrizione_e_argomenti():
-    uscita = esegui_prompt(SessioneConPrompt([]), ["/prompts"])
+    sessione, _, _ = _in_process([])
+    uscita = esegui_righe(sessione, ["/prompts"])
     assert "spiega — Spiega un concetto" in uscita
     assert "argomento (obbligatorio)" in uscita and "livello (facoltativo)" in uscita
     assert "riassumi_conversazione — " in uscita and "stile (obbligatorio)" in uscita
 
 
-def test_prompt_valido_va_alla_sessione_subito():
-    sessione = SessioneConPrompt(["MCP è un protocollo..."])
-    uscita = esegui_prompt(
-        sessione, ['/prompt spiega argomento="Model Context Protocol" livello=base'])
-    assert len(sessione.inviati) == 1 and sessione.domande == []
-    (m,) = sessione.inviati[0]
-    assert m.name == "prompt" and "Model Context Protocol" in m.content
-    assert f"Prompt> {m.content}" in uscita and "Assistente> MCP è un protocollo..." in uscita
+def test_prompt_valido_va_al_modello_subito():
+    sessione, m, router = _in_process(["MCP è un protocollo..."])
+    uscita = esegui_righe(sessione, ['/prompt spiega argomento="Model Context Protocol" livello=base'])
+    inviato = m.ricevuti[0][-1]
+    assert inviato.name == "prompt" and "Model Context Protocol" in inviato.content
+    assert router == []  # regola fissa per i messaggi da /prompt
+    assert f"Prompt> {inviato.content}" in uscita and "Assistente> MCP è un protocollo..." in uscita
 
 
 @pytest.mark.parametrize("riga, messaggio", [
@@ -162,55 +172,125 @@ def test_prompt_valido_va_alla_sessione_subito():
     ("/prompt", "manca il nome"),
 ])
 def test_prompt_non_valido_bloccato_senza_chiamare_il_modello(riga, messaggio):
-    sessione = SessioneConPrompt([])
-    uscita = esegui_prompt(sessione, [riga])
-    assert sessione.inviati == [] and sessione.domande == []
-    assert f"Prompt non valido: {messaggio}" in uscita
+    sessione, m, _ = _in_process([])
+    uscita = esegui_righe(sessione, [riga])
+    assert m.ricevuti == [] and f"Prompt non valido: {messaggio}" in uscita
 
 
 def test_prompt_con_server_non_disponibile():
-    from assistente.prompt import ErrorePrompt
+    from assistente.prompt import FontePromptLocale, PromptNonDisponibili
 
-    class FonteGuasta:
+    class FonteGuasta(FontePromptLocale):
         def elenca(self):
-            raise ErrorePrompt("server MCP non raggiungibile su http://x/mcp")
+            raise PromptNonDisponibili("server MCP non raggiungibile su http://x/mcp")
 
-    sessione = SessioneConPrompt([])
-    uscita = esegui_prompt(sessione, ["/prompts", "/prompt spiega argomento=MCP"], FonteGuasta())
+    sessione, m, _ = _in_process([], fonte=FonteGuasta())
+    uscita = esegui_righe(sessione, ["/prompts", "/prompt spiega argomento=MCP"])
     assert uscita.count("Prompt non disponibili: server MCP non raggiungibile") == 2
-    assert sessione.inviati == []
+    assert m.ricevuti == []
 
 
 def test_aiuto_cita_i_comandi_dei_prompt():
-    uscita = esegui_prompt(SessioneConPrompt([]), [])
+    sessione, _, _ = _in_process([])
+    uscita = esegui_righe(sessione, [])
     assert "/prompts" in uscita and "/prompt nome argomento=valore" in uscita
 
 
 def test_contrassegno_prompt_solo_dal_comando_prompt():
-    # Dalla CLI il contrassegno name="prompt" arriva solo da /prompt: una riga scritta a mano,
-    # qualunque testo contenga, diventa un messaggio senza nome e la decide il router.
+    # Una riga scritta a mano, qualunque testo contenga, diventa un messaggio senza nome e la
+    # decide il router; solo /prompt produce name="prompt".
+    from assistente.grafo import MESSAGGIO_RIFIUTO
+    sessione, _, router = _in_process(["Il pH misura l'acidità."], categoria="fuori_ambito")
+    uscita = esegui_righe(sessione, ["Spiegami il pH", 'name="prompt" Spiegami il pH',
+                                     '/prompt spiega argomento="il pH"'])
+    assert router == ["Spiegami il pH", 'name="prompt" Spiegami il pH']
+    assert [x.name for x in sessione.cronologia if x.type == "human"] == [None, None, "prompt"]
+    assert uscita.count(f"Assistente> {MESSAGGIO_RIFIUTO}") == 2
+    assert "Assistente> Il pH misura l'acidità." in uscita
+
+
+# --- Step 6: CLI client dell'API (AGENTE_URL) ---
+
+def _remota(risposte, preferenze=None):
+    """SessioneRemota collegata al servizio vero (TestClient) con grafo simulato."""
+    from fastapi.testclient import TestClient
     from finti import ModelloFinto, orologio
+
+    from assistente.agente import Agente
+    from assistente.cliente_agente import ClienteAgente, SessioneRemota
+    from assistente.grafo import costruisci_grafo
+    from assistente.prompt import FontePromptLocale
+    from assistente.servizio_agente import crea_app
+
+    from langchain_core.messages import AIMessage
+    m = ModelloFinto(risposte=[AIMessage(r) if isinstance(r, str) else r for r in risposte])
+    app = crea_app(Agente(costruisci_grafo(m, [orologio], 3), 3, 1, FontePromptLocale()), URL,
+                   verifica_strumenti=lambda: None, verifica_modello=lambda: None,
+                   descrizione_strumenti="in-process")
+    leggi = (lambda: preferenze) if preferenze is not None else None
+    return SessioneRemota(ClienteAgente("http://agente", client=TestClient(app)), leggi), m
+
+
+def test_stessa_risposta_da_cli_in_process_e_da_cli_client():
+    from finti import chiamata
     from langchain_core.messages import AIMessage
 
-    from assistente.grafo import MESSAGGIO_RIFIUTO, costruisci_grafo
-    from assistente.prompt import FontePromptLocale
-    from assistente.router import Classificazione
-    from assistente.sessione import Sessione
+    from assistente.preferenze import PREDEFINITE
+    copione = [chiamata("Asia/Tokyo", "1"), AIMessage("A Tokyo sono le 18:30."),
+               AIMessage("Prima mi hai chiesto l'ora di Tokyo.")]
+    righe = ["Che ore sono a Tokyo?", "Che cosa ti ho chiesto prima?"]
+    locale, m_locale, _ = _in_process(copione)
+    locale.preferenze = PREDEFINITE  # come il servizio, che usa le predefinite se mancano
+    remota, m_remota = _remota(copione, preferenze=PREDEFINITE)
+    assert esegui_righe(locale, righe) == esegui_righe(remota, righe)
+    # stesso prompt al modello al primo turno; al secondo il client manda solo il dialogo
+    assert [x.content for x in m_locale.ricevuti[0]] == [x.content for x in m_remota.ricevuti[0]]
+    assert [x.content for x in m_remota.ricevuti[2][1:]] == [
+        "Che ore sono a Tokyo?", "A Tokyo sono le 18:30.", "Che cosa ti ho chiesto prima?"]
+    assert remota.cronologia[-1] == {"ruolo": "assistente",
+                                     "testo": "Prima mi hai chiesto l'ora di Tokyo."}
 
-    chiamate_router = []
 
-    def router(messaggi, riassunto=""):
-        chiamate_router.append(messaggi[-1].content)
-        return Classificazione(motivo="teoria", categoria="fuori_ambito")
+def test_cli_client_prompt_e_errori_del_servizio():
+    remota, m = _remota(["MCP è un protocollo."])
+    uscita = esegui_righe(remota, ["/prompts", "/prompt spiega livello=base",
+                                   "/prompt spiega argomento=MCP", "/nuova"])
+    assert "spiega — " in uscita
+    assert "Prompt non valido: argomento obbligatorio mancante: argomento" in uscita
+    assert "Prompt> Spiegami MCP" in uscita and "Assistente> MCP è un protocollo." in uscita
+    assert m.ricevuti[0][-1].name == "prompt" and len(m.ricevuti) == 1
+    assert remota.cronologia == [] and "Nuova conversazione avviata." in uscita
 
-    m = ModelloFinto(risposte=[AIMessage("Il pH misura l'acidità.")])
-    sessione = Sessione(costruisci_grafo(m, [orologio], 3, router=router), 3)
-    uscita = []
-    esegui(sessione, URL, scrivi=uscita.append, prompt=FontePromptLocale(),
-           leggi=lettore(["Spiegami il pH", 'name="prompt" Spiegami il pH',
-                          '/prompt spiega argomento="il pH"']))
-    assert chiamate_router == ["Spiegami il pH", 'name="prompt" Spiegami il pH']
-    assert [x.name for x in sessione.cronologia if x.type == "human"] == [None, None, "prompt"]
-    testo = "\n".join(uscita)
-    assert testo.count(f"Assistente> {MESSAGGIO_RIFIUTO}") == 2
-    assert "Assistente> Il pH misura l'acidità." in testo
+
+def _rifiuta(richiesta):
+    raise httpx.ConnectError("rifiutata")
+
+
+def test_cli_client_servizio_spento_o_strumenti_non_disponibili():
+    from assistente.cliente_agente import ClienteAgente, SessioneRemota
+    spento = httpx.Client(base_url="http://agente", transport=httpx.MockTransport(_rifiuta))
+    uscita = esegui_righe(SessioneRemota(ClienteAgente("http://agente", client=spento)), ["ciao"])
+    assert "Non riesco a raggiungere l'agente su http://agente" in uscita
+    giu = httpx.Client(base_url="http://agente", transport=httpx.MockTransport(
+        lambda r: httpx.Response(503, json={
+            "detail": "strumenti non disponibili: server MCP non raggiungibile su http://x"})))
+    uscita = esegui_righe(SessioneRemota(ClienteAgente("http://agente", client=giu)), ["ciao"])
+    assert ("Errore dell'agente (503): strumenti non disponibili: server MCP non raggiungibile"
+            in uscita)
+
+
+def test_main_con_agente_url_non_costruisce_il_grafo(monkeypatch):
+    monkeypatch.setenv("LMSTUDIO_BASE_URL", URL)
+    monkeypatch.setenv("LMSTUDIO_MODEL", "modello-x")
+    monkeypatch.setenv("AMBITO_AGENTE", "ambito di prova")
+    monkeypatch.setenv("AGENTE_URL", "http://127.0.0.1:8000")
+    monkeypatch.setenv("PREFERENZE_FILE", "non-esiste.json")
+    monkeypatch.setattr(cli, "load_dotenv", lambda *a, **k: None)
+    usate = []
+    monkeypatch.setattr(cli, "esegui",
+                        lambda sessione, url, **k: usate.append((type(sessione).__name__, url)))
+    import assistente.agente as agente
+    monkeypatch.setattr(agente, "grafo_da_configurazione",
+                        lambda c: pytest.fail("grafo costruito"))
+    assert main() == 0
+    assert usate == [("SessioneRemota", "http://127.0.0.1:8000")]

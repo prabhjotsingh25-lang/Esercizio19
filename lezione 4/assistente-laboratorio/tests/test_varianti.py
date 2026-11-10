@@ -136,3 +136,21 @@ def test_fonte_prompt_per_variante():
     assert isinstance(fonte_prompt(Configurazione("u", "m", variante="mcp",
                                                   strumenti_mcp_url="http://s/mcp")),
                       FontePromptMCP)
+
+
+def test_verifiche_di_strumenti_e_modello():
+    import httpx
+
+    from assistente.varianti import verifica_modello, verifica_strumenti
+    assert verifica_strumenti(Configurazione("u", "m"))() is None  # locale: in-process
+    ok = httpx.MockTransport(lambda r: httpx.Response(200, json={"data": [{"id": "m"}]}))
+    giu = httpx.MockTransport(lambda r: (_ for _ in ()).throw(httpx.ConnectError("rifiutata")))
+    http = Configurazione("http://lm/v1", "m", variante="http", strumenti_http_url="http://s")
+    assert verifica_strumenti(http, ok)() is None
+    assert "servizio strumenti non raggiungibile su http://s" in verifica_strumenti(http, giu)()
+    assert verifica_modello(http, ok)() is None
+    assert "modello non raggiungibile su http://lm/v1" in verifica_modello(http, giu)()
+    altro = httpx.MockTransport(lambda r: httpx.Response(200, json={"data": [{"id": "x"}]}))
+    assert "il modello m non è fra quelli del server" in verifica_modello(http, altro)()
+    mcp = Configurazione("u", "m", variante="mcp", strumenti_mcp_url="http://127.0.0.1:9/mcp")
+    assert "server MCP non raggiungibile su http://127.0.0.1:9/mcp" in verifica_strumenti(mcp)()

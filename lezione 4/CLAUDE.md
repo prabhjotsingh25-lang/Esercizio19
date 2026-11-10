@@ -4,7 +4,7 @@ Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
 Struttura: `src/assistente/` (config, contesto, preferenze, prompt, riassunto, router, revisore,
-grafo, sessione, modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
+grafo, agente, servizio_agente, cliente_agente, sessione, modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
 variante di integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
@@ -14,6 +14,8 @@ Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
 - avvio locale: `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente`
 - servizio strumenti (variante `http`):
   `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.servizio_http:app --port 8001`
+- servizio HTTP dell'agente: `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.servizio_agente`
+  (contratto: `... -m assistente.servizio_agente --openapi docs/openapi-agente.json`)
 - server MCP (variante `mcp`):
   `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.server_mcp:app --port 8002`
 - avvio Docker: `docker compose run --rm assistente`; varianti `http` e `mcp`:
@@ -40,6 +42,9 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - dopo l'agente, un revisore controlla che la risposta sia coerente con la domanda e, se no,
   lo fa riprovare (al massimo `MAX_REVISIONI` volte); vede anche riassunto e risultati degli
   strumenti del turno, che considera attendibili;
+- è anche un servizio HTTP senza stato (`servizio_agente.py`, contratto OpenAPI in
+  `docs/openapi-agente.json`); la CLI ne è client con `AGENTE_URL`, altrimenti lo esegue nel
+  processo con lo stesso modulo `agente.py`;
 - si avvia anche con Docker Compose.
 
 ## Confini
@@ -73,12 +78,12 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   posizione non conta). Di solito il risultato a mente è giusto, ma non sempre (una volta
   «96»). L'ora usa sempre `ora_corrente`. Il testo dello stile sintetico è «risposta finale
   breve ed essenziale (usa comunque gli strumenti)».
-- **Contrassegno dei prompt** (step 5): i messaggi ottenuti con `/prompt` hanno
-  `name="prompt"` e il nodo router li fa passare con una regola fissa, senza chiamare il modello.
-  Oggi il contrassegno lo mette solo la CLI (comando `/prompt`). Allo step 6 (agente come
-  servizio HTTP) dovrà arrivare dal chiamante in modo non falsificabile da un client qualsiasi
-  (per esempio: il servizio compone lui i messaggi da nome e argomenti del prompt e non accetta
-  `name="prompt"` nei messaggi ricevuti), altrimenti chiunque potrebbe aggirare il router.
+- **Contrassegno dei prompt** (step 5-6): i messaggi ottenuti con `/prompt` hanno
+  `name="prompt"` e il nodo router li fa passare con una regola fissa, senza chiamare il
+  modello. Lo mettono solo le fonti dei prompt, dopo il controllo: nella CLI il comando
+  `/prompt`, nel servizio HTTP l'endpoint `POST /prompt` (nome e argomenti). La cronologia
+  ricevuta dal servizio accetta solo `ruolo` (utente o assistente) e `testo`: un `name` →
+  422, quindi un client non può aggirare il router.
 - **Revisore e riassumi_conversazione** (step 5): il revisore vede solo gli ultimi 6 messaggi
   di testo, quindi ha bocciato due volte un riassunto giusto della sessione perché citava un turno
   più vecchio («Spiegazione del Model Context Protocol»); la risposta è uscita al limite delle
@@ -91,8 +96,8 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
    prompt `riassumi_conversazione`).
 2. **Controllo «calcolo senza strumento» nel revisore**: se la risposta contiene un calcolo o
    una conversione ma nel turno non c'è nessuno strumento, l'agente rifà usando lo strumento.
-3. **Contrassegno `/prompt` non falsificabile allo step 6**: il servizio HTTP compone lui i
-   messaggi da nome e argomenti del prompt e rifiuta `name="prompt"` nei messaggi ricevuti.
+3. ~~Contrassegno `/prompt` non falsificabile allo step 6~~: fatto nello step 6 (il servizio
+   compone i messaggi dei prompt; la cronologia in ingresso accetta solo `ruolo` e `testo`).
 
 ## Scelte tecniche
 - Python, codice sincrono e moduli piccoli, con una separazione semplice tra

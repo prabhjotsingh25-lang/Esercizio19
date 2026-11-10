@@ -75,6 +75,35 @@ riga scritta a mano la decide sempre il modello («Spiegami il pH» resta fuori 
 all'agente di riassumere i turni della sessione: il server non vede la cronologia (non c'entra
 con il nodo riassunto). I prompt non sono tool e non arrivano al modello come strumenti.
 
+**Agente come servizio HTTP.** `python -m assistente.servizio_agente` avvia l'agente come
+servizio FastAPI **senza stato** su `AGENTE_HOST`:`AGENTE_PORTA` (default `127.0.0.1:8000`,
+nessuna autenticazione). A ogni richiesta il chiamante manda cronologia (solo `{ruolo:
+utente|assistente, testo}`), riassunto e preferenze; la risposta li restituisce aggiornati,
+con gli strumenti usati (`nome`, `argomenti`, `risultato`). Endpoint: `POST /messaggi`
+(domanda), `POST /prompt` (nome e argomenti: il servizio compone i messaggi, li controlla come
+la CLI e mette lui il contrassegno `name="prompt"`), `GET /prompt` (elenco), `GET /stato`
+(agente, modello e strumenti, con dettaglio per componente; 503 se uno non risponde).
+Campi non previsti (per esempio `name`) o ruoli di sistema o di strumento → 422: un client non
+può far saltare il router. Errori: modello non raggiungibile 503, strumenti non disponibili
+503 (messaggio diverso, controllato prima di chiamare il modello), errore del server del
+modello 502, prompt non valido 422, limite di passaggi 200 con il messaggio di limite.
+Preferenze mancanti: valori predefiniti con WARNING. Contratto: `/docs`, `/openapi.json` e la
+copia `docs/openapi-agente.json` (rigenerabile con `python -m assistente.servizio_agente
+--openapi docs/openapi-agente.json`; un test la confronta con quella generata). Con
+`AGENTE_URL` la CLI è un client dell'API (legge le preferenze e le manda a ogni richiesta);
+senza, esegue l'agente nel processo con lo stesso modulo (`agente.py`).
+
+Formato della cronologia restituita (è quella che il chiamante, e il back-end dello step 7,
+salva così com'è e rimanda al turno dopo): un elenco di `{ruolo, testo}` con soltanto le domande
+dell'utente e le risposte finali dell'assistente, in ordine. Restano fuori le chiamate e i
+risultati degli strumenti (sono nel campo `strumenti` della risposta), le indicazioni del
+revisore e le bozze che il revisore ha rifiutato: dopo un turno con revisione la cronologia ha
+solo domanda e risposta finale. Le domande composte da un prompt compaiono come testo
+dell'utente, senza contrassegno. Se il nodo riassunto ha compresso la conversazione, la
+cronologia contiene solo i turni recenti e il resto sta nel campo `riassunto`, da rimandare
+insieme. Questa cronologia passa sempre la validazione in ingresso (provato da
+`test_cronologia_dopo_una_revisione_si_rimanda_senza_422`).
+
 All'inizio di ogni turno un nodo **riassunto** controlla la lunghezza della cronologia: oltre
 `SOGLIA_RIASSUNTO` messaggi (default 20, strumenti compresi) i messaggi vecchi vengono tolti e
 sostituiti da un riassunto, e restano intatti almeno gli ultimi `MESSAGGI_RECENTI` (default 6).
@@ -142,6 +171,10 @@ Struttura:
 - `src/assistente/server_mcp.py`: server FastMCP degli strumenti e della resource
   `utente://preferenze` e dei prompt (variante 03);
 - `src/assistente/prompt.py`: prompt dell'utente (catalogo, comando `/prompt`, controlli);
+- `src/assistente/agente.py`: agente senza stato (turno sul grafo, strumenti usati, prompt),
+  usato dal servizio e dalla CLI in-process;
+- `src/assistente/servizio_agente.py`: servizio HTTP dell'agente (FastAPI);
+- `src/assistente/cliente_agente.py`: client dell'API per la CLI (`AGENTE_URL`);
 - `src/assistente/preferenze.py`: preferenze dell'utente (schema, validazione, file, prompt);
 - `src/assistente/variante_mcp.py`: adattatore client MCP (variante 03);
 - `src/assistente/strumenti.py`: strumento orologio;
@@ -195,6 +228,8 @@ Variabili:
 | `STRUMENTI_HTTP_URL` | indirizzo del servizio strumenti, obbligatorio con `http`, es. `http://localhost:8001` |
 | `STRUMENTI_MCP_URL` | indirizzo del server MCP, obbligatorio con `mcp`, es. `http://localhost:8002/mcp` |
 | `PREFERENZE_FILE` | file JSON delle preferenze (default `preferenze.json`). Nella variante `mcp` conta quello del processo del server MCP |
+| `AGENTE_HOST`, `AGENTE_PORTA` | indirizzo d'ascolto del servizio dell'agente (default `127.0.0.1`, `8000`) |
+| `AGENTE_URL` | facoltativa: se c'è, la CLI usa l'API dell'agente a questo indirizzo |
 | `NOTE_DB` | file SQLite delle note (default `note.sqlite`). Nelle varianti `http` e `mcp` conta quello del processo del servizio |
 
 L'identificativo del modello va letto dal server, non inventato:
@@ -253,6 +288,19 @@ $env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.server
 Poi, nel `.env`, imposta `VARIANTE_STRUMENTI=mcp` e `STRUMENTI_MCP_URL=http://localhost:8002/mcp`
 e avvia l'assistente come sopra. Nel log del server ogni chiamata di strumento compare come tre
 richieste `POST /mcp` (apertura della sessione, notifica, chiamata).
+
+### Agente come servizio HTTP
+
+```powershell
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.servizio_agente
+# in un altro terminale: stato, una domanda, la CLI come client
+Invoke-RestMethod http://127.0.0.1:8000/stato
+Invoke-RestMethod http://127.0.0.1:8000/messaggi -Method Post -ContentType application/json `
+  -Body '{"testo": "Che ore sono a Tokyo?"}'
+$env:AGENTE_URL = "http://127.0.0.1:8000"; .\.venv\Scripts\python.exe -m assistente
+```
+
+Documentazione interattiva su `http://127.0.0.1:8000/docs`.
 
 ## Avvio con Docker Compose
 
@@ -394,6 +442,10 @@ Una risposta simulata nei test non dimostra che il modello sappia usare lo strum
 solo queste prove lo fanno.
 
 ## Diagnosi
+
+- **Servizio dell'agente**: `GET /stato` dice quale componente non risponde (`modello` o
+  `strumenti`, con il motivo). La CLI client scrive «Non riesco a raggiungere l'agente su ...»
+  se il servizio è spento, oppure «Errore dell'agente (503): ...» con il messaggio del servizio.
 
 - **Calcolo fatto a mente invece che con lo strumento**: comportamento noto del modello piccolo
   (`gemma-4-e2b`) quando ci sono le preferenze in cima al prompt di sistema. Misurato su tre

@@ -14,7 +14,7 @@ from fastmcp.exceptions import MCPError
 from langchain_core.tools import BaseTool, StructuredTool
 
 from assistente.prompt import (
-    ArgomentoPrompt, ErrorePrompt, InfoPrompt, log, log_messaggi, messaggio)
+    ArgomentoPrompt, ErrorePrompt, InfoPrompt, PromptNonDisponibili, log, log_messaggi, messaggio)
 from assistente.preferenze import (
     URI_PREFERENZE, ErrorePreferenze, LettorePreferenze, Preferenze, con_predefinite, da_json)
 
@@ -109,11 +109,11 @@ class FontePromptMCP:
         try:
             return asyncio.run(esegui())
         except MCPError as errore:
-            raise ErrorePrompt(f"errore del server MCP: {errore.error.message}") from None
+            raise PromptNonDisponibili(f"errore del server MCP: {errore.error.message}") from None
         except RuntimeError as errore:
             if "failed to connect" not in str(errore):
                 raise  # non è un problema di rete: non va mascherato
-            raise ErrorePrompt(f"server MCP non raggiungibile su {self._url}") from None
+            raise PromptNonDisponibili(f"server MCP non raggiungibile su {self._url}") from None
 
     def elenca(self) -> list[InfoPrompt]:
         voci = self._esegui(lambda client: client.list_prompts())
@@ -130,9 +130,9 @@ class FontePromptMCP:
         messaggi = []
         for m in risultato.messages:
             if not isinstance(m.content, tipi.TextContent):
-                raise ErrorePrompt("il server ha restituito un messaggio non testuale")
+                raise PromptNonDisponibili("il server ha restituito un messaggio non testuale")
             messaggi.append(messaggio(m.role, m.content.text))
         if not messaggi:
-            raise ErrorePrompt("il server non ha restituito messaggi")
+            raise PromptNonDisponibili("il server non ha restituito messaggi")
         log_messaggi("mcp", nome, argomenti, messaggi)
         return messaggi

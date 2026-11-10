@@ -69,3 +69,5 @@ START -> riassunto -> router -conversazione-> modello <-> strumenti -> revisore 
   dell'agente («non ho accesso a dati in tempo reale») restava fra i messaggi recenti e
   faceva fallire la domanda sul nome anche con il riassunto migliorato. Il difetto del
   revisore è un debito noto (CLAUDE.md) e si corregge in un commit separato `fix(revisore)`.
+- Risolto dal fix del revisore (`2026-11-10-fix-revisore-design.md`): la prova reale usa di
+  nuovo «Che ore sono a Tokyo?».

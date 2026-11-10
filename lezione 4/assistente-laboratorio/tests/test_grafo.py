@@ -6,7 +6,7 @@ from assistente.grafo import (
     INTESTAZIONE_RIASSUNTO, MESSAGGIO_LIMITE, MESSAGGIO_RIFIUTO, MESSAGGIO_SISTEMA,
     costruisci_grafo, limite_ricorsione,
     scegli_dopo_router, scegli_prossimo)
-from assistente.revisore import Revisione
+from assistente.revisore import Revisione, messaggi_per_revisore
 from assistente.router import Classificazione
 from assistente.sessione import Sessione
 
@@ -150,7 +150,7 @@ def revisore_finto(*giudizi, ricevuti=None):
     """Revisore simulato: restituisce i giudizi (coerente, motivo) in ordine, poi l'ultimo."""
     elenco = list(giudizi)
 
-    def rivedi(messaggi):
+    def rivedi(messaggi, riassunto=""):
         if ricevuti is not None:
             ricevuti.append(list(messaggi))
         coerente, motivo = elenco.pop(0) if len(elenco) > 1 else elenco[0]
@@ -357,3 +357,42 @@ def test_sessione_conserva_e_aggiorna_il_riassunto():
     assert s.riassunto == "R2" and chiamate[1][0] == "R1"
     s.nuova()
     assert s.riassunto == "" and s.cronologia == []
+
+
+# --- Fix revisore: il revisore simulato giudica dal prompt vero (messaggi_per_revisore) ---
+
+def revisore_dal_prompt(dato, ricevuti=None):
+    """Boccia la risposta se `dato` non compare nel prompt che il revisore vero riceverebbe."""
+    def rivedi(messaggi, riassunto=""):
+        testo = messaggi_per_revisore(messaggi, riassunto)[-1].content
+        if ricevuti is not None:
+            ricevuti.append(testo)
+        if dato in testo:
+            return Revisione(motivo="dato presente", coerente=True)
+        return Revisione(motivo="non hai accesso a questo dato", coerente=False)
+    return rivedi
+
+
+def test_risposta_basata_su_strumento_non_bocciata(caplog):
+    caplog.set_level("INFO")
+    m = ModelloFinto(risposte=[chiamata("Asia/Tokyo", "1"), AIMessage("A Tokyo sono le 18:30.")])
+    out = costruisci_grafo(m, [orologio], 3,
+                           revisore=revisore_dal_prompt("2026-10-26T18:30:05+09:00")).invoke(
+        {"messages": [HumanMessage("Che ore sono a Tokyo?")], "passaggi": 0, "revisioni": 0})
+    assert out["messages"][-1].content == "A Tokyo sono le 18:30." and out["revisioni"] == 0
+    assert "revisore coerente=sì" in caplog.text and "coerente=no" not in caplog.text
+
+
+def test_nome_dal_riassunto_non_bocciato_dopo_la_compressione(caplog):
+    caplog.set_level("INFO")
+    ricevuti = []
+    m = ModelloFinto(risposte=[AIMessage("Ti chiami Prabhjot.")])
+    out = costruisci_grafo(m, [orologio], 3,
+                           revisore=revisore_dal_prompt("si chiama Prabhjot", ricevuti),
+                           riassuntore=riassuntore_finto("Utente: si chiama Prabhjot."),
+                           soglia_riassunto=5, messaggi_recenti=2).invoke(
+        {"messages": [*storia(3)[:-1], HumanMessage("Come mi chiamo?")], "passaggi": 0,
+         "revisioni": 0})
+    assert "riassunti 4" in caplog.text  # la compressione è avvenuta
+    assert out["messages"][-1].content == "Ti chiami Prabhjot." and out["revisioni"] == 0
+    assert ricevuti[0].startswith("Conversazione precedente:\nRiassunto: Utente: si chiama")

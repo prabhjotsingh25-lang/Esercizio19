@@ -68,9 +68,12 @@ router non è valido, la domanda passa all'agente (con un WARNING nel log).
 
 Prima di restituirla, un **revisore** controlla che la risposta finale dell'agente risponda alla
 domanda, a tutte le sue parti (output strutturato: motivo e `coerente` sì/no). Vede la domanda
-originale del turno, la risposta proposta e gli ultimi 6 messaggi di testo come contesto; non
-vede gli strumenti, quindi giudica la coerenza e non l'esattezza dei dati (una richiesta di
-chiarimento pertinente è coerente). Se la risposta non è coerente, il motivo entra nella
+originale del turno, la risposta proposta, gli ultimi 6 messaggi di testo e il riassunto come
+contesto, e gli strumenti usati nel turno con i loro risultati (`nome(argomenti) -> risultato`,
+tagliati a 500 caratteri). Risultati degli strumenti e riassunto sono per lui dati attendibili:
+non boccia una risposta perché pensa che l'assistente non possa conoscere l'ora o il nome
+dell'utente. Giudica la coerenza e non l'esattezza dei dati (una richiesta di chiarimento
+pertinente è coerente). Se la risposta non è coerente, il motivo entra nella
 cronologia come messaggio utente con `name="revisore"` e l'agente riprova; bozza rifiutata e
 indicazione restano in cronologia. Dopo `MAX_REVISIONI` nuovi tentativi (default 1) si
 restituisce l'ultima risposta, con un WARNING nel log. Il rifiuto del router e il messaggio di
@@ -330,15 +333,14 @@ nuova risposta è provato dai test simulati, da `test_revisore_rifiuta_una_rispo
 (revisore vero su una risposta preparata) e da `test_agente_riprova_dopo_l_indicazione_del_revisore`
 (agente vero che riceve l'indicazione).
 Per il riassunto: avvia con `SOGLIA_RIASSUNTO=6` e `MESSAGGI_RECENTI=2`, scrivi «Ciao, mi chiamo
-...», poi tre domande (per esempio «Quanto fa 12 * 7?», «Converti 3 km in metri.», «Quanto fa
-15 + 27?»), poi «Come mi chiamo?». Al primo turno il log mostra `riassunto: 1 messaggi, sotto la soglia di 6: nessuna
+...», poi tre domande (per esempio «Quanto fa 12 * 7?», «Converti 3 km in metri.», «Che ore
+sono a Tokyo?»), poi «Come mi chiamo?». Al primo turno il log mostra `riassunto: 1 messaggi, sotto la soglia di 6: nessuna
 chiamata`; quando la soglia viene superata compare `riassunto: N messaggi, soglia 6 ->
 riassunti X, tenuti Y` e la risposta finale deve contenere il nome, che ormai sta solo nel
-riassunto. Le prove reali `test_riassunto_*` fanno lo stesso. La prova non usa domande
-sull'ora: il revisore, che non vede i risultati degli strumenti, a volte boccia un orario
-giusto e la correzione dell'agente («non ho accesso a dati in tempo reale») resta fra i
-messaggi recenti e lo porta a rispondere «non mi hai detto il tuo nome» (debito noto, in
-correzione subito dopo questo step).
+riassunto. Al turno di Tokyo non deve comparire `revisore coerente=no`. Le prove reali
+`test_riassunto_*` fanno lo stesso; `test_revisore_approva_l_ora_presa_dallo_strumento` e
+`test_revisore_approva_il_nome_preso_dal_riassunto` provano il revisore vero su messaggi
+preparati (un minuto circa).
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 

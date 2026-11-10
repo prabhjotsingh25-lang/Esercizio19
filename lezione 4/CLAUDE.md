@@ -33,7 +33,8 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   ed eseguito davvero dal programma;
 - prima dell'agente, un router rifiuta le domande fuori dall'ambito descritto in `AMBITO_AGENTE`;
 - dopo l'agente, un revisore controlla che la risposta sia coerente con la domanda e, se no,
-  lo fa riprovare (al massimo `MAX_REVISIONI` volte);
+  lo fa riprovare (al massimo `MAX_REVISIONI` volte); vede anche riassunto e risultati degli
+  strumenti del turno, che considera attendibili;
 - si avvia anche con Docker Compose.
 
 ## Confini
@@ -58,18 +59,6 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   non leggerle per copiarne il codice e non modificarle.
 - Un branch `feat/<nome>` per task, creato sempre da `dev`; nessun worktree se non richiesto.
   Non toccare `main`.
-
-## Debito noto
-- **Revisore e strumenti** (trovato nello step 3, da correggere subito dopo con un commit
-  `fix(revisore): ...`): il revisore vede solo domanda e risposta, non i risultati degli
-  strumenti, quindi a volte boccia risposte giuste basate su dati che non può vedere (per
-  esempio «a Tokyo sono le 18:17» → «non hai accesso a dati in tempo reale»). L'agente allora
-  si corregge con una risposta sbagliata, che resta in cronologia e confonde i turni dopo.
-  Correzione prevista: passare al revisore i risultati degli strumenti del turno (o almeno
-  dirgli quali strumenti sono stati usati) e dirgli che i dati presi da uno strumento sono
-  attendibili. Stesso problema con il riassunto: il revisore non lo riceve, quindi dopo una
-  compressione ha bocciato «Ti chiami Prabhjot» perché il nome non era nei messaggi recenti;
-  nel fix va passato anche il riassunto.
 
 ## Scelte tecniche
 - Python, codice sincrono e moduli piccoli, con una separazione semplice tra

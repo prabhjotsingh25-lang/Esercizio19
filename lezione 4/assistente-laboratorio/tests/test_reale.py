@@ -209,7 +209,7 @@ def test_agente_riprova_dopo_l_indicazione_del_revisore(config_reale, caplog):
                Revisione(motivo="ok", coerente=True)]
     modello = crea_modello(config_reale)
     grafo = costruisci_grafo(modello, strumenti_per_variante(config_reale),
-                             config_reale.max_passaggi, revisore=lambda m: giudizi.pop(0))
+                             config_reale.max_passaggi, revisore=lambda m, r="": giudizi.pop(0))
     sessione = Sessione(grafo, config_reale.max_passaggi, 1)
     risposta = sessione.chiedi(DUE_PARTI)
     nomi = [m.name for m in sessione.cronologia if isinstance(m, HumanMessage)]
@@ -259,14 +259,19 @@ def test_riassunto_sotto_soglia_nessuna_chiamata(sessione_soglia_bassa, caplog):
 def test_riassunto_conserva_il_nome_dopo_la_compressione(sessione_soglia_bassa, caplog):
     caplog.set_level("INFO", logger="assistente")
     s = sessione_soglia_bassa
-    # Niente domande sull'ora: il revisore, che non vede i risultati degli strumenti, può
-    # bocciare un orario giusto, e la correzione dell'agente («non ho accesso a dati in tempo
-    # reale») confonde la domanda sul nome (debito noto, vedi CLAUDE.md).
+    # La sequenza che prima del fix del revisore falliva: al turno di Tokyo il revisore, che non
+    # vedeva i risultati degli strumenti, bocciava l'orario giusto.
     domande = ["Ciao, mi chiamo Prabhjot.", "Quanto fa 12 * 7?", "Converti 3 km in metri.",
-               "Quanto fa 15 + 27?"]
+               "Che ore sono a Tokyo?"]
     for i, domanda in enumerate(domande, 1):
+        inizio = len(caplog.records)
         risposta = s.chiedi(domanda)
         print(f"turno {i}: Tu> {domanda}\n         Assistente> {risposta}")
+        revisioni = [r.getMessage() for r in caplog.records[inizio:]
+                     if r.getMessage().startswith("revisore ")]
+        print(*(f"         {r}" for r in revisioni), sep="\n")
+    turno_tokyo = [r for r in revisioni if "coerente=no" in r]
+    assert not turno_tokyo, f"il revisore ha bocciato la risposta su Tokyo: {turno_tokyo}"
     compressioni = _COMPRESSIONE.findall(caplog.text)
     print("log:", *(r.getMessage() for r in caplog.records
                     if r.getMessage().startswith("riassunto:")), sep="\n  ")
@@ -274,10 +279,38 @@ def test_riassunto_conserva_il_nome_dopo_la_compressione(sessione_soglia_bassa, 
     assert compressioni, "nessuna compressione nei primi turni"
     assert all(m.content != "Ciao, mi chiamo Prabhjot." for m in s.cronologia), (
         "il turno con il nome è ancora in cronologia: non è stato riassunto")
+    inizio = len(caplog.records)
     risposta = s.chiedi("Come mi chiamo?")
     print(f"dopo la compressione: Tu> Come mi chiamo?\n         Assistente> {risposta}")
+    print(*(f"         {r.getMessage()}" for r in caplog.records[inizio:]
+            if r.getMessage().startswith("revisore ")), sep="\n")
     print(f"riassunto visto dall'agente nell'ultimo turno: {s.riassunto}")
     print("messaggi tenuti:", *(f"{type(m).__name__}({m.name or ''}): {m.content!r}"
                                 for m in s.cronologia), sep="\n  ")
     assert "router categoria=fuori_ambito" not in caplog.text
     assert "prabhjot" in risposta.lower(), f"nome assente nella risposta: {risposta!r}"
+
+
+# --- Fix revisore: revisore vero su messaggi preparati (prove veloci) ---
+
+def test_revisore_approva_l_ora_presa_dallo_strumento(config_reale, caplog):
+    revisore = crea_revisore(crea_modello(config_reale))
+    esito = revisore([
+        HumanMessage("Che ore sono a Tokyo?"),
+        AIMessage("", tool_calls=[{"name": "ora_corrente", "args": {"fuso_orario": "Asia/Tokyo"},
+                                   "id": "t1"}]),
+        ToolMessage("2026-11-10T18:17:07+09:00 (Asia/Tokyo)", tool_call_id="t1"),
+        AIMessage("Attualmente a Tokyo sono le ore 18:17 del 10 novembre 2026.")])
+    print(f"revisore: coerente={esito.coerente} motivo={esito.motivo}")
+    assert esito.coerente is True, esito.motivo
+    assert "output del revisore non valido" not in caplog.text
+
+
+def test_revisore_approva_il_nome_preso_dal_riassunto(config_reale, caplog):
+    revisore = crea_revisore(crea_modello(config_reale))
+    esito = revisore([HumanMessage("Quanto fa 15 + 27?"), AIMessage("15 + 27 fa 42."),
+                      HumanMessage("Come mi chiamo?"), AIMessage("Ti chiami Prabhjot.")],
+                     "Utente: si chiama Prabhjot.\nL'utente ha chiesto alcuni calcoli.")
+    print(f"revisore: coerente={esito.coerente} motivo={esito.motivo}")
+    assert esito.coerente is True, esito.motivo
+    assert "output del revisore non valido" not in caplog.text

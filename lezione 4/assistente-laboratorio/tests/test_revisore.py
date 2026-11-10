@@ -1,6 +1,6 @@
 """Test del revisore con modello finto: prompt, indicazione e output non valido."""
-from finti import ModelloFinto
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from finti import ModelloFinto, chiamata
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from assistente.revisore import (
     Revisione, crea_revisore, indicazione, messaggi_per_revisore)
@@ -55,3 +55,54 @@ def test_output_non_valido_vale_coerente_con_warning(caplog):
     for _ in range(2):
         assert revisore([HumanMessage("?"), AIMessage("!")]).coerente is True
     assert caplog.text.count("output del revisore non valido") == 2
+
+
+# --- Fix: il revisore vede riassunto e strumenti del turno ---
+
+def _tokyo(id_chiamata="t1", risultato="2026-11-10T18:17:07+09:00 (Asia/Tokyo)"):
+    return [chiamata("Asia/Tokyo", id_chiamata), ToolMessage(risultato, tool_call_id=id_chiamata)]
+
+
+def test_prompt_con_il_riassunto_prima_del_contesto():
+    storia = [HumanMessage("domanda 0"), AIMessage("risposta 0"),
+              HumanMessage("Come mi chiamo?"), AIMessage("Ti chiami Prabhjot.")]
+    testo = messaggi_per_revisore(storia, "Utente: si chiama Prabhjot.")[-1].content
+    assert "Riassunto: Utente: si chiama Prabhjot.\nUtente: domanda 0" in testo
+    assert "Riassunto" not in messaggi_per_revisore(storia)[-1].content
+
+
+def test_prompt_con_gli_strumenti_del_turno_corrente_soltanto():
+    storia = [HumanMessage("Che ore sono a Roma?"), *_tokyo("vecchia", "RISULTATO-VECCHIO"),
+              AIMessage("A Roma sono le 10."),
+              HumanMessage("Che ore sono a Tokyo?"), *_tokyo(), AIMessage("Sono le 18:17."),
+              indicazione("manca la data"), *_tokyo("t2", "SECONDO-TENTATIVO"),
+              AIMessage("Sono le 18:17 del 10 novembre.")]
+    testo = messaggi_per_revisore(storia)[-1].content
+    strumenti = testo.split("Strumenti usati in questo turno:")[1].split("Risposta proposta:")[0]
+    assert ("ora_corrente({'fuso_orario': 'Asia/Tokyo'}) -> "
+            "2026-11-10T18:17:07+09:00 (Asia/Tokyo)") in strumenti
+    assert "SECONDO-TENTATIVO" in strumenti  # anche i tentativi precedenti dello stesso turno
+    assert "RISULTATO-VECCHIO" not in testo  # non i turni precedenti
+
+
+def test_strumenti_nessuno_e_risultato_lungo_tagliato():
+    senza = messaggi_per_revisore([HumanMessage("Ciao"), AIMessage("Ciao!")])[-1].content
+    assert "Strumenti usati in questo turno:\n(nessuno)" in senza
+    lungo = "x" * 600
+    testo = messaggi_per_revisore(
+        [HumanMessage("?"), *_tokyo(risultato=lungo), AIMessage("!")])[-1].content
+    assert "x" * 500 + "…" in testo and "x" * 501 not in testo
+
+
+def test_istruzioni_dati_degli_strumenti_e_riassunto_attendibili():
+    sistema = messaggi_per_revisore([HumanMessage("?"), AIMessage("!")])[0].content
+    assert "attendibili" in sistema
+    assert "non può conoscere" in sistema
+    assert "Non puoi verificare" in sistema  # resta: non giudica l'esattezza dei numeri
+
+
+def test_revisore_passa_il_riassunto_al_modello():
+    m = ModelloFinto(risposte=[revisione(True)])
+    crea_revisore(m)([HumanMessage("Come mi chiamo?"), AIMessage("Ti chiami Prabhjot.")],
+                     "Utente: si chiama Prabhjot.")
+    assert "Riassunto: Utente: si chiama Prabhjot." in m.ricevuti[0][-1].content

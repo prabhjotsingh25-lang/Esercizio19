@@ -59,6 +59,22 @@ File assente o non valido, o resource non disponibile: valori predefiniti (`it`,
 `Europe/Rome`, `sintetico`) con un WARNING. Con un fuso predefinito l'agente non chiede più il
 luogo per «Che ore sono?».
 
+**Prompt.** `/prompts` elenca i prompt (nome, descrizione, argomenti obbligatori o
+facoltativi); `/prompt nome argomento=valore` ne usa uno, con le virgolette per i valori con
+spazi, per esempio `/prompt spiega argomento="Model Context Protocol" livello=base` o
+`/prompt riassumi_conversazione stile=sintetico`. Nella variante `mcp` i prompt sono **prompt
+MCP** del server (`prompts/list`, `prompts/get`); nelle altre vengono dal catalogo locale
+(`prompt.py`). Prima di chiedere il testo l'host controlla nome e argomenti rispetto
+all'elenco: un prompt sconosciuto, un argomento obbligatorio mancante o uno sconosciuto
+bloccano la richiesta («Prompt non valido: ...») senza chiamare il modello. Il testo ottenuto
+(`Prompt> ...`) entra in cronologia come messaggio utente con `name="prompt"` e passa da
+router, agente e revisore. Per questi messaggi il nodo router applica una regola fissa, senza
+chiamare il modello (`router categoria=conversazione motivo=richiesta da un prompt
+dell'assistente (regola) -> agente`): il contrassegno lo mette solo il comando `/prompt`, e una
+riga scritta a mano la decide sempre il modello («Spiegami il pH» resta fuori ambito). `riassumi_conversazione` chiede
+all'agente di riassumere i turni della sessione: il server non vede la cronologia (non c'entra
+con il nodo riassunto). I prompt non sono tool e non arrivano al modello come strumenti.
+
 All'inizio di ogni turno un nodo **riassunto** controlla la lunghezza della cronologia: oltre
 `SOGLIA_RIASSUNTO` messaggi (default 20, strumenti compresi) i messaggi vecchi vengono tolti e
 sostituiti da un riassunto, e restano intatti almeno gli ultimi `MESSAGGI_RECENTI` (default 6).
@@ -124,7 +140,8 @@ Struttura:
 - `src/assistente/servizio_http.py`: servizio FastAPI degli strumenti (variante 02);
 - `src/assistente/variante_http.py`: wrapper HTTP verso il servizio (variante 02);
 - `src/assistente/server_mcp.py`: server FastMCP degli strumenti e della resource
-  `utente://preferenze` (variante 03);
+  `utente://preferenze` e dei prompt (variante 03);
+- `src/assistente/prompt.py`: prompt dell'utente (catalogo, comando `/prompt`, controlli);
 - `src/assistente/preferenze.py`: preferenze dell'utente (schema, validazione, file, prompt);
 - `src/assistente/variante_mcp.py`: adattatore client MCP (variante 03);
 - `src/assistente/strumenti.py`: strumento orologio;
@@ -367,6 +384,12 @@ fuso_orario=America/New_York stile=sintetico` prima della domanda (con la varian
 nel file, la sessione successiva (`/nuova` o un nuovo avvio) risponde di conseguenza. Le prove
 `test_ora_senza_luogo_usa_il_fuso_predefinito` e
 `test_lingua_e_stile_valgono_dalla_sessione_successiva` fanno lo stesso con un file temporaneo.
+Per i prompt: `/prompts`, poi `/prompt spiega argomento="Model Context Protocol" livello=base`
+(nel log `prompt: prompts/list ...` e `prompt: prompts/get spiega ... -> messaggi dal server:
+...`, poi `router categoria=conversazione`), `/prompt spiega livello=base` e `/prompt spiega
+argomento=MCP colore=blu` (bloccati, nessuna riga `agente:`), due domande e `/prompt
+riassumi_conversazione stile=sintetico` (la risposta riassume quei turni). Le prove
+`test_prompt_*` fanno lo stesso con pytest.
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 
@@ -378,6 +401,9 @@ solo queste prove lo fanno.
   le preferenze 0-2 su 3 qualunque formulazione e posizione. Nel log manca la riga `strumento
   passaggio=...`; il risultato di solito è giusto ma non è garantito. Con un modello più grande
   il problema dovrebbe ridursi; un controllo nel revisore è in valutazione.
+
+- **`/prompt` rifiutato**: «Prompt non valido: ...» dice che cosa manca o non è previsto
+  (controlla con `/prompts`); «Prompt non disponibili: ...» indica un problema del server MCP.
 
 - **Preferenze ignorate**: nel log a inizio sessione `preferenze: ... non disponibili (...):
   uso le predefinite` (WARNING) spiega il motivo: file assente, JSON o campo non valido (per

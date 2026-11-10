@@ -14,7 +14,7 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
-from assistente.contesto import e_indicazione
+from assistente.contesto import e_da_prompt, e_indicazione
 from assistente.preferenze import Preferenze, prompt_preferenze
 from assistente.revisore import Revisore, indicazione
 from assistente.riassunto import Riassuntore, punto_di_taglio
@@ -146,6 +146,12 @@ def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_pass
         return {"messages": [*chiuse, AIMessage(MESSAGGIO_LIMITE)]}
 
     def nodo_router(stato: Stato) -> dict:
+        if e_da_prompt(stato["messages"][-1]):
+            # Regola fissa: i prompt sono modelli del catalogo dell'assistente scelti con /prompt;
+            # il modello del router non viene chiamato (lo rifiutava come «teoria»).
+            log.info("router categoria=conversazione motivo=richiesta da un prompt "
+                     "dell'assistente (regola) -> agente")
+            return {"categoria": "conversazione"}
         esito = router(stato["messages"], stato.get("riassunto", ""))
         destinazione = "rifiuto" if esito.categoria == "fuori_ambito" else "agente"
         log.info("router categoria=%s motivo=%s -> %s", esito.categoria, esito.motivo, destinazione)

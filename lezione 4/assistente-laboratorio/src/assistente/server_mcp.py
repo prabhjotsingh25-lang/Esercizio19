@@ -1,5 +1,6 @@
-"""Server FastMCP che espone gli strumenti del catalogo (variante 03) e la resource
-`utente://preferenze` (preferenze dell'utente, lette dal file PREFERENZE_FILE a ogni lettura).
+"""Server FastMCP che espone gli strumenti del catalogo (variante 03), la resource
+`utente://preferenze` (preferenze dell'utente, lette dal file PREFERENZE_FILE a ogni lettura)
+e i prompt del catalogo dei prompt (spiega, riassumi_conversazione).
 
 Avvio: uvicorn assistente.server_mcp:app --port 8002   (endpoint MCP: /mcp)
 """
@@ -8,11 +9,13 @@ from typing import Any
 import anyio
 from fastmcp import FastMCP
 from fastmcp.exceptions import ResourceError, ToolError
+from fastmcp.prompts import Prompt, PromptArgument
 from fastmcp.tools import Tool, ToolResult
 from langchain_core.tools import BaseTool
 from pydantic import PrivateAttr, ValidationError
 
 from assistente.catalogo import strumenti_locali
+from assistente.prompt import CATALOGO_PROMPT, DefinizionePrompt
 from assistente.preferenze import (
     URI_PREFERENZE, ErrorePreferenze, leggi_file, percorso_preferenze)
 
@@ -41,6 +44,25 @@ class StrumentoMCP(Tool):
         return ToolResult(content=str(risultato))
 
 
+class PromptMCP(Prompt):
+    """Prompt MCP che pubblica nome, descrizione e argomenti del catalogo dei prompt."""
+
+    _definizione: DefinizionePrompt = PrivateAttr()
+
+    @classmethod
+    def da_catalogo(cls, definizione: DefinizionePrompt) -> "PromptMCP":
+        voce = cls(name=definizione.nome, description=definizione.descrizione,
+                   arguments=[PromptArgument(name=a.nome, description=a.descrizione,
+                                             required=a.obbligatorio)
+                              for a in definizione.argomenti])
+        voce._definizione = definizione
+        return voce
+
+    async def render(self, arguments: dict[str, Any] | None = None) -> str:
+        # Un solo messaggio utente con il testo compilato (predefiniti dei facoltativi compresi).
+        return self._definizione.componi({k: str(v) for k, v in (arguments or {}).items()})
+
+
 def crea_server(strumenti: list[BaseTool]) -> FastMCP:
     """Server con uno strumento MCP per ogni voce e la resource delle preferenze.
 
@@ -59,6 +81,8 @@ def crea_server(strumenti: list[BaseTool]) -> FastMCP:
         except ErrorePreferenze as errore:
             raise ResourceError(f"preferenze non disponibili: {errore}") from None
 
+    for definizione in CATALOGO_PROMPT:
+        server.add_prompt(PromptMCP.da_catalogo(definizione))
     return server
 
 

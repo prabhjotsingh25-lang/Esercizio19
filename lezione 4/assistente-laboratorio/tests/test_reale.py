@@ -364,3 +364,33 @@ def test_lingua_e_stile_valgono_dalla_sessione_successiva(sessione, file_prefere
     assert _parole(dopo, _INGLESE) > _parole(dopo, _ITALIANO), dopo
     assert "84" in prima and "84" in dopo
     assert len(dopo) > len(prima), "lo stile dettagliato non ha allungato la risposta"
+
+
+# --- Step 5: prompt (/prompt) che passano da router, agente e revisore ---
+
+def test_prompt_spiega_passa_il_router_e_risponde(sessione, caplog):
+    from assistente.varianti import fonte_prompt
+    caplog.set_level("INFO", logger="assistente")
+    fonte = fonte_prompt(carica_configurazione())
+    messaggi = fonte.ottieni("spiega", {"argomento": "Model Context Protocol", "livello": "base"})
+    risposta = sessione.chiedi_messaggi(messaggi)
+    print(f"Prompt> {messaggi[0].content}\nAssistente> {risposta}")
+    assert "router categoria=conversazione" in caplog.text, caplog.text
+    assert "protocol" in risposta.lower(), risposta
+
+
+def test_prompt_riassumi_conversazione_riassume_i_turni(sessione, caplog):
+    from assistente.varianti import fonte_prompt
+    caplog.set_level("INFO", logger="assistente")
+    sessione.chiedi("Quanto fa 12 * 7?")
+    sessione.chiedi("Converti 3 km in metri.")
+    inizio = len(caplog.records)
+    messaggi = fonte_prompt(carica_configurazione()).ottieni(
+        "riassumi_conversazione", {"stile": "sintetico"})
+    risposta = sessione.chiedi_messaggi(messaggi)
+    turno = [r.getMessage() for r in caplog.records[inizio:]]
+    print(f"Prompt> {messaggi[0].content}\nAssistente> {risposta}")
+    print(*(f"  {r}" for r in turno if r.startswith(("router", "revisore"))), sep="\n")
+    assert any(r.startswith("router categoria=conversazione") for r in turno), turno
+    assert not any("revisore coerente=no" in r for r in turno), turno
+    assert "84" in risposta and "3000" in risposta.replace(".", ""), risposta

@@ -123,3 +123,16 @@ def test_lettore_preferenze_per_variante(tmp_path, monkeypatch, caplog):
     caplog.clear()
     assert lettore_preferenze(mcp)().lingua == "it"  # server spento: predefinite
     assert "resources/read utente://preferenze (mcp) non disponibili" in caplog.text
+
+
+def test_fonte_prompt_per_variante():
+    from assistente.prompt import FontePromptLocale
+    from assistente.variante_mcp import FontePromptMCP
+    from assistente.varianti import fonte_prompt
+    assert isinstance(fonte_prompt(Configurazione("u", "m")), FontePromptLocale)
+    assert isinstance(fonte_prompt(Configurazione("u", "m", variante="http",
+                                                  strumenti_http_url="http://s")),
+                      FontePromptLocale)
+    assert isinstance(fonte_prompt(Configurazione("u", "m", variante="mcp",
+                                                  strumenti_mcp_url="http://s/mcp")),
+                      FontePromptMCP)

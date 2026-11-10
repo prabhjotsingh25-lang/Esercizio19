@@ -19,13 +19,17 @@ class Sessione:
         self.preferenze: Preferenze | None = self._leggi()
 
     def chiedi(self, testo: str) -> str:
-        """Invia una domanda e restituisce il testo della risposta finale.
+        """Invia una domanda e restituisce il testo della risposta finale."""
+        return self.chiedi_messaggi([HumanMessage(testo)])
+
+    def chiedi_messaggi(self, messaggi: list[BaseMessage]) -> str:
+        """Aggiunge i messaggi (una domanda, o quelli di un prompt) e invoca il grafo.
 
         Cronologia e riassunto cambiano solo se l'invocazione riesce; le eccezioni passano
         al chiamante.
         """
         uscita = self._grafo.invoke(
-            {"messages": [*self.cronologia, HumanMessage(testo)], "passaggi": 0, "revisioni": 0,
+            {"messages": [*self.cronologia, *messaggi], "passaggi": 0, "revisioni": 0,
              "riassunto": self.riassunto, "preferenze": self.preferenze},
             config=self._config)
         self.cronologia = list(uscita["messages"])

@@ -45,3 +45,14 @@ def test_errore_del_modello_lascia_invariata_la_cronologia():
     with pytest.raises(IndexError):  # ModelloFinto senza risposte
         s.chiedi("y")
     assert s.cronologia == prima
+
+
+def test_chiedi_messaggi_da_prompt_entrano_in_cronologia():
+    from langchain_core.messages import HumanMessage
+    m = ModelloFinto(risposte=[AIMessage("Riassunto: abbiamo parlato di x.")])
+    s = Sessione(costruisci_grafo(m, [orologio], 3), 3)
+    prompt = HumanMessage("Riassumi i turni della sessione corrente nello stile sintetico.",
+                          name="prompt")
+    assert s.chiedi_messaggi([prompt]) == "Riassunto: abbiamo parlato di x."
+    assert [x.name for x in s.cronologia] == ["prompt", None]
+    assert m.ricevuti[0][-1].content == prompt.content

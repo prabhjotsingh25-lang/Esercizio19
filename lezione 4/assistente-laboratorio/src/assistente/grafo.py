@@ -144,7 +144,7 @@ def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_pass
         return {"messages": [AIMessage(MESSAGGIO_RIFIUTO)]}
 
     def nodo_revisore(stato: Stato) -> dict:
-        esito = revisore(stato["messages"])
+        esito = revisore(stato["messages"], stato.get("riassunto", ""))
         revisioni = stato.get("revisioni", 0)
         if esito.coerente:
             log.info("revisore coerente=sì motivo=%s -> fine", esito.motivo)

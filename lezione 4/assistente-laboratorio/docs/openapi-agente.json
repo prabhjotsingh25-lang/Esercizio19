@@ -1,0 +1,523 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agente dell'assistente di laboratorio",
+    "description": "Agente senza stato: ogni richiesta porta cronologia, riassunto e preferenze; la risposta li restituisce aggiornati.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/messaggi": {
+      "post": {
+        "summary": "Una domanda dell'utente, con cronologia, riassunto e preferenze",
+        "operationId": "messaggi_messaggi_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RichiestaMessaggio"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RispostaTurno"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prompt": {
+      "get": {
+        "summary": "Elenco dei prompt",
+        "operationId": "elenco_prompt_prompt_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PromptApi"
+                  },
+                  "type": "array",
+                  "title": "Response Elenco Prompt Prompt Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Usa un prompt: il servizio compone i messaggi (name=\"prompt\")",
+        "operationId": "usa_prompt_prompt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RichiestaPrompt"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RispostaPrompt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stato": {
+      "get": {
+        "summary": "Raggiungibilità di agente, modello e strumenti",
+        "operationId": "stato_stato_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stato"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stato"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArgomentoApi": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "descrizione": {
+            "type": "string",
+            "title": "Descrizione"
+          },
+          "obbligatorio": {
+            "type": "boolean",
+            "title": "Obbligatorio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "descrizione",
+          "obbligatorio"
+        ],
+        "title": "ArgomentoApi"
+      },
+      "Componente": {
+        "properties": {
+          "stato": {
+            "type": "string",
+            "title": "Stato",
+            "description": "ok oppure errore"
+          },
+          "dettaglio": {
+            "type": "string",
+            "title": "Dettaglio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stato",
+          "dettaglio"
+        ],
+        "title": "Componente"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Preferenze": {
+        "properties": {
+          "lingua": {
+            "type": "string",
+            "enum": [
+              "it",
+              "en",
+              "fr",
+              "de",
+              "es"
+            ],
+            "title": "Lingua",
+            "default": "it"
+          },
+          "fuso_orario": {
+            "type": "string",
+            "title": "Fuso Orario",
+            "default": "Europe/Rome"
+          },
+          "stile": {
+            "type": "string",
+            "enum": [
+              "sintetico",
+              "dettagliato"
+            ],
+            "title": "Stile",
+            "default": "sintetico"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Preferenze",
+        "description": "Lingua delle risposte, fuso orario predefinito (IANA) e stile."
+      },
+      "PromptApi": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "descrizione": {
+            "type": "string",
+            "title": "Descrizione"
+          },
+          "argomenti": {
+            "items": {
+              "$ref": "#/components/schemas/ArgomentoApi"
+            },
+            "type": "array",
+            "title": "Argomenti"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "descrizione",
+          "argomenti"
+        ],
+        "title": "PromptApi"
+      },
+      "RichiestaMessaggio": {
+        "properties": {
+          "testo": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Testo",
+            "description": "Domanda dell'utente."
+          },
+          "cronologia": {
+            "items": {
+              "$ref": "#/components/schemas/VoceCronologia"
+            },
+            "type": "array",
+            "title": "Cronologia",
+            "description": "Turni precedenti: solo utente e assistente."
+          },
+          "riassunto": {
+            "type": "string",
+            "title": "Riassunto",
+            "description": "Riassunto restituito dalla risposta precedente.",
+            "default": ""
+          },
+          "preferenze": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Preferenze"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Se mancano: valori predefiniti."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testo"
+        ],
+        "title": "RichiestaMessaggio"
+      },
+      "RichiestaPrompt": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome",
+            "description": "Nome del prompt (GET /prompt)."
+          },
+          "argomenti": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Argomenti"
+          },
+          "cronologia": {
+            "items": {
+              "$ref": "#/components/schemas/VoceCronologia"
+            },
+            "type": "array",
+            "title": "Cronologia"
+          },
+          "riassunto": {
+            "type": "string",
+            "title": "Riassunto",
+            "default": ""
+          },
+          "preferenze": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Preferenze"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "nome"
+        ],
+        "title": "RichiestaPrompt"
+      },
+      "RispostaPrompt": {
+        "properties": {
+          "risposta": {
+            "type": "string",
+            "title": "Risposta"
+          },
+          "strumenti": {
+            "items": {
+              "$ref": "#/components/schemas/StrumentoUsatoApi"
+            },
+            "type": "array",
+            "title": "Strumenti"
+          },
+          "cronologia": {
+            "items": {
+              "$ref": "#/components/schemas/VoceCronologia"
+            },
+            "type": "array",
+            "title": "Cronologia"
+          },
+          "riassunto": {
+            "type": "string",
+            "title": "Riassunto"
+          },
+          "prompt": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Prompt",
+            "description": "Testi composti dal servizio a partire dal prompt."
+          }
+        },
+        "type": "object",
+        "required": [
+          "risposta",
+          "strumenti",
+          "cronologia",
+          "riassunto",
+          "prompt"
+        ],
+        "title": "RispostaPrompt"
+      },
+      "RispostaTurno": {
+        "properties": {
+          "risposta": {
+            "type": "string",
+            "title": "Risposta"
+          },
+          "strumenti": {
+            "items": {
+              "$ref": "#/components/schemas/StrumentoUsatoApi"
+            },
+            "type": "array",
+            "title": "Strumenti"
+          },
+          "cronologia": {
+            "items": {
+              "$ref": "#/components/schemas/VoceCronologia"
+            },
+            "type": "array",
+            "title": "Cronologia"
+          },
+          "riassunto": {
+            "type": "string",
+            "title": "Riassunto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "risposta",
+          "strumenti",
+          "cronologia",
+          "riassunto"
+        ],
+        "title": "RispostaTurno"
+      },
+      "Stato": {
+        "properties": {
+          "agente": {
+            "$ref": "#/components/schemas/Componente"
+          },
+          "modello": {
+            "$ref": "#/components/schemas/Componente"
+          },
+          "strumenti": {
+            "$ref": "#/components/schemas/Componente"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agente",
+          "modello",
+          "strumenti"
+        ],
+        "title": "Stato"
+      },
+      "StrumentoUsatoApi": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "argomenti": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Argomenti"
+          },
+          "risultato": {
+            "type": "string",
+            "title": "Risultato"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "argomenti",
+          "risultato"
+        ],
+        "title": "StrumentoUsatoApi"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VoceCronologia": {
+        "properties": {
+          "ruolo": {
+            "type": "string",
+            "enum": [
+              "utente",
+              "assistente"
+            ],
+            "title": "Ruolo"
+          },
+          "testo": {
+            "type": "string",
+            "title": "Testo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ruolo",
+          "testo"
+        ],
+        "title": "VoceCronologia",
+        "description": "Cronologia nell'API: solo testi dell'utente e dell'assistente, nessun altro campo."
+      }
+    }
+  }
+}

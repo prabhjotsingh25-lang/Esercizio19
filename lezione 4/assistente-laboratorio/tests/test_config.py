@@ -126,3 +126,17 @@ def test_file_delle_preferenze_default_e_valore():
     assert carica_configurazione(dict(BASE)).preferenze_file == "preferenze.json"
     c = carica_configurazione({**BASE, "PREFERENZE_FILE": " C:/dati/pref.json "})
     assert c.preferenze_file == "C:/dati/pref.json"
+
+
+def test_agente_http_default_e_valori():
+    c = carica_configurazione(dict(BASE))
+    assert (c.agente_host, c.agente_porta, c.agente_url) == ("127.0.0.1", 8000, None)
+    c = carica_configurazione({**BASE, "AGENTE_HOST": "0.0.0.0", "AGENTE_PORTA": "8100",
+                               "AGENTE_URL": " http://127.0.0.1:8100/ "})
+    assert (c.agente_host, c.agente_porta, c.agente_url) == ("0.0.0.0", 8100, "http://127.0.0.1:8100")
+
+
+@pytest.mark.parametrize("valore", ["zero", "0", "70000"])
+def test_agente_porta_non_valida(valore):
+    with pytest.raises(ErroreConfigurazione, match="AGENTE_PORTA"):
+        carica_configurazione({**BASE, "AGENTE_PORTA": valore})

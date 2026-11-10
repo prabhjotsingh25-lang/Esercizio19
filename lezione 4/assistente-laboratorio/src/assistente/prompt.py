@@ -17,12 +17,17 @@ from assistente.contesto import NOME_PROMPT
 log = logging.getLogger("assistente.prompt")
 
 __all__ = ["CATALOGO_PROMPT", "NOME_PROMPT", "ArgomentoPrompt", "DefinizionePrompt", "ErrorePrompt",
+           "PromptNonDisponibili",
            "FontePrompt", "FontePromptLocale", "InfoPrompt", "analizza_comando", "controlla",
            "descrivi_elenco", "log_messaggi"]
 
 
 class ErrorePrompt(ValueError):
-    """Comando /prompt non valido o prompt non disponibile: il messaggio è per l'utente."""
+    """Comando /prompt non valido: il messaggio è per l'utente."""
+
+
+class PromptNonDisponibili(ErrorePrompt):
+    """I prompt non si possono leggere (server MCP non raggiungibile o in errore)."""
 
 
 @dataclass(frozen=True)

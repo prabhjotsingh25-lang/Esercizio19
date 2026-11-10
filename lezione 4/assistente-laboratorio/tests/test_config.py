@@ -155,3 +155,13 @@ def test_backend_default_e_valori():
 def test_backend_valori_non_validi(nome, valore):
     with pytest.raises(ErroreConfigurazione, match=nome):
         carica_configurazione({**BASE, nome: valore})
+
+
+def test_frontend_default_e_valori():
+    c = carica_configurazione(dict(BASE))
+    assert (c.backend_url, c.frontend_host, c.frontend_porta, c.frontend_origine) == (
+        "http://127.0.0.1:8080", "127.0.0.1", 8090, "http://127.0.0.1:8090")
+    c = carica_configurazione({**BASE, "BACKEND_URL": "http://b:9/", "FRONTEND_PORTA": "9000",
+                               "FRONTEND_ORIGINE": "http://localhost:9000/"})
+    assert (c.backend_url, c.frontend_porta, c.frontend_origine) == (
+        "http://b:9", 9000, "http://localhost:9000")

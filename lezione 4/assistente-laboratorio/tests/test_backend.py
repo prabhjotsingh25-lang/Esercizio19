@@ -239,3 +239,19 @@ def test_prompt_non_valido_come_prima_domanda_non_lascia_il_titolo():
     id = a.nuova()
     assert a.client.post(f"/conversazioni/{id}/prompt", json={"nome": "poesia"}).status_code == 422
     assert a.client.get(f"/conversazioni/{id}").json()["titolo"] is None
+
+
+def test_cors_solo_per_l_origine_del_front_end():
+    a = Ambiente()
+    app = crea_backend(a.archivio, ClienteAgente(URL_AGENTE, client=a.agente_http), Preferenze,
+                       URL_AGENTE, ["http://127.0.0.1:8090"])
+    client = TestClient(app)
+    preflight = {"Access-Control-Request-Method": "POST",
+                 "Access-Control-Request-Headers": "content-type"}
+    ok = client.options("/conversazioni", headers={"Origin": "http://127.0.0.1:8090", **preflight})
+    assert ok.status_code == 200
+    assert ok.headers["access-control-allow-origin"] == "http://127.0.0.1:8090"
+    altro = client.options("/conversazioni", headers={"Origin": "http://evil.example", **preflight})
+    assert "access-control-allow-origin" not in altro.headers
+    r = client.get("/conversazioni", headers={"Origin": "http://127.0.0.1:8090"})
+    assert r.headers["access-control-allow-origin"] == "http://127.0.0.1:8090"

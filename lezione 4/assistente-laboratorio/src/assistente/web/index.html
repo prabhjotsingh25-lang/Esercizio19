@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assistente di laboratorio</title>
+  <link rel="stylesheet" href="stile.css">
+</head>
+<body>
+  <aside id="barra">
+    <button id="nuova" type="button">+ Nuova chat</button>
+    <ul id="chat"></ul>
+  </aside>
+  <main>
+    <div id="avviso" role="alert" hidden></div>
+    <section id="messaggi" aria-live="polite">
+      <p class="vuoto">Scegli una chat o scrivi una domanda per iniziarne una nuova.</p>
+    </section>
+    <form id="invio">
+      <textarea id="testo" rows="2" placeholder="Scrivi una domanda…" required></textarea>
+      <button id="manda" type="submit">Invia</button>
+    </form>
+  </main>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -4,7 +4,8 @@ Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
 Struttura: `src/assistente/` (config, contesto, preferenze, prompt, riassunto, router, revisore,
-grafo, agente, servizio_agente, cliente_agente, backend, archivio (+ `schema.sql`), sessione,
+grafo, agente, servizio_agente, cliente_agente, backend, archivio (+ `schema.sql`), frontend
+(+ `web/`), sessione,
 modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
 variante di integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
@@ -20,6 +21,8 @@ Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
 - back-end: PostgreSQL in container (`docker run ... postgres:16`, porta host 55432), poi
   `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.backend`; prove con il
   database vero: `.\.venv\Scripts\python.exe -m pytest -m postgres -v`
+- front-end: `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.frontend`
+  (http://127.0.0.1:8090; parla solo con il back-end di `BACKEND_URL`)
 - server MCP (variante `mcp`):
   `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.server_mcp:app --port 8002`
 - avvio Docker: `docker compose run --rm assistente`; varianti `http` e `mcp`:
@@ -51,6 +54,8 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   processo con lo stesso modulo `agente.py`;
 - ha un back-end FastAPI che salva le conversazioni in PostgreSQL (pg8000, SQL scritto a mano)
   e chiama l'agente in modo sincrono (contratto in `docs/openapi-backend.json`);
+- ha un front-end web minimale (HTML, CSS e JavaScript senza librerie) che usa solo il
+  back-end;
 - si avvia anche con Docker Compose.
 
 ## Confini

@@ -136,6 +136,18 @@ non viene salvato. Le domande rimaste `in_attesa` per un arresto del back-end pa
 docs/openapi-backend.json`); verso l'agente il back-end usa solo percorsi e campi di
 `docs/openapi-agente.json`, verificati da un test.
 
+**Front-end.** `python -m assistente.frontend` serve su `FRONTEND_HOST`:`FRONTEND_PORTA`
+(default `http://127.0.0.1:8090`) una pagina di chat in HTML, CSS e JavaScript senza librerie
+(`src/assistente/web/`). La pagina parla solo con il back-end, all'indirizzo `BACKEND_URL` che
+legge da `/config.js` (nessun indirizzo scritto nel codice); il back-end accetta le richieste
+del browser solo dall'origine `FRONTEND_ORIGINE` (CORS). Funzioni: elenco delle chat con titolo
+e data dell'ultimo messaggio, nuova chat, eliminazione, messaggi e invio, «Strumenti usati»
+richiudibile sotto ogni risposta, attesa con cronometro (l'invio resta disattivato; il browser
+aspetta fino a `AGENTE_TIMEOUT` + 60 s), errori comprensibili e pulsante «Riprova» sull'ultima
+domanda in errore. Con il back-end spento la pagina mostra «Non riesco a raggiungere il
+back-end su ...» e resta utilizzabile. Usa solo gli endpoint di `docs/openapi-backend.json`
+(verificato da un test).
+
 All'inizio di ogni turno un nodo **riassunto** controlla la lunghezza della cronologia: oltre
 `SOGLIA_RIASSUNTO` messaggi (default 20, strumenti compresi) i messaggi vecchi vengono tolti e
 sostituiti da un riassunto, e restano intatti almeno gli ultimi `MESSAGGI_RECENTI` (default 6).
@@ -208,6 +220,7 @@ Struttura:
 - `src/assistente/servizio_agente.py`: servizio HTTP dell'agente (FastAPI);
 - `src/assistente/cliente_agente.py`: client dell'API dell'agente (CLI e back-end);
 - `src/assistente/backend.py`: back-end FastAPI (conversazioni, turni sincroni, riprova);
+- `src/assistente/frontend.py` e `src/assistente/web/`: front-end (pagina di chat e `config.js`);
 - `src/assistente/archivio.py` e `schema.sql`: archivio delle conversazioni (PostgreSQL con
   pg8000, oppure in memoria per i test);
 - `src/assistente/preferenze.py`: preferenze dell'utente (schema, validazione, file, prompt);
@@ -267,6 +280,9 @@ Variabili:
 | `AGENTE_URL` | facoltativa: se c'è, la CLI usa l'API dell'agente a questo indirizzo |
 | `AGENTE_TIMEOUT` | secondi di attesa di una risposta dell'agente (default 900) |
 | `DATABASE_URL` | PostgreSQL del back-end, con la password (solo nel `.env`) |
+| `BACKEND_URL` | indirizzo del back-end usato dalla pagina del front-end (default `http://127.0.0.1:8080`) |
+| `FRONTEND_HOST`, `FRONTEND_PORTA` | indirizzo d'ascolto del front-end (default `127.0.0.1`, `8090`) |
+| `FRONTEND_ORIGINE` | unica origine ammessa dal CORS del back-end (default `http://127.0.0.1:8090`) |
 | `BACKEND_HOST`, `BACKEND_PORTA` | indirizzo d'ascolto del back-end (default `127.0.0.1`, `8080`) |
 | `NOTE_DB` | file SQLite delle note (default `note.sqlite`). Nelle varianti `http` e `mcp` conta quello del processo del servizio |
 
@@ -352,6 +368,7 @@ docker run -d --name assistente-postgres -e POSTGRES_USER=assistente -e POSTGRES
 $env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.servizio_agente   # agente
 $env:AGENTE_URL = "http://127.0.0.1:8000"; .\.venv\Scripts\python.exe -m assistente.backend
 Invoke-RestMethod http://127.0.0.1:8080/stato
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.frontend   # http://127.0.0.1:8090
 ```
 
 Il driver è pg8000 (solo Python): psycopg 3 con la sua DLL è bloccato su questo Windows da un

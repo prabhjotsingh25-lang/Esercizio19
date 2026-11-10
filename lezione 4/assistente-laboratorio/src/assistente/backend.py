@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -122,11 +123,19 @@ def _messaggio(m: Messaggio) -> dict:
 
 
 def crea_backend(archivio: Archivio, agente: ClienteAgente, leggi_preferenze: LettorePreferenze,
-                 agente_url: str) -> FastAPI:
-    """Back-end sopra un archivio e un client dell'agente (iniettabili per i test)."""
+                 agente_url: str, origini_consentite: list[str] | None = None) -> FastAPI:
+    """Back-end sopra un archivio e un client dell'agente (iniettabili per i test).
+
+    `origini_consentite`: le sole origini web (il front-end) a cui il CORS permette di chiamare
+    il back-end dal browser.
+    """
     app = FastAPI(title="Back-end dell'assistente di laboratorio", version="1.0.0",
                   description="Conversazioni salvate in PostgreSQL; ogni invio è sincrono e può "
                               "durare minuti (timeout alti nel chiamante).")
+    if origini_consentite:
+        app.add_middleware(CORSMiddleware, allow_origins=list(origini_consentite),
+                           allow_methods=["GET", "POST", "PUT", "DELETE"],
+                           allow_headers=["Content-Type"])
 
     def conversazione(id: str) -> Conversazione:
         conv = archivio.leggi(id)
@@ -284,7 +293,7 @@ def crea_backend_da_configurazione(config) -> FastAPI:
     archivio.azzera_turni()  # turni rimasti a metà da un arresto: domande in errore, riprovabili
     agente_url = config.agente_url or f"http://{config.agente_host}:{config.agente_porta}"
     return crea_backend(archivio, ClienteAgente(agente_url, timeout=config.agente_timeout),
-                        lettore_preferenze(config), agente_url)
+                        lettore_preferenze(config), agente_url, [config.frontend_origine])
 
 
 def scrivi_openapi(percorso: str) -> None:

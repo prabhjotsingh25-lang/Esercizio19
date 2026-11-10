@@ -29,6 +29,10 @@ class Configurazione:
     database_url: str | None = None  # PostgreSQL del back-end (con la password: solo in .env)
     backend_host: str = "127.0.0.1"
     backend_porta: int = 8080
+    backend_url: str = "http://127.0.0.1:8080"  # usato dal front-end (nel browser)
+    frontend_host: str = "127.0.0.1"
+    frontend_porta: int = 8090
+    frontend_origine: str = "http://127.0.0.1:8090"  # unica origine ammessa dal CORS del back-end
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -118,4 +122,9 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         database_url=env.get("DATABASE_URL", "").strip() or None,
         backend_host=env.get("BACKEND_HOST", "").strip() or "127.0.0.1",
         backend_porta=_porta(env, "BACKEND_PORTA", 8080),
+        backend_url=env.get("BACKEND_URL", "").strip().rstrip("/") or "http://127.0.0.1:8080",
+        frontend_host=env.get("FRONTEND_HOST", "").strip() or "127.0.0.1",
+        frontend_porta=_porta(env, "FRONTEND_PORTA", 8090),
+        frontend_origine=env.get("FRONTEND_ORIGINE", "").strip().rstrip("/")
+        or "http://127.0.0.1:8090",
     )

@@ -1,0 +1,889 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Back-end dell'assistente di laboratorio",
+    "description": "Conversazioni salvate in PostgreSQL; ogni invio è sincrono e può durare minuti (timeout alti nel chiamante).",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/conversazioni": {
+      "get": {
+        "summary": "Elenco: titolo e data dell'ultimo messaggio, dal più recente",
+        "operationId": "elenco_conversazioni_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversazioneBreve"
+                  },
+                  "type": "array",
+                  "title": "Response Elenco Conversazioni Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Nuova conversazione (preferenze dal corpo o lette dalla fonte dell'host)",
+        "operationId": "nuova_conversazioni_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RichiestaNuova"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Richiesta"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversazioneCompleta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversazioni/{id}": {
+      "get": {
+        "summary": "Storico completo della conversazione",
+        "operationId": "completa_conversazioni__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversazioneCompleta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversazione inesistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Elimina",
+        "operationId": "elimina_conversazioni__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Conversazione inesistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversazioni/{id}/preferenze": {
+      "put": {
+        "summary": "Preferenze",
+        "operationId": "preferenze_conversazioni__id__preferenze_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Preferenze"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferenze"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversazione inesistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversazioni/{id}/messaggi": {
+      "post": {
+        "summary": "Invio sincrono: salva la domanda, chiama l'agente, salva la risposta",
+        "operationId": "messaggi_conversazioni__id__messaggi_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RichiestaTesto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Turno"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversazione inesistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Un turno è già in corso (o niente da riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Prompt non valido: la domanda non viene salvata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Errore del server del modello (domanda salvata in errore).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Agente, modello o strumenti non disponibili (domanda salvata in errore: si può riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "L'agente non ha risposto entro AGENTE_TIMEOUT (domanda salvata in errore: si può riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversazioni/{id}/prompt": {
+      "post": {
+        "summary": "Usa un prompt (composto e controllato dall'agente)",
+        "operationId": "usa_prompt_conversazioni__id__prompt_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RichiestaPromptBackend"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Turno"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversazione inesistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Un turno è già in corso (o niente da riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Prompt non valido: la domanda non viene salvata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Errore del server del modello (domanda salvata in errore).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Agente, modello o strumenti non disponibili (domanda salvata in errore: si può riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "L'agente non ha risposto entro AGENTE_TIMEOUT (domanda salvata in errore: si può riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversazioni/{id}/riprova": {
+      "post": {
+        "summary": "Rimanda l'ultima domanda in errore, senza duplicarla",
+        "operationId": "riprova_conversazioni__id__riprova_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Turno"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversazione inesistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Un turno è già in corso (o niente da riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Prompt non valido: la domanda non viene salvata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Errore del server del modello (domanda salvata in errore).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Agente, modello o strumenti non disponibili (domanda salvata in errore: si può riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "L'agente non ha risposto entro AGENTE_TIMEOUT (domanda salvata in errore: si può riprovare).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errore"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prompt": {
+      "get": {
+        "summary": "Elenco dei prompt (dall'agente)",
+        "operationId": "elenco_prompt_prompt_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Elenco Prompt Prompt Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stato": {
+      "get": {
+        "summary": "Raggiungibilità di back-end, database e agente",
+        "operationId": "stato_stato_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConversazioneBreve": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "titolo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Titolo"
+          },
+          "ultimo_messaggio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ultimo Messaggio",
+            "description": "Data dell'ultimo messaggio (o della creazione)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "titolo",
+          "ultimo_messaggio"
+        ],
+        "title": "ConversazioneBreve"
+      },
+      "ConversazioneCompleta": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "titolo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Titolo"
+          },
+          "ultimo_messaggio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ultimo Messaggio",
+            "description": "Data dell'ultimo messaggio (o della creazione)."
+          },
+          "preferenze": {
+            "$ref": "#/components/schemas/Preferenze"
+          },
+          "turno_in_corso": {
+            "type": "boolean",
+            "title": "Turno In Corso"
+          },
+          "messaggi": {
+            "items": {
+              "$ref": "#/components/schemas/MessaggioApi"
+            },
+            "type": "array",
+            "title": "Messaggi"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "titolo",
+          "ultimo_messaggio",
+          "preferenze",
+          "turno_in_corso",
+          "messaggi"
+        ],
+        "title": "ConversazioneCompleta"
+      },
+      "Errore": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "Errore"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MessaggioApi": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "posizione": {
+            "type": "integer",
+            "title": "Posizione"
+          },
+          "ruolo": {
+            "type": "string",
+            "title": "Ruolo",
+            "description": "utente oppure assistente"
+          },
+          "testo": {
+            "type": "string",
+            "title": "Testo"
+          },
+          "strumenti": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strumenti",
+            "description": "Risposte: strumenti usati."
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt",
+            "description": "Domande da /prompt: nome e argomenti."
+          },
+          "stato": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stato",
+            "description": "Domande: in_attesa, risposta oppure errore."
+          },
+          "errore": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errore",
+            "description": "Domande in errore: il motivo, da mostrare."
+          },
+          "creato": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creato"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "posizione",
+          "ruolo",
+          "testo",
+          "creato"
+        ],
+        "title": "MessaggioApi"
+      },
+      "Preferenze": {
+        "properties": {
+          "lingua": {
+            "type": "string",
+            "enum": [
+              "it",
+              "en",
+              "fr",
+              "de",
+              "es"
+            ],
+            "title": "Lingua",
+            "default": "it"
+          },
+          "fuso_orario": {
+            "type": "string",
+            "title": "Fuso Orario",
+            "default": "Europe/Rome"
+          },
+          "stile": {
+            "type": "string",
+            "enum": [
+              "sintetico",
+              "dettagliato"
+            ],
+            "title": "Stile",
+            "default": "sintetico"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Preferenze",
+        "description": "Lingua delle risposte, fuso orario predefinito (IANA) e stile."
+      },
+      "RichiestaNuova": {
+        "properties": {
+          "preferenze": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Preferenze"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Se mancano: lette una volta dalla fonte dell'host (resource o file)."
+          }
+        },
+        "type": "object",
+        "title": "RichiestaNuova"
+      },
+      "RichiestaPromptBackend": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "argomenti": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Argomenti"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome"
+        ],
+        "title": "RichiestaPromptBackend"
+      },
+      "RichiestaTesto": {
+        "properties": {
+          "testo": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Testo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "testo"
+        ],
+        "title": "RichiestaTesto"
+      },
+      "Turno": {
+        "properties": {
+          "domanda": {
+            "$ref": "#/components/schemas/MessaggioApi"
+          },
+          "risposta": {
+            "$ref": "#/components/schemas/MessaggioApi"
+          }
+        },
+        "type": "object",
+        "required": [
+          "domanda",
+          "risposta"
+        ],
+        "title": "Turno"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

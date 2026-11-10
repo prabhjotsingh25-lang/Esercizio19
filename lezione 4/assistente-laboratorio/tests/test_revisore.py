@@ -106,3 +106,15 @@ def test_revisore_passa_il_riassunto_al_modello():
     crea_revisore(m)([HumanMessage("Come mi chiamo?"), AIMessage("Ti chiami Prabhjot.")],
                      "Utente: si chiama Prabhjot.")
     assert "Riassunto: Utente: si chiama Prabhjot." in m.ricevuti[0][-1].content
+
+
+# --- Step 4: le preferenze dell'utente sono dati attendibili per il revisore ---
+
+def test_prompt_con_le_preferenze_prima_del_riassunto():
+    storia = [HumanMessage("Che ore sono?"), AIMessage("A New York sono le 9.")]
+    testo = messaggi_per_revisore(storia, "R", "Preferenze dell'utente: fuso America/New_York")[-1].content
+    assert ("Conversazione precedente:\nPreferenze dell'utente: fuso America/New_York\n"
+            "Riassunto: R") in testo
+    assert "Preferenze" not in messaggi_per_revisore(storia)[-1].content
+    sistema = messaggi_per_revisore(storia)[0].content
+    assert "preferenze dell'utente" in sistema

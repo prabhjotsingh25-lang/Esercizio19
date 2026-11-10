@@ -21,6 +21,7 @@ class Configurazione:
     max_revisioni: int = 1  # nuovi tentativi chiesti dal revisore per ogni domanda
     soglia_riassunto: int = 20  # oltre questi messaggi, quelli vecchi diventano un riassunto
     messaggi_recenti: int = 6  # messaggi recenti che restano intatti (almeno)
+    preferenze_file: str = "preferenze.json"  # letto dall'host nelle varianti locale e http
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -95,4 +96,5 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         max_revisioni=_intero_positivo(env, "MAX_REVISIONI", 1),
         soglia_riassunto=soglia,
         messaggi_recenti=recenti,
+        preferenze_file=env.get("PREFERENZE_FILE", "").strip() or "preferenze.json",
     )

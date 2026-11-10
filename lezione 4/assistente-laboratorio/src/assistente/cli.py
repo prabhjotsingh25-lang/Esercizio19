@@ -14,7 +14,7 @@ from assistente.revisore import crea_revisore
 from assistente.riassunto import crea_riassuntore
 from assistente.router import crea_router
 from assistente.sessione import Sessione
-from assistente.varianti import strumenti_per_variante
+from assistente.varianti import lettore_preferenze, strumenti_per_variante
 
 
 def esegui(sessione: Sessione, base_url: str,
@@ -74,5 +74,8 @@ def main() -> int:
                              riassuntore=crea_riassuntore(modello),
                              soglia_riassunto=config.soglia_riassunto,
                              messaggi_recenti=config.messaggi_recenti)
-    esegui(Sessione(grafo, config.max_passaggi, config.max_revisioni), config.base_url)
+    # Le preferenze si leggono qui, una volta prima della prima domanda (e di nuovo con /nuova).
+    sessione = Sessione(grafo, config.max_passaggi, config.max_revisioni,
+                        leggi_preferenze=lettore_preferenze(config))
+    esegui(sessione, config.base_url)
     return 0

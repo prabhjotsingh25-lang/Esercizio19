@@ -3,8 +3,8 @@
 Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
-Struttura: `src/assistente/` (config, contesto, riassunto, router, revisore, grafo, sessione,
-modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
+Struttura: `src/assistente/` (config, contesto, preferenze, riassunto, router, revisore, grafo,
+sessione, modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
 variante di integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
@@ -31,6 +31,9 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   gli ultimi `MESSAGGI_RECENTI`);
 - offre uno strumento orologio con fuso orario esplicito, richiesto dal modello tramite tool calling
   ed eseguito davvero dal programma;
+- legge una volta a inizio sessione le preferenze dell'utente (lingua, fuso orario predefinito,
+  stile): resource MCP `utente://preferenze` nella variante mcp, file `PREFERENZE_FILE` nelle
+  altre; vanno in cima al prompt di sistema dell'agente;
 - prima dell'agente, un router rifiuta le domande fuori dall'ambito descritto in `AMBITO_AGENTE`;
 - dopo l'agente, un revisore controlla che la risposta sia coerente con la domanda e, se no,
   lo fa riprovare (al massimo `MAX_REVISIONI` volte); vede anche riassunto e risultati degli

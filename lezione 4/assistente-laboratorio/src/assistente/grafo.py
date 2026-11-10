@@ -1,5 +1,6 @@
 """Grafo LangGraph: nodi `riassunto`, `router`, `rifiuto`, `modello`, `strumenti`, `limite`
-e `revisore`.
+e `revisore`. Le preferenze dell'utente arrivano nello stato dal chiamante (lette dall'host a
+inizio sessione), non da un nodo.
 
 L'instradamento è esplicito: archi condizionali dopo il router, il modello e il revisore.
 """
@@ -14,6 +15,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
 from assistente.contesto import e_indicazione
+from assistente.preferenze import Preferenze, prompt_preferenze
 from assistente.revisore import Revisore, indicazione
 from assistente.riassunto import Riassuntore, punto_di_taglio
 from assistente.router import Router
@@ -52,6 +54,7 @@ class Stato(TypedDict):
     categoria: NotRequired[str]  # decisa dal router: conversazione o fuori_ambito
     revisioni: NotRequired[int]  # nuovi tentativi chiesti dal revisore in questo turno
     riassunto: NotRequired[str]  # messaggi vecchi riassunti: aggiornato, non accumulato
+    preferenze: NotRequired[Preferenze | None]  # dal chiamante: lette a inizio sessione
 
 
 def scegli_dopo_router(stato: Stato) -> Literal["modello", "rifiuto"]:
@@ -81,11 +84,19 @@ def limite_ricorsione(max_passaggi: int, max_revisioni: int = 0) -> int:
     return 2 * max_passaggi + 2 * max_revisioni + 6
 
 
-def messaggio_di_sistema(riassunto: str = "") -> str:
-    """Messaggio di sistema dell'agente, con in coda l'eventuale riassunto."""
-    if not riassunto:
-        return MESSAGGIO_SISTEMA
-    return f"{MESSAGGIO_SISTEMA}\n\n{INTESTAZIONE_RIASSUNTO}\n{riassunto}"
+def messaggio_di_sistema(riassunto: str = "", preferenze: Preferenze | None = None) -> str:
+    """Messaggio di sistema dell'agente: preferenze in cima, riassunto in coda (se presenti)."""
+    testo = MESSAGGIO_SISTEMA
+    if preferenze is not None:
+        testo = f"{prompt_preferenze(preferenze)}\n\n{testo}"
+    if riassunto:
+        testo = f"{testo}\n\n{INTESTAZIONE_RIASSUNTO}\n{riassunto}"
+    return testo
+
+
+def _testo_preferenze(stato: "Stato") -> str:
+    preferenze = stato.get("preferenze")
+    return prompt_preferenze(preferenze) if preferenze is not None else ""
 
 
 def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_passaggi: int,
@@ -102,7 +113,8 @@ def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_pass
     per_nome = {s.name: s for s in strumenti}
 
     def nodo_modello(stato: Stato) -> dict:
-        messaggi = [SystemMessage(messaggio_di_sistema(stato.get("riassunto", ""))),
+        messaggi = [SystemMessage(messaggio_di_sistema(stato.get("riassunto", ""),
+                                                       stato.get("preferenze"))),
                     *stato["messages"]]
         log.info("agente: chiamata al modello con %d messaggi", len(messaggi))
         risposta = modello_con_strumenti.invoke(messaggi)
@@ -144,7 +156,8 @@ def costruisci_grafo(modello: BaseChatModel, strumenti: list[BaseTool], max_pass
         return {"messages": [AIMessage(MESSAGGIO_RIFIUTO)]}
 
     def nodo_revisore(stato: Stato) -> dict:
-        esito = revisore(stato["messages"], stato.get("riassunto", ""))
+        esito = revisore(stato["messages"], stato.get("riassunto", ""),
+                         _testo_preferenze(stato))
         revisioni = stato.get("revisioni", 0)
         if esito.coerente:
             log.info("revisore coerente=sì motivo=%s -> fine", esito.motivo)

@@ -3,9 +3,9 @@
 Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
-Struttura: `src/assistente/` (config, contesto, router, revisore, grafo, sessione, modello, cli,
-`__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per variante di
-integrazione),
+Struttura: `src/assistente/` (config, contesto, riassunto, router, revisore, grafo, sessione,
+modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
+variante di integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
 - test offline: `.\.venv\Scripts\python.exe -m pytest -v`
@@ -27,6 +27,8 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - organizza il flusso in un grafo LangGraph esplicito (stato, nodi, instradamento riconoscibili);
 - usa un modello servito da LM Studio, che resta sul computer host;
 - conserva la cronologia della conversazione per la durata della sessione (nessuna persistenza);
+  oltre `SOGLIA_RIASSUNTO` messaggi quelli vecchi diventano un riassunto (restano intatti almeno
+  gli ultimi `MESSAGGI_RECENTI`);
 - offre uno strumento orologio con fuso orario esplicito, richiesto dal modello tramite tool calling
   ed eseguito davvero dal programma;
 - prima dell'agente, un router rifiuta le domande fuori dall'ambito descritto in `AMBITO_AGENTE`;
@@ -56,6 +58,18 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   non leggerle per copiarne il codice e non modificarle.
 - Un branch `feat/<nome>` per task, creato sempre da `dev`; nessun worktree se non richiesto.
   Non toccare `main`.
+
+## Debito noto
+- **Revisore e strumenti** (trovato nello step 3, da correggere subito dopo con un commit
+  `fix(revisore): ...`): il revisore vede solo domanda e risposta, non i risultati degli
+  strumenti, quindi a volte boccia risposte giuste basate su dati che non può vedere (per
+  esempio «a Tokyo sono le 18:17» → «non hai accesso a dati in tempo reale»). L'agente allora
+  si corregge con una risposta sbagliata, che resta in cronologia e confonde i turni dopo.
+  Correzione prevista: passare al revisore i risultati degli strumenti del turno (o almeno
+  dirgli quali strumenti sono stati usati) e dirgli che i dati presi da uno strumento sono
+  attendibili. Stesso problema con il riassunto: il revisore non lo riceve, quindi dopo una
+  compressione ha bocciato «Ti chiami Prabhjot» perché il nome non era nei messaggi recenti;
+  nel fix va passato anche il riassunto.
 
 ## Scelte tecniche
 - Python, codice sincrono e moduli piccoli, con una separazione semplice tra

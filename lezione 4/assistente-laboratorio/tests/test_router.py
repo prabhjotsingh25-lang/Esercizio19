@@ -61,3 +61,16 @@ def test_finestra_salta_le_indicazioni_del_revisore():
     testo = messaggi_per_router(storia, AMBITO)[-1].content
     assert "Revisione:" not in testo
     assert "Assistente: Sono le 18." in testo  # la bozza rifiutata resta visibile
+
+
+def test_prompt_con_il_riassunto_prima_della_finestra():
+    storia = [HumanMessage("domanda 0"), AIMessage("risposta 0"), HumanMessage("Come mi chiamo?")]
+    testo = messaggi_per_router(storia, AMBITO, "L'utente si chiama Anna.")[-1].content
+    assert "Riassunto: L'utente si chiama Anna.\nUtente: domanda 0" in testo
+    assert "Riassunto" not in messaggi_per_router(storia, AMBITO)[-1].content
+
+
+def test_router_passa_il_riassunto_al_modello():
+    m = ModelloFinto(risposte=[classificazione("conversazione")])
+    crea_router(m, AMBITO)([HumanMessage("Come mi chiamo?")], "L'utente si chiama Anna.")
+    assert "Riassunto: L'utente si chiama Anna." in m.ricevuti[0][-1].content

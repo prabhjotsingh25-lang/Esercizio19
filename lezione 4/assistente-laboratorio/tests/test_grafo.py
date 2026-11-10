@@ -3,7 +3,8 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_core.tools import StructuredTool
 
 from assistente.grafo import (
-    MESSAGGIO_LIMITE, MESSAGGIO_RIFIUTO, MESSAGGIO_SISTEMA, costruisci_grafo, limite_ricorsione,
+    INTESTAZIONE_RIASSUNTO, MESSAGGIO_LIMITE, MESSAGGIO_RIFIUTO, MESSAGGIO_SISTEMA,
+    costruisci_grafo, limite_ricorsione,
     scegli_dopo_router, scegli_prossimo)
 from assistente.revisore import Revisione
 from assistente.router import Classificazione
@@ -18,7 +19,7 @@ def test_instradamento():
 
 
 def test_limite_ricorsione():
-    assert limite_ricorsione(3) == 11
+    assert limite_ricorsione(3) == 12
 
 
 def test_ciclo_completo_con_strumento():
@@ -90,7 +91,7 @@ def test_prompt_di_sistema_identico_con_strumenti_diversi():
 
 def router_finto(categoria, motivo="motivo di prova", ricevuti=None):
     """Router simulato: restituisce sempre la stessa classificazione e annota cosa riceve."""
-    def classifica(messaggi):
+    def classifica(messaggi, riassunto=""):
         if ricevuti is not None:
             ricevuti.append(list(messaggi))
         return Classificazione(motivo=motivo, categoria=categoria)
@@ -134,7 +135,7 @@ def test_rifiuto_resta_in_cronologia_e_il_turno_dopo_riparte_dal_router():
     categorie = iter(["fuori_ambito", "conversazione"])
     m = ModelloFinto(risposte=[AIMessage("Ciao!")])
     grafo = costruisci_grafo(m, [orologio], 3,
-                             router=lambda messaggi: Classificazione(motivo="x",
+                             router=lambda messaggi, riassunto: Classificazione(motivo="x",
                                                                      categoria=next(categorie)))
     s = Sessione(grafo, 3)
     assert s.chiedi("Scrivimi una poesia") == MESSAGGIO_RIFIUTO
@@ -250,4 +251,109 @@ def test_limite_di_ricorsione_basta_nel_caso_peggiore():
     grafo = costruisci_grafo(m, [orologio], 1, router=router_finto("conversazione"),
                              revisore=revisore_finto((False, "no")), max_revisioni=2)
     assert Sessione(grafo, 1, max_revisioni=2).chiedi("?") == "c"
-    assert limite_ricorsione(1, 2) == 11 and limite_ricorsione(3) == 11
+    assert limite_ricorsione(1, 2) == 12 and limite_ricorsione(3) == 12
+
+
+# --- Riassunto (step 3): riassuntore simulato che annota cosa riceve ---
+
+def riassuntore_finto(*testi, chiamate=None):
+    """Restituisce i testi in ordine (l'ultimo si ripete) e annota (precedente, messaggi)."""
+    elenco = list(testi)
+
+    def riassumi(precedente, messaggi):
+        if chiamate is not None:
+            chiamate.append((precedente, list(messaggi)))
+        return elenco.pop(0) if len(elenco) > 1 else elenco[0]
+    return riassumi
+
+
+def storia(turni):
+    """`turni` turni di domanda e risposta, più la domanda nuova."""
+    messaggi = []
+    for i in range(turni):
+        messaggi += [HumanMessage(f"domanda {i}"), AIMessage(f"risposta {i}")]
+    return [*messaggi, HumanMessage("nuova")]
+
+
+def test_sotto_la_soglia_nessuna_chiamata_al_riassuntore(caplog):
+    caplog.set_level("INFO")
+    chiamate = []
+    m = ModelloFinto(risposte=[AIMessage("ok")])
+    out = costruisci_grafo(m, [orologio], 3, riassuntore=riassuntore_finto("R", chiamate=chiamate),
+                           soglia_riassunto=5, messaggi_recenti=2).invoke(
+        {"messages": storia(2), "passaggi": 0})  # 5 messaggi: non oltre la soglia
+    assert chiamate == [] and len(out["messages"]) == 6
+    assert out.get("riassunto", "") == ""
+    assert "riassunto: 5 messaggi, sotto la soglia di 5: nessuna chiamata" in caplog.text
+
+
+def test_oltre_la_soglia_i_vecchi_diventano_riassunto(caplog):
+    caplog.set_level("INFO")
+    chiamate = []
+    m = ModelloFinto(risposte=[AIMessage("ok")])
+    out = costruisci_grafo(m, [orologio], 3,
+                           riassuntore=riassuntore_finto("NUOVO", chiamate=chiamate),
+                           soglia_riassunto=5, messaggi_recenti=2).invoke(
+        {"messages": storia(3), "passaggi": 0, "riassunto": "VECCHIO"})  # 7 messaggi
+    assert [x.content for x in out["messages"]] == ["domanda 2", "risposta 2", "nuova", "ok"]
+    assert out["riassunto"] == "NUOVO"
+    precedente, vecchi = chiamate[0]
+    assert precedente == "VECCHIO"
+    assert [x.content for x in vecchi] == ["domanda 0", "risposta 0", "domanda 1", "risposta 1"]
+    assert "riassunto: 7 messaggi, soglia 5 -> riassunti 4, tenuti 3" in caplog.text
+    sistema = m.ricevuti[0][0]
+    assert sistema.content.startswith(MESSAGGIO_SISTEMA)
+    assert sistema.content.endswith(f"{INTESTAZIONE_RIASSUNTO}\nNUOVO")
+    assert "informazioni che l'utente ti ha dato" in INTESTAZIONE_RIASSUNTO
+    assert [x.content for x in m.ricevuti[0][1:]] == ["domanda 2", "risposta 2", "nuova"]
+
+
+def test_il_router_riceve_il_riassunto():
+    ricevuti = []
+
+    def router(messaggi, riassunto):
+        ricevuti.append(riassunto)
+        return Classificazione(motivo="x", categoria="conversazione")
+    costruisci_grafo(ModelloFinto(risposte=[AIMessage("ok")]), [orologio], 3, router=router,
+                     riassuntore=riassuntore_finto("NUOVO"), soglia_riassunto=5,
+                     messaggi_recenti=2).invoke({"messages": storia(3), "passaggi": 0})
+    assert ricevuti == ["NUOVO"]
+
+
+def test_riassunto_vuoto_non_toglie_messaggi(caplog):
+    m = ModelloFinto(risposte=[AIMessage("ok")])
+    out = costruisci_grafo(m, [orologio], 3, riassuntore=riassuntore_finto("  "),
+                           soglia_riassunto=5, messaggi_recenti=2).invoke(
+        {"messages": storia(3), "passaggi": 0, "riassunto": "VECCHIO"})
+    assert len(out["messages"]) == 8 and out["riassunto"] == "VECCHIO"
+    assert "riassunto vuoto" in caplog.text
+    assert [r.levelname for r in caplog.records if "riassunto vuoto" in r.message] == ["WARNING"]
+
+
+def test_un_solo_turno_lungo_non_si_riassume(caplog):
+    caplog.set_level("INFO")
+    chiamate = []
+    # 3 messaggi oltre la soglia di 2, ma tutti nello stesso turno: il taglio cade all'inizio
+    out = costruisci_grafo(ModelloFinto(risposte=[AIMessage("ok")]), [orologio], 3,
+                           riassuntore=riassuntore_finto("R", chiamate=chiamate),
+                           soglia_riassunto=2, messaggi_recenti=1).invoke(
+        {"messages": [HumanMessage("a"), AIMessage("b"), AIMessage("c")], "passaggi": 0})
+    assert chiamate == [] and len(out["messages"]) == 4
+    assert "niente da riassumere" in caplog.text
+
+
+def test_sessione_conserva_e_aggiorna_il_riassunto():
+    chiamate = []
+    m = ModelloFinto(risposte=[AIMessage(f"risposta {i}") for i in range(5)])
+    s = Sessione(costruisci_grafo(m, [orologio], 3,
+                                  riassuntore=riassuntore_finto("R1", "R2", chiamate=chiamate),
+                                  soglia_riassunto=4, messaggi_recenti=2), 3)
+    for i in range(3):
+        s.chiedi(f"domanda {i}")
+    assert s.riassunto == "R1" and chiamate[0][0] == ""  # turno 3: 5 messaggi -> riassunto
+    assert [x.content for x in s.cronologia] == ["domanda 1", "risposta 1", "domanda 2",
+                                                 "risposta 2"]
+    s.chiedi("domanda 3")  # 5 messaggi: il nuovo riassunto riceve il precedente
+    assert s.riassunto == "R2" and chiamate[1][0] == "R1"
+    s.nuova()
+    assert s.riassunto == "" and s.cronologia == []

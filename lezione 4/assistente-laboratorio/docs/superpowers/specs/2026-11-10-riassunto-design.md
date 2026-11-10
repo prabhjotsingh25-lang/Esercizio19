@@ -56,3 +56,16 @@ START -> riassunto -> router -conversazione-> modello <-> strumenti -> revisore 
 - Reali (LM Studio, `SOGLIA_RIASSUNTO=6`, `MESSAGGI_RECENTI=2`): turno 1 con il nome, log della
   compressione, «come mi chiamo?» risposto correttamente dopo la compressione; caso sotto
   soglia senza chiamata. Rilancio delle prove del router e di «note con conferma».
+
+## Note dall'implementazione
+- Prima prova reale fallita due volte: il riassunto conteneva il nome («Prabhjot ha iniziato
+  una conversazione...») ma il modello rispondeva «non mi hai detto il tuo nome». Diagnosi
+  sull'ultimo turno ricostruito: serve che il riassunto dica esplicitamente chi è l'utente.
+  Le istruzioni del riassunto ora chiedono una prima riga «Utente: ...» con i fatti
+  sull'utente, e l'intestazione nel messaggio di sistema dice che sono informazioni date
+  dall'utente da usare per rispondere. Nessuna decisione della specifica cambia.
+- La prova reale usa «Quanto fa 15 + 27?» al posto di «Che ore sono a Tokyo?»: il revisore
+  (step 2) non vede i risultati degli strumenti e bocciava l'orario giusto; la correzione
+  dell'agente («non ho accesso a dati in tempo reale») restava fra i messaggi recenti e
+  faceva fallire la domanda sul nome anche con il riassunto migliorato. Il difetto del
+  revisore è un debito noto (CLAUDE.md) e si corregge in un commit separato `fix(revisore)`.

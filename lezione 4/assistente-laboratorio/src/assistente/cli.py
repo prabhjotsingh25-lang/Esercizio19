@@ -11,6 +11,7 @@ from assistente.config import ErroreConfigurazione, carica_configurazione
 from assistente.grafo import costruisci_grafo
 from assistente.modello import crea_modello
 from assistente.revisore import crea_revisore
+from assistente.riassunto import crea_riassuntore
 from assistente.router import crea_router
 from assistente.sessione import Sessione
 from assistente.varianti import strumenti_per_variante
@@ -69,6 +70,9 @@ def main() -> int:
     grafo = costruisci_grafo(modello, strumenti, config.max_passaggi,
                              router=crea_router(modello, config.ambito),
                              revisore=crea_revisore(modello),
-                             max_revisioni=config.max_revisioni)
+                             max_revisioni=config.max_revisioni,
+                             riassuntore=crea_riassuntore(modello),
+                             soglia_riassunto=config.soglia_riassunto,
+                             messaggi_recenti=config.messaggi_recenti)
     esegui(Sessione(grafo, config.max_passaggi, config.max_revisioni), config.base_url)
     return 0

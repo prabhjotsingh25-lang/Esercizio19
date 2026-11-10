@@ -19,6 +19,8 @@ class Configurazione:
     strumenti_mcp_url: str | None = None
     ambito: str = ""  # cosa fa l'assistente: il router lo usa per le domande fuori ambito
     max_revisioni: int = 1  # nuovi tentativi chiesti dal revisore per ogni domanda
+    soglia_riassunto: int = 20  # oltre questi messaggi, quelli vecchi diventano un riassunto
+    messaggi_recenti: int = 6  # messaggi recenti che restano intatti (almeno)
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -76,6 +78,11 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
     if env is None:
         env = os.environ
     variante = _variante(env)
+    soglia = _intero_positivo(env, "SOGLIA_RIASSUNTO", 20)
+    recenti = _intero_positivo(env, "MESSAGGI_RECENTI", 6)
+    if recenti >= soglia:
+        raise ErroreConfigurazione(
+            f"MESSAGGI_RECENTI ({recenti}) deve essere minore di SOGLIA_RIASSUNTO ({soglia})")
     return Configurazione(
         base_url=_obbligatoria(env, "LMSTUDIO_BASE_URL"),
         modello=_obbligatoria(env, "LMSTUDIO_MODEL"),
@@ -86,4 +93,6 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         strumenti_mcp_url=_obbligatoria(env, "STRUMENTI_MCP_URL") if variante == "mcp" else None,
         ambito=_obbligatoria(env, "AMBITO_AGENTE"),
         max_revisioni=_intero_positivo(env, "MAX_REVISIONI", 1),
+        soglia_riassunto=soglia,
+        messaggi_recenti=recenti,
     )

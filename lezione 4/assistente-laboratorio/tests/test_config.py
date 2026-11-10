@@ -100,3 +100,23 @@ def test_max_revisioni_default_e_valore():
 def test_max_revisioni_non_valido(valore):
     with pytest.raises(ErroreConfigurazione, match="MAX_REVISIONI"):
         carica_configurazione({**BASE, "MAX_REVISIONI": valore})
+
+
+def test_riassunto_default_e_valori():
+    c = carica_configurazione(dict(BASE))
+    assert (c.soglia_riassunto, c.messaggi_recenti) == (20, 6)
+    c = carica_configurazione({**BASE, "SOGLIA_RIASSUNTO": " 6 ", "MESSAGGI_RECENTI": "2"})
+    assert (c.soglia_riassunto, c.messaggi_recenti) == (6, 2)
+
+
+@pytest.mark.parametrize("nome", ["SOGLIA_RIASSUNTO", "MESSAGGI_RECENTI"])
+@pytest.mark.parametrize("valore", ["dieci", "0", "-1"])
+def test_riassunto_non_intero_positivo(nome, valore):
+    with pytest.raises(ErroreConfigurazione, match=nome):
+        carica_configurazione({**BASE, nome: valore})
+
+
+@pytest.mark.parametrize("soglia, recenti", [("6", "6"), ("6", "7"), ("3", "6")])
+def test_messaggi_recenti_devono_essere_meno_della_soglia(soglia, recenti):
+    with pytest.raises(ErroreConfigurazione, match="MESSAGGI_RECENTI.*SOGLIA_RIASSUNTO"):
+        carica_configurazione({**BASE, "SOGLIA_RIASSUNTO": soglia, "MESSAGGI_RECENTI": recenti})

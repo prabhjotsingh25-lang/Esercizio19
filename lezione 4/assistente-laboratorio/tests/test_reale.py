@@ -9,6 +9,7 @@ from assistente.config import ErroreConfigurazione, carica_configurazione
 from assistente.grafo import MESSAGGIO_RIFIUTO, costruisci_grafo
 from assistente.modello import crea_modello
 from assistente.revisore import Revisione, crea_revisore
+from assistente.riassunto import crea_riassuntore
 from assistente.router import crea_router
 from assistente.sessione import Sessione
 from assistente.varianti import strumenti_per_variante
@@ -33,7 +34,10 @@ def sessione(tmp_path, monkeypatch):
     grafo = costruisci_grafo(modello, strumenti, config.max_passaggi,
                              router=crea_router(modello, config.ambito),
                              revisore=crea_revisore(modello),
-                             max_revisioni=config.max_revisioni)
+                             max_revisioni=config.max_revisioni,
+                             riassuntore=crea_riassuntore(modello),
+                             soglia_riassunto=config.soglia_riassunto,
+                             messaggi_recenti=config.messaggi_recenti)
     return Sessione(grafo, config.max_passaggi, config.max_revisioni)
 
 
@@ -219,3 +223,61 @@ def test_domanda_in_due_parti(sessione, caplog):
     risposta = sessione.chiedi(DUE_PARTI)
     assert "revisore coerente=" in caplog.text, caplog.text
     assert "63" in risposta, f"63 assente nella risposta: {risposta!r}"
+
+
+# --- Riassunto (step 3): soglia bassa per comprimere già dopo pochi turni ---
+
+@pytest.fixture
+def sessione_soglia_bassa(sessione, monkeypatch):
+    """Sessione completa con SOGLIA_RIASSUNTO=6 e MESSAGGI_RECENTI=2."""
+    monkeypatch.setenv("SOGLIA_RIASSUNTO", "6")
+    monkeypatch.setenv("MESSAGGI_RECENTI", "2")
+    config = carica_configurazione()
+    modello = crea_modello(config)
+    grafo = costruisci_grafo(modello, strumenti_per_variante(config), config.max_passaggi,
+                             router=crea_router(modello, config.ambito),
+                             revisore=crea_revisore(modello),
+                             max_revisioni=config.max_revisioni,
+                             riassuntore=crea_riassuntore(modello),
+                             soglia_riassunto=config.soglia_riassunto,
+                             messaggi_recenti=config.messaggi_recenti)
+    return Sessione(grafo, config.max_passaggi, config.max_revisioni)
+
+
+_COMPRESSIONE = re.compile(r"riassunto: (\d+) messaggi, soglia (\d+) -> riassunti (\d+), tenuti (\d+)")
+
+
+def test_riassunto_sotto_soglia_nessuna_chiamata(sessione_soglia_bassa, caplog):
+    caplog.set_level("INFO", logger="assistente")
+    risposta = sessione_soglia_bassa.chiedi("Ciao, mi chiamo Prabhjot.")
+    print(f"turno 1: {risposta}")
+    assert "riassunto: 1 messaggi, sotto la soglia di 6: nessuna chiamata" in caplog.text
+    assert not _COMPRESSIONE.search(caplog.text)
+    assert sessione_soglia_bassa.riassunto == ""
+
+
+def test_riassunto_conserva_il_nome_dopo_la_compressione(sessione_soglia_bassa, caplog):
+    caplog.set_level("INFO", logger="assistente")
+    s = sessione_soglia_bassa
+    # Niente domande sull'ora: il revisore, che non vede i risultati degli strumenti, può
+    # bocciare un orario giusto, e la correzione dell'agente («non ho accesso a dati in tempo
+    # reale») confonde la domanda sul nome (debito noto, vedi CLAUDE.md).
+    domande = ["Ciao, mi chiamo Prabhjot.", "Quanto fa 12 * 7?", "Converti 3 km in metri.",
+               "Quanto fa 15 + 27?"]
+    for i, domanda in enumerate(domande, 1):
+        risposta = s.chiedi(domanda)
+        print(f"turno {i}: Tu> {domanda}\n         Assistente> {risposta}")
+    compressioni = _COMPRESSIONE.findall(caplog.text)
+    print("log:", *(r.getMessage() for r in caplog.records
+                    if r.getMessage().startswith("riassunto:")), sep="\n  ")
+    print(f"riassunto: {s.riassunto}")
+    assert compressioni, "nessuna compressione nei primi turni"
+    assert all(m.content != "Ciao, mi chiamo Prabhjot." for m in s.cronologia), (
+        "il turno con il nome è ancora in cronologia: non è stato riassunto")
+    risposta = s.chiedi("Come mi chiamo?")
+    print(f"dopo la compressione: Tu> Come mi chiamo?\n         Assistente> {risposta}")
+    print(f"riassunto visto dall'agente nell'ultimo turno: {s.riassunto}")
+    print("messaggi tenuti:", *(f"{type(m).__name__}({m.name or ''}): {m.content!r}"
+                                for m in s.cronologia), sep="\n  ")
+    assert "router categoria=fuori_ambito" not in caplog.text
+    assert "prabhjot" in risposta.lower(), f"nome assente nella risposta: {risposta!r}"

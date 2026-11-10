@@ -1,4 +1,4 @@
-"""Contesto testuale della conversazione, condiviso da router e revisore."""
+"""Contesto testuale della conversazione, condiviso da router, revisore e riassunto."""
 from collections.abc import Sequence
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -14,6 +14,19 @@ def e_indicazione(messaggio: BaseMessage) -> bool:
     return isinstance(messaggio, HumanMessage) and messaggio.name == NOME_REVISORE
 
 
+def e_domanda(messaggio: BaseMessage) -> bool:
+    """Vero per le domande dell'utente (non per le indicazioni del revisore)."""
+    return isinstance(messaggio, HumanMessage) and not e_indicazione(messaggio)
+
+
+def riga_di_testo(messaggio: BaseMessage) -> str | None:
+    """Riga «Utente: ...» / «Assistente: ...»; None per strumenti, indicazioni e vuoti."""
+    testo = _testo(messaggio)
+    if testo is None:
+        return None
+    return f"{'Utente' if isinstance(messaggio, HumanMessage) else 'Assistente'}: {testo}"
+
+
 def _testo(messaggio: BaseMessage) -> str | None:
     """Testo di una domanda o di una risposta finale; None per strumenti, indicazioni e vuoti."""
     if e_indicazione(messaggio):
@@ -27,9 +40,5 @@ def _testo(messaggio: BaseMessage) -> str | None:
 
 def contesto_testuale(precedenti: Sequence[BaseMessage]) -> str:
     """Ultimi FINESTRA messaggi di testo come righe «Utente: ...» / «Assistente: ...»."""
-    righe = []
-    for m in precedenti:
-        testo = _testo(m)
-        if testo is not None:
-            righe.append(f"{'Utente' if isinstance(m, HumanMessage) else 'Assistente'}: {testo}")
+    righe = [r for r in map(riga_di_testo, precedenti) if r is not None]
     return "\n".join(righe[-FINESTRA:]) or "(nessuna)"

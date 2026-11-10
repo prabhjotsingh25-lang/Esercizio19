@@ -31,13 +31,17 @@ class Classificazione(BaseModel):
         description="conversazione se la domanda rientra nell'ambito, altrimenti fuori_ambito.")
 
 
-Router = Callable[[Sequence[BaseMessage]], Classificazione]
+# (messaggi, riassunto della conversazione precedente) -> classificazione
+Router = Callable[[Sequence[BaseMessage], str], Classificazione]
 
 
-def messaggi_per_router(messaggi: Sequence[BaseMessage], ambito: str) -> list[BaseMessage]:
-    """Prompt del router: ambito, ultimi FINESTRA messaggi di testo e domanda da classificare."""
+def messaggi_per_router(messaggi: Sequence[BaseMessage], ambito: str,
+                        riassunto: str = "") -> list[BaseMessage]:
+    """Prompt del router: ambito, riassunto, ultimi FINESTRA messaggi di testo e domanda."""
     *precedenti, domanda = messaggi
     contesto = contesto_testuale(precedenti)
+    if riassunto:
+        contesto = f"Riassunto: {riassunto}\n{contesto}"
     return [SystemMessage(ISTRUZIONI_ROUTER.format(ambito=ambito)),
             HumanMessage(f"Conversazione precedente:\n{contesto}\n\n"
                          f"Domanda da classificare:\n{domanda.content}")]
@@ -51,9 +55,9 @@ def crea_router(modello: BaseChatModel, ambito: str) -> Router:
     """
     strutturato = modello.with_structured_output(Classificazione)
 
-    def classifica(messaggi: Sequence[BaseMessage]) -> Classificazione:
+    def classifica(messaggi: Sequence[BaseMessage], riassunto: str = "") -> Classificazione:
         try:
-            esito = strutturato.invoke(messaggi_per_router(messaggi, ambito))
+            esito = strutturato.invoke(messaggi_per_router(messaggi, ambito, riassunto))
         except ValueError as errore:  # JSON rotto o campi non validi (ValidationError)
             esito = errore
         if not isinstance(esito, Classificazione):

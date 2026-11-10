@@ -46,6 +46,18 @@ programma esegue davvero:
 
 La cronologia vive solo per la durata della sessione.
 
+All'inizio di ogni turno un nodo **riassunto** controlla la lunghezza della cronologia: oltre
+`SOGLIA_RIASSUNTO` messaggi (default 20, strumenti compresi) i messaggi vecchi vengono tolti e
+sostituiti da un riassunto, e restano intatti almeno gli ultimi `MESSAGGI_RECENTI` (default 6).
+Il taglio cade solo fra un turno e l'altro (sulla domanda dell'utente più vicina), quindi una
+chiamata a uno strumento non resta mai separata dal suo risultato. Il riassunto è un campo
+dello stato: a ogni compressione il modello riceve il riassunto precedente e i messaggi da
+togliere e ne scrive uno nuovo che li comprende; la prima riga riporta i fatti sull'utente
+(«Utente: si chiama ...»). Nel riassunto entrano solo domande e risposte
+accettate: niente strumenti, indicazioni del revisore e bozze scartate. L'agente lo riceve in
+coda al messaggio di sistema, il router come prima riga del contesto. Sotto la soglia il modello
+non viene chiamato; un riassunto vuoto lascia la cronologia com'è (WARNING nel log).
+
 Prima dell'agente un **router** decide se la domanda rientra nell'ambito dell'assistente,
 descritto in configurazione (`AMBITO_AGENTE`). Il router usa lo stesso modello con output
 strutturato (motivo e categoria `conversazione` / `fuori_ambito`) e vede l'ambito, gli ultimi
@@ -66,12 +78,12 @@ limite degli strumenti non vengono revisionati; un output non valido del revisor
 «coerente» (WARNING nel log):
 
 ```
-START -> router --conversazione--> modello <-> strumenti
-                |                     | risposta finale
-                |                     v
-                |                  revisore --coerente / limite--> END
-                |                     '--non coerente--> indicazione -> modello
-                '--fuori_ambito--> rifiuto -> END
+START -> riassunto -> router --conversazione--> modello <-> strumenti
+                             |                     | risposta finale
+                             |                     v
+                             |                  revisore --coerente / limite--> END
+                             |                     '--non coerente--> indicazione -> modello
+                             '--fuori_ambito--> rifiuto -> END
 ```
 
 Gli strumenti si possono raggiungere con varianti di integrazione diverse, scelte da
@@ -106,7 +118,9 @@ Struttura:
 - `src/assistente/meteo.py`: strumento meteo (Open-Meteo, via `httpx`);
 - `src/assistente/router.py`: router (ambito della domanda, output strutturato);
 - `src/assistente/revisore.py`: revisore (coerenza della risposta, output strutturato);
-- `src/assistente/contesto.py`: finestra dei messaggi di testo usata da router e revisore;
+- `src/assistente/riassunto.py`: riassunto della cronologia (punto di taglio, riassuntore);
+- `src/assistente/contesto.py`: finestra dei messaggi di testo usata da router, revisore e
+  riassunto;
 - `src/assistente/grafo.py`: grafo LangGraph (stato, nodi, instradamento);
 - `src/assistente/sessione.py`: cronologia della conversazione;
 - `src/assistente/modello.py`: collegamento a LM Studio (API compatibile con OpenAI);
@@ -139,6 +153,8 @@ Variabili:
 | `AMBITO_AGENTE` | obbligatoria: descrizione di che cosa fa l'assistente, usata dal router (testo di esempio in `.env.example`, fra virgolette) |
 | `MAX_PASSAGGI_STRUMENTO` | passaggi massimi di strumento per domanda (default 3), contati su tutti i tentativi |
 | `MAX_REVISIONI` | nuovi tentativi che il revisore può chiedere per domanda (default 1) |
+| `SOGLIA_RIASSUNTO` | oltre questo numero di messaggi quelli vecchi diventano un riassunto (default 20) |
+| `MESSAGGI_RECENTI` | messaggi recenti che restano intatti, almeno (default 6, minore di `SOGLIA_RIASSUNTO`) |
 | `LOG_LEVEL` | livello dei log su stderr (default `INFO`) |
 | `VARIANTE_STRUMENTI` | `locale` (default), `http` oppure `mcp` |
 | `STRUMENTI_HTTP_URL` | indirizzo del servizio strumenti, obbligatorio con `http`, es. `http://localhost:8001` |
@@ -313,6 +329,16 @@ all'agente. Il modello vero non si può costringere a una risposta parziale: il 
 nuova risposta è provato dai test simulati, da `test_revisore_rifiuta_una_risposta_parziale`
 (revisore vero su una risposta preparata) e da `test_agente_riprova_dopo_l_indicazione_del_revisore`
 (agente vero che riceve l'indicazione).
+Per il riassunto: avvia con `SOGLIA_RIASSUNTO=6` e `MESSAGGI_RECENTI=2`, scrivi «Ciao, mi chiamo
+...», poi tre domande (per esempio «Quanto fa 12 * 7?», «Converti 3 km in metri.», «Quanto fa
+15 + 27?»), poi «Come mi chiamo?». Al primo turno il log mostra `riassunto: 1 messaggi, sotto la soglia di 6: nessuna
+chiamata`; quando la soglia viene superata compare `riassunto: N messaggi, soglia 6 ->
+riassunti X, tenuti Y` e la risposta finale deve contenere il nome, che ormai sta solo nel
+riassunto. Le prove reali `test_riassunto_*` fanno lo stesso. La prova non usa domande
+sull'ora: il revisore, che non vede i risultati degli strumenti, a volte boccia un orario
+giusto e la correzione dell'agente («non ho accesso a dati in tempo reale») resta fra i
+messaggi recenti e lo porta a rispondere «non mi hai detto il tuo nome» (debito noto, in
+correzione subito dopo questo step).
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 
@@ -335,6 +361,11 @@ solo queste prove lo fanno.
   rifiuto. `limite di N revisioni raggiunto` (WARNING) indica che anche l'ultima risposta non
   è stata giudicata coerente ed è stata restituita comunque. Ogni revisione costa almeno due
   chiamate al modello: con un modello lento si può tenere `MAX_REVISIONI=1`.
+- **L'assistente dimentica qualcosa di detto molto prima**: con `LOG_LEVEL=DEBUG` la riga
+  `riassunto: testo=...` mostra che cosa è rimasto della parte vecchia della conversazione.
+  `riassunto vuoto` (WARNING) indica che il modello non ha prodotto il riassunto: i messaggi
+  restano e si riprova al turno dopo. Per tenere più messaggi intatti alza `MESSAGGI_RECENTI`
+  o `SOGLIA_RIASSUNTO`.
 - **Servizio strumenti spento (variante `http`)**: l'assistente non si blocca; lo strumento
   restituisce al modello «Errore: servizio strumenti non raggiungibile su ...», e il modello
   lo riferisce. Avvia il servizio (o, in Docker, usa `--profile http`).

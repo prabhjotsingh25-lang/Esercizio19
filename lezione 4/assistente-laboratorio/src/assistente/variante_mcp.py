@@ -1,5 +1,5 @@
 """Adattatore MCP (variante 03): stesse definizioni del catalogo, esecuzione tramite client FastMCP;
-lettura della resource `utente://preferenze` per l'host.
+lettura della resource `utente://preferenze` e dei prompt (prompts/list, prompts/get) per l'host.
 
 Il client FastMCP è asincrono, il resto del programma è sincrono: ogni chiamata apre una
 connessione, esegue lo strumento e la chiude (`asyncio.run`). Semplice e senza stato condiviso.
@@ -13,6 +13,8 @@ from fastmcp import Client
 from fastmcp.exceptions import MCPError
 from langchain_core.tools import BaseTool, StructuredTool
 
+from assistente.prompt import (
+    ArgomentoPrompt, ErrorePrompt, InfoPrompt, log, log_messaggi, messaggio)
 from assistente.preferenze import (
     URI_PREFERENZE, ErrorePreferenze, LettorePreferenze, Preferenze, con_predefinite, da_json)
 
@@ -91,3 +93,46 @@ def crea_lettore_mcp(url: str, crea_client: Callable[[], Any] | None = None) -> 
     crea_client = crea_client or (lambda: Client(url, timeout=TIMEOUT_SECONDI))
     return lambda: con_predefinite(f"resources/read {URI_PREFERENZE} (mcp)",
                                    lambda: _leggi_preferenze(crea_client, url))
+
+
+class FontePromptMCP:
+    """Prompt dal server MCP: prompts/list per l'elenco, prompts/get per il testo."""
+
+    def __init__(self, url: str, crea_client: Callable[[], Any] | None = None):
+        self._url = url
+        self._crea_client = crea_client or (lambda: Client(url, timeout=TIMEOUT_SECONDI))
+
+    def _esegui(self, operazione):
+        async def esegui():
+            async with self._crea_client() as client:
+                return await operazione(client)
+        try:
+            return asyncio.run(esegui())
+        except MCPError as errore:
+            raise ErrorePrompt(f"errore del server MCP: {errore.error.message}") from None
+        except RuntimeError as errore:
+            if "failed to connect" not in str(errore):
+                raise  # non è un problema di rete: non va mascherato
+            raise ErrorePrompt(f"server MCP non raggiungibile su {self._url}") from None
+
+    def elenca(self) -> list[InfoPrompt]:
+        voci = self._esegui(lambda client: client.list_prompts())
+        elenco = [InfoPrompt(p.name, p.description or "",
+                             tuple(ArgomentoPrompt(a.name, a.description or "", bool(a.required))
+                                   for a in p.arguments or []))
+                  for p in voci]
+        log.info("prompt: prompts/list (mcp) -> %d prompt: %s", len(elenco),
+                 ", ".join(i.nome for i in elenco))
+        return elenco
+
+    def ottieni(self, nome: str, argomenti: dict[str, str]) -> list:
+        risultato = self._esegui(lambda client: client.get_prompt(nome, argomenti))
+        messaggi = []
+        for m in risultato.messages:
+            if not isinstance(m.content, tipi.TextContent):
+                raise ErrorePrompt("il server ha restituito un messaggio non testuale")
+            messaggi.append(messaggio(m.role, m.content.text))
+        if not messaggi:
+            raise ErrorePrompt("il server non ha restituito messaggi")
+        log_messaggi("mcp", nome, argomenti, messaggi)
+        return messaggi

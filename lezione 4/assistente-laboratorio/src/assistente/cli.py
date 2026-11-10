@@ -10,18 +10,56 @@ from langgraph.errors import GraphRecursionError
 from assistente.config import ErroreConfigurazione, carica_configurazione
 from assistente.grafo import costruisci_grafo
 from assistente.modello import crea_modello
+from assistente.prompt import (
+    ErrorePrompt, FontePrompt, analizza_comando, controlla, descrivi_elenco)
 from assistente.revisore import crea_revisore
 from assistente.riassunto import crea_riassuntore
 from assistente.router import crea_router
 from assistente.sessione import Sessione
-from assistente.varianti import lettore_preferenze, strumenti_per_variante
+from assistente.varianti import fonte_prompt, lettore_preferenze, strumenti_per_variante
+
+
+def _prompt(fonte: FontePrompt | None, resto: str, scrivi: Callable[[str], None]):
+    """Prepara i messaggi di /prompt; None (con un messaggio) se il comando va bloccato.
+
+    Il controllo su nome e argomenti si fa sull'elenco (prompts/list) prima di chiedere il
+    testo (prompts/get): un comando non valido non arriva né al server né al modello.
+    """
+    if fonte is None:
+        scrivi("Prompt non disponibili.")
+        return None
+    try:
+        nome, argomenti = analizza_comando(resto)
+    except ErrorePrompt as errore:
+        scrivi(f"Prompt non valido: {errore}")
+        return None
+    try:
+        elenco = fonte.elenca()
+    except ErrorePrompt as errore:
+        scrivi(f"Prompt non disponibili: {errore}")
+        return None
+    try:
+        controlla(elenco, nome, argomenti)
+    except ErrorePrompt as errore:
+        scrivi(f"Prompt non valido: {errore}")
+        return None
+    try:
+        messaggi = fonte.ottieni(nome, argomenti)
+    except ErrorePrompt as errore:
+        scrivi(f"Prompt non disponibili: {errore}")
+        return None
+    for m in messaggi:
+        scrivi(f"Prompt> {m.content}")
+    return messaggi
 
 
 def esegui(sessione: Sessione, base_url: str,
            leggi: Callable[[str], str] = input,
-           scrivi: Callable[[str], None] = print) -> None:
+           scrivi: Callable[[str], None] = print,
+           prompt: FontePrompt | None = None) -> None:
     """Ciclo di conversazione; termina con /esci, fine input o Ctrl+C."""
-    scrivi("Comandi: /esci per uscire, /nuova per una nuova conversazione.")
+    scrivi("Comandi: /esci per uscire, /nuova per una nuova conversazione, /prompts per "
+           "l'elenco dei prompt, /prompt nome argomento=valore per usarne uno.")
     while True:
         try:
             riga = leggi("Tu> ").strip()
@@ -36,8 +74,21 @@ def esegui(sessione: Sessione, base_url: str,
             sessione.nuova()
             scrivi("Nuova conversazione avviata.")
             continue
+        if riga == "/prompts":
+            try:
+                scrivi(descrivi_elenco(prompt.elenca()) if prompt else "Prompt non disponibili.")
+            except ErrorePrompt as errore:
+                scrivi(f"Prompt non disponibili: {errore}")
+            continue
+        if riga == "/prompt" or riga.startswith("/prompt "):
+            messaggi = _prompt(prompt, riga[len("/prompt"):], scrivi)
+            if messaggi is None:
+                continue
+            invia = lambda m=messaggi: sessione.chiedi_messaggi(m)  # noqa: E731
+        else:
+            invia = lambda r=riga: sessione.chiedi(r)  # noqa: E731
         try:
-            scrivi(f"Assistente> {sessione.chiedi(riga)}")
+            scrivi(f"Assistente> {invia()}")
         except (openai.APIConnectionError, openai.APITimeoutError):
             scrivi(f"Non riesco a raggiungere LM Studio su {base_url}: "
                    "controlla che il server sia avviato.")
@@ -77,5 +128,5 @@ def main() -> int:
     # Le preferenze si leggono qui, una volta prima della prima domanda (e di nuovo con /nuova).
     sessione = Sessione(grafo, config.max_passaggi, config.max_revisioni,
                         leggi_preferenze=lettore_preferenze(config))
-    esegui(sessione, config.base_url)
+    esegui(sessione, config.base_url, prompt=fonte_prompt(config))
     return 0

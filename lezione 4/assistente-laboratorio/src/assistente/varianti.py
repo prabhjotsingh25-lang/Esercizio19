@@ -5,7 +5,8 @@ from assistente.catalogo import strumenti_locali
 from assistente.config import Configurazione
 from assistente.variante_http import crea_strumenti_http
 from assistente.preferenze import LettorePreferenze, crea_lettore_file
-from assistente.variante_mcp import crea_lettore_mcp, crea_strumenti_mcp
+from assistente.prompt import FontePrompt, FontePromptLocale
+from assistente.variante_mcp import FontePromptMCP, crea_lettore_mcp, crea_strumenti_mcp
 
 
 def strumenti_per_variante(config: Configurazione) -> list[BaseTool]:
@@ -22,3 +23,10 @@ def lettore_preferenze(config: Configurazione) -> LettorePreferenze:
     if config.variante == "mcp":
         return crea_lettore_mcp(config.strumenti_mcp_url)
     return crea_lettore_file(config.preferenze_file)
+
+
+def fonte_prompt(config: Configurazione) -> FontePrompt:
+    """mcp: prompts/list e prompts/get sul server; locale e http: catalogo locale dei prompt."""
+    if config.variante == "mcp":
+        return FontePromptMCP(config.strumenti_mcp_url)
+    return FontePromptLocale()

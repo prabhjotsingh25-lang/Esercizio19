@@ -3,8 +3,8 @@
 Progetto del corso «Deep Learning e LLM: costruire chatbot e agenti».
 La cartella del progetto è `assistente-laboratorio/`; questo file e il progetto stanno nella cartella `lezione 4/` della repository,
 accanto alle altre lezioni (es. `lezione 3/`).
-Struttura: `src/assistente/` (config, contesto, preferenze, riassunto, router, revisore, grafo,
-sessione, modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
+Struttura: `src/assistente/` (config, contesto, preferenze, prompt, riassunto, router, revisore,
+grafo, sessione, modello, cli, `__main__`; strumenti in moduli propri; `catalogo`, `varianti` e un modulo per
 variante di integrazione),
 `tests/`, `docs/superpowers/`, `Dockerfile`, `compose.yaml`, `requirements*.txt`, `.env.example`.
 Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
@@ -34,6 +34,8 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
 - legge una volta a inizio sessione le preferenze dell'utente (lingua, fuso orario predefinito,
   stile): resource MCP `utente://preferenze` nella variante mcp, file `PREFERENZE_FILE` nelle
   altre; vanno in cima al prompt di sistema dell'agente;
+- offre i prompt `spiega` e `riassumi_conversazione` con `/prompts` e `/prompt nome arg=valore`
+  (prompt MCP nella variante mcp, catalogo locale nelle altre); i messaggi passano dal grafo;
 - prima dell'agente, un router rifiuta le domande fuori dall'ambito descritto in `AMBITO_AGENTE`;
 - dopo l'agente, un revisore controlla che la risposta sia coerente con la domanda e, se no,
   lo fa riprovare (al massimo `MAX_REVISIONI` volte); vede anche riassunto e risultati degli
@@ -62,6 +64,35 @@ Un'applicazione da terminale in Python che conversa con un modello locale e:
   non leggerle per copiarne il codice e non modificarle.
 - Un branch `feat/<nome>` per task, creato sempre da `dev`; nessun worktree se non richiesto.
   Non toccare `main`.
+
+## Comportamenti noti
+- **Preferenze e strumenti con il modello piccolo** (`gemma-4-e2b`, misurato il 2026-11-10 su
+  «Quanto fa 12 * 7?», «Converti 3 km in metri.», «Quanto fa 137 * 49?»): senza preferenze
+  l'agente usa lo strumento 3 volte su 3; con il blocco delle preferenze in cima al prompt di
+  sistema 0-2 su 3, qualunque formulazione dello stile; con le preferenze in fondo 0 su 3 (la
+  posizione non conta). Di solito il risultato a mente è giusto, ma non sempre (una volta
+  «96»). L'ora usa sempre `ora_corrente`. Il testo dello stile sintetico è «risposta finale
+  breve ed essenziale (usa comunque gli strumenti)».
+- **Contrassegno dei prompt** (step 5): i messaggi ottenuti con `/prompt` hanno
+  `name="prompt"` e il nodo router li fa passare con una regola fissa, senza chiamare il modello.
+  Oggi il contrassegno lo mette solo la CLI (comando `/prompt`). Allo step 6 (agente come
+  servizio HTTP) dovrà arrivare dal chiamante in modo non falsificabile da un client qualsiasi
+  (per esempio: il servizio compone lui i messaggi da nome e argomenti del prompt e non accetta
+  `name="prompt"` nei messaggi ricevuti), altrimenti chiunque potrebbe aggirare il router.
+- **Revisore e riassumi_conversazione** (step 5): il revisore vede solo gli ultimi 6 messaggi
+  di testo, quindi ha bocciato due volte un riassunto giusto della sessione perché citava un turno
+  più vecchio («Spiegazione del Model Context Protocol»); la risposta è uscita al limite delle
+  revisioni.
+
+### Possibili fix (da valutare dopo lo step 5, ciascuno con specifica a parte)
+1. **Più contesto al revisore per `riassumi_conversazione`**: la finestra di 6 messaggi non basta
+   per giudicare un riassunto della sessione (per esempio: tutti i messaggi di testo del turno
+   corrente della sessione, o il riassunto più i turni recenti, quando la domanda viene dal
+   prompt `riassumi_conversazione`).
+2. **Controllo «calcolo senza strumento» nel revisore**: se la risposta contiene un calcolo o
+   una conversione ma nel turno non c'è nessuno strumento, l'agente rifà usando lo strumento.
+3. **Contrassegno `/prompt` non falsificabile allo step 6**: il servizio HTTP compone lui i
+   messaggi da nome e argomenti del prompt e rifiuta `name="prompt"` nei messaggi ricevuti.
 
 ## Scelte tecniche
 - Python, codice sincrono e moduli piccoli, con una separazione semplice tra

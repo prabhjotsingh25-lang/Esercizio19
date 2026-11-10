@@ -7,11 +7,20 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 FINESTRA = 6
 # Nome dei messaggi con cui il revisore dà indicazioni all'agente: non sono domande dell'utente.
 NOME_REVISORE = "revisore"
+# Nome dei messaggi utente che arrivano da un prompt (/prompt): sono domande dell'utente.
+# Lo mette solo prompt.messaggio(), usato dalle fonti dei prompt; le righe scritte a mano
+# diventano HumanMessage senza nome (Sessione.chiedi).
+NOME_PROMPT = "prompt"
 
 
 def e_indicazione(messaggio: BaseMessage) -> bool:
     """Vero per le indicazioni del revisore (messaggi utente con name="revisore")."""
     return isinstance(messaggio, HumanMessage) and messaggio.name == NOME_REVISORE
+
+
+def e_da_prompt(messaggio: BaseMessage) -> bool:
+    """Vero per i messaggi utente ottenuti con /prompt (name="prompt")."""
+    return isinstance(messaggio, HumanMessage) and messaggio.name == NOME_PROMPT
 
 
 def e_domanda(messaggio: BaseMessage) -> bool:

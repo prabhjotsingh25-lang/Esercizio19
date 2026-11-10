@@ -467,3 +467,32 @@ def test_sessione_senza_lettore_non_ha_preferenze():
     s = Sessione(costruisci_grafo(m, [orologio], 3), 3)
     s.chiedi("uno")
     assert s.preferenze is None and m.ricevuti[0][0].content == MESSAGGIO_SISTEMA
+
+
+# --- Step 5: regola fissa del router per i messaggi che arrivano da /prompt ---
+
+def test_messaggio_da_prompt_regola_fissa_senza_chiamare_il_router(caplog):
+    from assistente.prompt import FontePromptLocale
+    caplog.set_level("INFO")
+    ricevuti = []
+    (prompt,) = FontePromptLocale().ottieni("spiega", {"argomento": "il pH"})
+    m = ModelloFinto(risposte=[AIMessage("Il pH misura l'acidità.")])
+    out = costruisci_grafo(m, [orologio], 3,
+                           router=router_finto("fuori_ambito", ricevuti=ricevuti)).invoke(
+        {"messages": [prompt], "passaggi": 0})
+    assert ricevuti == []  # il modello del router non viene mai chiamato
+    assert ("router categoria=conversazione motivo=richiesta da un prompt dell'assistente "
+            "(regola) -> agente") in caplog.text
+    assert out["categoria"] == "conversazione"
+    assert out["messages"][-1].content == "Il pH misura l'acidità."
+
+
+def test_messaggio_scritto_a_mano_decide_il_modello_del_router(caplog):
+    caplog.set_level("INFO")
+    ricevuti = []
+    m = ModelloFinto(risposte=[])
+    out = costruisci_grafo(m, [orologio], 3,
+                           router=router_finto("fuori_ambito", ricevuti=ricevuti)).invoke(
+        {"messages": [HumanMessage("Spiegami il pH")], "passaggi": 0})
+    assert len(ricevuti) == 1 and out["messages"][-1].content == MESSAGGIO_RIFIUTO
+    assert "(regola)" not in caplog.text

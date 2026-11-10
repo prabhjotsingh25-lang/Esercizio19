@@ -46,6 +46,19 @@ programma esegue davvero:
 
 La cronologia vive solo per la durata della sessione.
 
+**Preferenze dell'utente.** A inizio sessione (e a ogni `/nuova`) l'applicazione legge una
+sola volta le preferenze: `lingua` delle risposte (`it`, `en`, `fr`, `de`, `es`),
+`fuso_orario` predefinito (IANA) e `stile` (`sintetico` o `dettagliato`). Nella variante `mcp`
+le legge dalla **resource** MCP `utente://preferenze` del server (`resources/read`, separata
+dalle chiamate agli strumenti: la resource non è un tool e non arriva a `bind_tools`); nelle
+varianti `locale` e `http` legge direttamente il file `PREFERENZE_FILE` (default
+`preferenze.json`; esempio versionato in `preferenze.example.json`, il file vero resta fuori da
+Git). Le preferenze vanno in cima al messaggio di sistema dell'agente e il revisore le vede come
+dati attendibili; il router no. Arrivano al grafo nello stato, dal chiamante, non da un nodo.
+File assente o non valido, o resource non disponibile: valori predefiniti (`it`,
+`Europe/Rome`, `sintetico`) con un WARNING. Con un fuso predefinito l'agente non chiede più il
+luogo per «Che ore sono?».
+
 All'inizio di ogni turno un nodo **riassunto** controlla la lunghezza della cronologia: oltre
 `SOGLIA_RIASSUNTO` messaggi (default 20, strumenti compresi) i messaggi vecchi vengono tolti e
 sostituiti da un riassunto, e restano intatti almeno gli ultimi `MESSAGGI_RECENTI` (default 6).
@@ -110,7 +123,9 @@ Struttura:
 - `src/assistente/varianti.py`: scelta della variante da configurazione;
 - `src/assistente/servizio_http.py`: servizio FastAPI degli strumenti (variante 02);
 - `src/assistente/variante_http.py`: wrapper HTTP verso il servizio (variante 02);
-- `src/assistente/server_mcp.py`: server FastMCP degli strumenti (variante 03);
+- `src/assistente/server_mcp.py`: server FastMCP degli strumenti e della resource
+  `utente://preferenze` (variante 03);
+- `src/assistente/preferenze.py`: preferenze dell'utente (schema, validazione, file, prompt);
 - `src/assistente/variante_mcp.py`: adattatore client MCP (variante 03);
 - `src/assistente/strumenti.py`: strumento orologio;
 - `src/assistente/convertitore.py`: strumento convertitore di unità;
@@ -162,6 +177,7 @@ Variabili:
 | `VARIANTE_STRUMENTI` | `locale` (default), `http` oppure `mcp` |
 | `STRUMENTI_HTTP_URL` | indirizzo del servizio strumenti, obbligatorio con `http`, es. `http://localhost:8001` |
 | `STRUMENTI_MCP_URL` | indirizzo del server MCP, obbligatorio con `mcp`, es. `http://localhost:8002/mcp` |
+| `PREFERENZE_FILE` | file JSON delle preferenze (default `preferenze.json`). Nella variante `mcp` conta quello del processo del server MCP |
 | `NOTE_DB` | file SQLite delle note (default `note.sqlite`). Nelle varianti `http` e `mcp` conta quello del processo del servizio |
 
 L'identificativo del modello va letto dal server, non inventato:
@@ -296,9 +312,11 @@ $env:VARIANTE_STRUMENTI = "mcp"; $env:STRUMENTI_MCP_URL = "http://localhost:8002
 ```
 
 Le prove reali dipendono da un modello non deterministico: un fallimento isolato va ripetuto
-prima di attribuirlo al codice. Per esempio `test_ora_senza_luogo` è fallito una volta su 13
-esecuzioni (il modello ha tentato una chiamata con argomenti non validi, fermata dalla
-validazione prima di raggiungere il server), con risultati identici nelle varianti.
+prima di attribuirlo al codice. Per esempio la vecchia `test_ora_senza_luogo` è fallita una
+volta su 13 esecuzioni (il modello ha tentato una chiamata con argomenti non validi, fermata
+dalla validazione prima di raggiungere il server), con risultati identici nelle varianti.
+Dallo step 4 è sostituita da `test_ora_senza_luogo_usa_il_fuso_predefinito`: con un fuso
+predefinito nelle preferenze l'agente non chiede più il luogo, usa quel fuso.
 
 Prova manuale: avvia l'assistente (locale o Docker), chiedi «Che ore sono a Tokyo?» e poi
 «E a Roma?». Sui log (stderr) devono comparire due chiamate `ora_corrente`, con
@@ -341,10 +359,23 @@ riassunto. Al turno di Tokyo non deve comparire `revisore coerente=no`. Le prove
 `test_riassunto_*` fanno lo stesso; `test_revisore_approva_l_ora_presa_dallo_strumento` e
 `test_revisore_approva_il_nome_preso_dal_riassunto` provano il revisore vero su messaggi
 preparati (un minuto circa).
+Per le preferenze: scrivi in `preferenze.json` `{"fuso_orario": "America/New_York"}` e chiedi
+«Che ore sono?»: nel log compare una sola riga `preferenze: ... -> lingua=it
+fuso_orario=America/New_York stile=sintetico` prima della domanda (con la variante `mcp`:
+`preferenze: resources/read utente://preferenze (mcp) -> ...`, con il file del server), poi
+`ora_corrente` con `America/New_York`, senza domande sul luogo. Cambiando `lingua` o `stile`
+nel file, la sessione successiva (`/nuova` o un nuovo avvio) risponde di conseguenza. Le prove
+`test_ora_senza_luogo_usa_il_fuso_predefinito` e
+`test_lingua_e_stile_valgono_dalla_sessione_successiva` fanno lo stesso con un file temporaneo.
 Una risposta simulata nei test non dimostra che il modello sappia usare lo strumento:
 solo queste prove lo fanno.
 
 ## Diagnosi
+
+- **Preferenze ignorate**: nel log a inizio sessione `preferenze: ... non disponibili (...):
+  uso le predefinite` (WARNING) spiega il motivo: file assente, JSON o campo non valido (per
+  esempio un fuso orario inesistente), server MCP non raggiungibile. In Docker, senza un file
+  montato, si usano le predefinite.
 
 - **LM Studio spento o server non avviato**: l'assistente scrive «Non riesco a raggiungere
   LM Studio su ...: controlla che il server sia avviato». Avvia il server locale in LM Studio.

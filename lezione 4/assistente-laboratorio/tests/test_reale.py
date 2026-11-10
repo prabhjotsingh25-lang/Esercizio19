@@ -8,11 +8,12 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from assistente.config import ErroreConfigurazione, carica_configurazione
 from assistente.grafo import MESSAGGIO_RIFIUTO, costruisci_grafo
 from assistente.modello import crea_modello
+from assistente.preferenze import PREDEFINITE
 from assistente.revisore import Revisione, crea_revisore
 from assistente.riassunto import crea_riassuntore
 from assistente.router import crea_router
 from assistente.sessione import Sessione
-from assistente.varianti import strumenti_per_variante
+from assistente.varianti import lettore_preferenze, strumenti_per_variante
 
 pytestmark = pytest.mark.reale
 
@@ -20,7 +21,18 @@ _ORA = re.compile(r"T(\d{2}:\d{2}):\d{2}")
 
 
 @pytest.fixture
-def sessione(tmp_path, monkeypatch):
+def file_preferenze(tmp_path, monkeypatch):
+    """File delle preferenze temporaneo, con i valori predefiniti; le prove possono riscriverlo
+    e chiamare sessione.nuova() per farlo rileggere. Nella variante mcp lo legge il server dal
+    proprio PREFERENZE_FILE (come per NOTE_DB)."""
+    file = tmp_path / "preferenze.json"
+    file.write_text(PREDEFINITE.model_dump_json(), encoding="utf-8")
+    monkeypatch.setenv("PREFERENZE_FILE", str(file))
+    return file
+
+
+@pytest.fixture
+def sessione(tmp_path, monkeypatch, file_preferenze):
     load_dotenv(".env", override=False)
     # Variante locale: note in un database temporaneo. Nelle varianti http e mcp le note
     # vanno nel database del servizio (NOTE_DB impostata all'avvio del servizio).
@@ -38,7 +50,8 @@ def sessione(tmp_path, monkeypatch):
                              riassuntore=crea_riassuntore(modello),
                              soglia_riassunto=config.soglia_riassunto,
                              messaggi_recenti=config.messaggi_recenti)
-    return Sessione(grafo, config.max_passaggi, config.max_revisioni)
+    return Sessione(grafo, config.max_passaggi, config.max_revisioni,
+                    leggi_preferenze=lettore_preferenze(config))
 
 
 def _strumenti_del_turno(sessione: Sessione) -> list[str]:
@@ -63,9 +76,19 @@ def test_tokyo_poi_roma(sessione):
         f"nessun ToolMessage per Europe/Rome nel secondo turno: {risultati}")
 
 
-def test_ora_senza_luogo(sessione):
-    sessione.chiedi("Che ore sono?")
-    assert _strumenti_del_turno(sessione) == []
+def test_ora_senza_luogo_usa_il_fuso_predefinito(sessione, file_preferenze, caplog):
+    # Sostituisce test_ora_senza_luogo: dallo step 4 c'è sempre un fuso orario predefinito
+    # (dalle preferenze o dai valori predefiniti), quindi l'agente non chiede più il luogo.
+    caplog.set_level("INFO", logger="assistente")
+    file_preferenze.write_text('{"fuso_orario": "America/New_York"}', encoding="utf-8")
+    sessione.nuova()  # rilegge le preferenze
+    risposta = sessione.chiedi("Che ore sono?")
+    risultati = _strumenti_del_turno(sessione)
+    print(f"Tu> Che ore sono?\nAssistente> {risposta}\nstrumenti: {risultati}")
+    new_york = [r for r in risultati if r.endswith("(America/New_York)")]
+    assert new_york, f"nessun ToolMessage per America/New_York: {risultati}"
+    ora = _ORA.search(new_york[-1])
+    assert ora and ora.group(1) in risposta, f"ora assente nella risposta: {risposta!r}"
 
 
 def test_conversione_km_in_metri(sessione):
@@ -209,7 +232,7 @@ def test_agente_riprova_dopo_l_indicazione_del_revisore(config_reale, caplog):
                Revisione(motivo="ok", coerente=True)]
     modello = crea_modello(config_reale)
     grafo = costruisci_grafo(modello, strumenti_per_variante(config_reale),
-                             config_reale.max_passaggi, revisore=lambda m, r="": giudizi.pop(0))
+                             config_reale.max_passaggi, revisore=lambda m, r="", p="": giudizi.pop(0))
     sessione = Sessione(grafo, config_reale.max_passaggi, 1)
     risposta = sessione.chiedi(DUE_PARTI)
     nomi = [m.name for m in sessione.cronologia if isinstance(m, HumanMessage)]
@@ -314,3 +337,30 @@ def test_revisore_approva_il_nome_preso_dal_riassunto(config_reale, caplog):
     print(f"revisore: coerente={esito.coerente} motivo={esito.motivo}")
     assert esito.coerente is True, esito.motivo
     assert "output del revisore non valido" not in caplog.text
+
+
+# --- Step 4: preferenze dell'utente ---
+
+_INGLESE = {"the", "is", "of", "result", "equals", "multiplied", "by"}
+_ITALIANO = {"il", "è", "di", "risultato", "fa", "per", "moltiplicato"}
+
+
+def _parole(testo: str, lingua: set[str]) -> int:
+    return sum(1 for p in re.findall(r"\w+", testo.lower()) if p in lingua)
+
+
+def test_lingua_e_stile_valgono_dalla_sessione_successiva(sessione, file_preferenze, caplog):
+    caplog.set_level("INFO", logger="assistente")
+    domanda = "Quanto fa 12 * 7?"
+    prima = sessione.chiedi(domanda)  # predefinite: italiano, sintetico
+    file_preferenze.write_text('{"lingua": "en", "stile": "dettagliato"}', encoding="utf-8")
+    sessione.nuova()  # /nuova: nuova sessione, preferenze rilette
+    dopo = sessione.chiedi(domanda)
+    letture = [r.getMessage() for r in caplog.records if r.getMessage().startswith("preferenze:")]
+    print("letture:", *letture, sep="\n  ")
+    print(f"it/sintetico ({len(prima)} caratteri): {prima}")
+    print(f"en/dettagliato ({len(dopo)} caratteri): {dopo}")
+    assert _parole(prima, _ITALIANO) > _parole(prima, _INGLESE), prima
+    assert _parole(dopo, _INGLESE) > _parole(dopo, _ITALIANO), dopo
+    assert "84" in prima and "84" in dopo
+    assert len(dopo) > len(prima), "lo stile dettagliato non ha allungato la risposta"

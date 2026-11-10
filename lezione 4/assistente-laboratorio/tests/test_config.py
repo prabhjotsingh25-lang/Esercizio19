@@ -120,3 +120,9 @@ def test_riassunto_non_intero_positivo(nome, valore):
 def test_messaggi_recenti_devono_essere_meno_della_soglia(soglia, recenti):
     with pytest.raises(ErroreConfigurazione, match="MESSAGGI_RECENTI.*SOGLIA_RIASSUNTO"):
         carica_configurazione({**BASE, "SOGLIA_RIASSUNTO": soglia, "MESSAGGI_RECENTI": recenti})
+
+
+def test_file_delle_preferenze_default_e_valore():
+    assert carica_configurazione(dict(BASE)).preferenze_file == "preferenze.json"
+    c = carica_configurazione({**BASE, "PREFERENZE_FILE": " C:/dati/pref.json "})
+    assert c.preferenze_file == "C:/dati/pref.json"

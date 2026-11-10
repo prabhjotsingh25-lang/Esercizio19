@@ -19,3 +19,6 @@ __pycache__/
 # Note dell'utente (database SQLite): dati personali, mai nel repository
 *.sqlite
 *.sqlite-journal
+
+# Preferenze reali dell'utente (dati personali): nel repository solo preferenze.example.json
+preferenze.json

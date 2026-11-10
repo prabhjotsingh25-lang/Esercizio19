@@ -6,6 +6,7 @@ from assistente.grafo import (
     INTESTAZIONE_RIASSUNTO, MESSAGGIO_LIMITE, MESSAGGIO_RIFIUTO, MESSAGGIO_SISTEMA,
     costruisci_grafo, limite_ricorsione,
     scegli_dopo_router, scegli_prossimo)
+from assistente.preferenze import Preferenze, prompt_preferenze
 from assistente.revisore import Revisione, messaggi_per_revisore
 from assistente.router import Classificazione
 from assistente.sessione import Sessione
@@ -150,7 +151,7 @@ def revisore_finto(*giudizi, ricevuti=None):
     """Revisore simulato: restituisce i giudizi (coerente, motivo) in ordine, poi l'ultimo."""
     elenco = list(giudizi)
 
-    def rivedi(messaggi, riassunto=""):
+    def rivedi(messaggi, riassunto="", preferenze=""):
         if ricevuti is not None:
             ricevuti.append(list(messaggi))
         coerente, motivo = elenco.pop(0) if len(elenco) > 1 else elenco[0]
@@ -363,8 +364,8 @@ def test_sessione_conserva_e_aggiorna_il_riassunto():
 
 def revisore_dal_prompt(dato, ricevuti=None):
     """Boccia la risposta se `dato` non compare nel prompt che il revisore vero riceverebbe."""
-    def rivedi(messaggi, riassunto=""):
-        testo = messaggi_per_revisore(messaggi, riassunto)[-1].content
+    def rivedi(messaggi, riassunto="", preferenze=""):
+        testo = messaggi_per_revisore(messaggi, riassunto, preferenze)[-1].content
         if ricevuti is not None:
             ricevuti.append(testo)
         if dato in testo:
@@ -396,3 +397,73 @@ def test_nome_dal_riassunto_non_bocciato_dopo_la_compressione(caplog):
     assert "riassunti 4" in caplog.text  # la compressione è avvenuta
     assert out["messages"][-1].content == "Ti chiami Prabhjot." and out["revisioni"] == 0
     assert ricevuti[0].startswith("Conversazione precedente:\nRiassunto: Utente: si chiama")
+
+
+# --- Step 4: preferenze dell'utente in cima al prompt dell'agente e al revisore ---
+
+NEW_YORK = Preferenze(lingua="en", fuso_orario="America/New_York")
+
+
+class ModelloCheRegistraBind(ModelloFinto):
+    legati: list = []
+
+    def bind_tools(self, tools, **kwargs):
+        self.legati = list(tools)
+        return self
+
+
+def test_preferenze_in_cima_al_messaggio_di_sistema():
+    m = ModelloCheRegistraBind(risposte=[AIMessage("ok")])
+    costruisci_grafo(m, [orologio], 3, riassuntore=riassuntore_finto("RIASSUNTO"),
+                     soglia_riassunto=5, messaggi_recenti=2).invoke(
+        {"messages": storia(3), "passaggi": 0, "preferenze": NEW_YORK})
+    sistema = m.ricevuti[0][0].content
+    assert sistema.startswith(prompt_preferenze(NEW_YORK) + "\n\n" + MESSAGGIO_SISTEMA)
+    assert sistema.endswith("RIASSUNTO")
+    assert [s.name for s in m.legati] == ["ora_corrente"]  # la resource non è un tool
+
+
+def test_senza_preferenze_messaggio_di_sistema_invariato():
+    m = ModelloFinto(risposte=[AIMessage("ok")])
+    costruisci_grafo(m, [orologio], 3).invoke(
+        {"messages": [HumanMessage("?")], "passaggi": 0, "preferenze": None})
+    assert m.ricevuti[0][0].content == MESSAGGIO_SISTEMA
+
+
+def test_il_revisore_vede_le_preferenze_il_router_no():
+    ricevuti_router = []
+    m = ModelloFinto(risposte=[chiamata("America/New_York", "1"),
+                               AIMessage("A New York sono le 05:30.")])
+    out = costruisci_grafo(m, [orologio], 3,
+                           router=router_finto("conversazione", ricevuti=ricevuti_router),
+                           revisore=revisore_dal_prompt("Fuso orario predefinito: America/New_York")
+                           ).invoke({"messages": [HumanMessage("Che ore sono?")], "passaggi": 0,
+                                     "revisioni": 0, "preferenze": NEW_YORK})
+    assert out["revisioni"] == 0 and out["messages"][-1].content == "A New York sono le 05:30."
+    assert len(ricevuti_router) == 1  # il router riceve solo messaggi e riassunto
+
+
+def test_sessione_legge_le_preferenze_una_volta_e_le_rilegge_con_nuova(caplog):
+    letture = []
+
+    def leggi():
+        letture.append(1)
+        return NEW_YORK if len(letture) == 1 else Preferenze(lingua="fr")
+    m = ModelloFinto(risposte=[AIMessage("a"), AIMessage("b"), AIMessage("c")])
+    s = Sessione(costruisci_grafo(m, [orologio], 3), 3, leggi_preferenze=leggi)
+    assert len(letture) == 1 and s.preferenze == NEW_YORK  # prima della prima domanda
+    s.chiedi("uno")
+    s.chiedi("due")
+    assert len(letture) == 1  # non a ogni turno
+    assert all(r[0].content.startswith(prompt_preferenze(NEW_YORK)) for r in m.ricevuti)
+    s.nuova()
+    assert len(letture) == 2 and s.preferenze.lingua == "fr"
+    s.chiedi("tre")
+    assert m.ricevuti[-1][0].content.startswith(prompt_preferenze(Preferenze(lingua="fr")))
+
+
+def test_sessione_senza_lettore_non_ha_preferenze():
+    m = ModelloFinto(risposte=[AIMessage("a")])
+    s = Sessione(costruisci_grafo(m, [orologio], 3), 3)
+    s.chiedi("uno")
+    assert s.preferenze is None and m.ricevuti[0][0].content == MESSAGGIO_SISTEMA

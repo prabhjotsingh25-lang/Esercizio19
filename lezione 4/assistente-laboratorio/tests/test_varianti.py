@@ -105,3 +105,21 @@ def test_scelta_da_configurazione(variante):
     nomi = [s.name for s in strumenti_per_variante(config)]
     assert nomi == ["ora_corrente", "convertitore_unita", "calcolatrice_sicura", "giorni_scadenze",
                     "catalogo_locale", "note_persistenti", "meteo_api"]
+
+
+def test_lettore_preferenze_per_variante(tmp_path, monkeypatch, caplog):
+    from assistente.varianti import lettore_preferenze
+    caplog.set_level("INFO")
+    file = tmp_path / "preferenze.json"
+    file.write_text('{"lingua": "en"}', encoding="utf-8")
+    locale = Configurazione("u", "m", preferenze_file=str(file))
+    assert lettore_preferenze(locale)().lingua == "en"
+    assert "lettura del file" in caplog.text
+    http = Configurazione("u", "m", variante="http", strumenti_http_url="http://s",
+                          preferenze_file=str(file))
+    assert lettore_preferenze(http)().lingua == "en"  # http: file letto direttamente
+    mcp = Configurazione("u", "m", variante="mcp", strumenti_mcp_url="http://127.0.0.1:9/mcp",
+                         preferenze_file=str(file))
+    caplog.clear()
+    assert lettore_preferenze(mcp)().lingua == "it"  # server spento: predefinite
+    assert "resources/read utente://preferenze (mcp) non disponibili" in caplog.text

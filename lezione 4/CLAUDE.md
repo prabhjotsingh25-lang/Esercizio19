@@ -25,7 +25,9 @@ Comandi (da `assistente-laboratorio/`, PowerShell, senza attivare il venv):
   (http://127.0.0.1:8090; parla solo con il back-end di `BACKEND_URL`)
 - server MCP (variante `mcp`):
   `$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m uvicorn assistente.server_mcp:app --port 8002`
-- avvio Docker: `docker compose run --rm assistente`; varianti `http` e `mcp`:
+- applicazione completa in Docker: `docker compose up -d --build` (chat su http://localhost:8090,
+  back-end su http://localhost:8080; `docker compose down` per fermare)
+- CLI in Docker: `docker compose run --rm assistente`; varianti `http` e `mcp`:
   `docker compose --profile http run --rm -e VARIANTE_STRUMENTI=http assistente`,
   `docker compose --profile mcp run --rm -e VARIANTE_STRUMENTI=mcp assistente`
 - le prove reali dipendono da un modello non deterministico: un fallimento isolato va ripetuto

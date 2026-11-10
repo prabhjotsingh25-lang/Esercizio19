@@ -1,7 +1,80 @@
+# Applicazione completa (step 9): PostgreSQL, agente, back-end e front-end.
+#   docker compose up -d --build        poi http://localhost:8090
+# LM Studio resta sull'host (host.docker.internal). Password del database: POSTGRES_PASSWORD nel
+# .env (escluso da Git). Il browser usa localhost:8080 (back-end) e localhost:8090 (front-end):
+# BACKEND_URL e FRONTEND_ORIGINE sono indirizzi visti dal browser, non nomi di servizio.
+
+x-comune: &comune
+  build: .
+  env_file: .env
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
 services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: assistente
+      POSTGRES_DB: assistente
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?imposta POSTGRES_PASSWORD nel .env}
+    volumes:
+      - pgdati:/var/lib/postgresql/data  # le chat sopravvivono a down/up
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assistente -d assistente"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    # Nessuna porta pubblicata: lo usa solo il back-end, nella rete di Compose.
+
+  agente:
+    <<: *comune
+    command: ["python", "-m", "assistente.servizio_agente"]
+    environment:
+      LMSTUDIO_BASE_URL: http://host.docker.internal:1234/v1
+      AGENTE_HOST: 0.0.0.0
+      AGENTE_PORTA: "8000"
+      VARIANTE_STRUMENTI: locale
+      NOTE_DB: /dati/note.sqlite
+    volumes:
+      - note:/dati
+    # Nessuna porta pubblicata: lo chiama solo il back-end.
+
+  backend:
+    <<: *comune
+    command: ["python", "-m", "assistente.backend"]
+    environment:
+      LMSTUDIO_BASE_URL: http://host.docker.internal:1234/v1
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORTA: "8080"
+      DATABASE_URL: postgresql://assistente:${POSTGRES_PASSWORD}@postgres:5432/assistente
+      AGENTE_URL: http://agente:8000
+      AGENTE_TIMEOUT: "900"
+      FRONTEND_ORIGINE: http://localhost:8090
+      VARIANTE_STRUMENTI: locale
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      agente:
+        condition: service_started
+
+  frontend:
+    <<: *comune
+    command: ["python", "-m", "assistente.frontend"]
+    environment:
+      FRONTEND_HOST: 0.0.0.0
+      FRONTEND_PORTA: "8090"
+      BACKEND_URL: http://localhost:8080
+    ports:
+      - "127.0.0.1:8090:8090"
+    depends_on:
+      - backend
+
+  # CLI da terminale (lezioni 4-5): docker compose run --rm assistente
   assistente:
-    build: .
-    env_file: .env
+    <<: *comune
+    profiles: [cli]
     environment:
       # Dal container l'host si raggiunge con host.docker.internal (LM Studio resta sull'host).
       LMSTUDIO_BASE_URL: http://host.docker.internal:1234/v1
@@ -13,8 +86,6 @@ services:
       - note:/dati  # le note sopravvivono ai container
     stdin_open: true
     tty: true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       strumenti-http:
         condition: service_started
@@ -47,6 +118,7 @@ services:
     volumes:
       - note:/dati
 
-# Volume condiviso: in ogni variante le note finiscono nello stesso database.
+# Volumi: note condivise fra le varianti; dati di PostgreSQL dell'applicazione.
 volumes:
   note:
+  pgdati:

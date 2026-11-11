@@ -251,6 +251,25 @@ Per ora il front-end mostra la domanda subito, con un cronometro di attesa, e il
 
 Decisione sul revisore: con il revisore attivo la bozza dell'agente può essere rifiutata e riscritta. Si sceglie quindi di mostrare in streaming solo la risposta approvata, non la bozza, per non far comparire testo poi scartato. Percorso previsto: l'agente emette testo ed eventi degli strumenti, il back-end inoltra il flusso con Server-Sent Events e salva il messaggio completo alla fine, il front-end mostra il testo mentre arriva e segnala l'uso di uno strumento.
 
+## Evidenze
+
+Screenshot delle prove nel browser (Edge senza finestra) e resoconto, in `docs/evidenze/`:
+
+- `Evoluzione9step_resoconto.pdf`: resoconto dei 9 step (decisioni, problemi risolti, avvio, limiti noti).
+- `step8/0-backend-spento.png`: back-end spento, la pagina mostra l'errore e resta utilizzabile.
+- `step8/1-attesa-cronometro.png`: domanda inviata, attesa con cronometro e invio disattivato.
+- `step8/2-conversazione-con-strumento.png`: due turni, «Strumenti usati» con `giorni_scadenze`.
+- `step8/3-dopo-riavvio-backend.png`: la stessa chat dopo il riavvio del back-end.
+- `step8/4-agente-spento-errore-riprova.png`: agente spento, errore mostrato e pulsante «Riprova».
+- `step8/5-riprova-in-attesa.png`: dopo il clic su «Riprova», di nuovo in attesa.
+- `step8/6-riprova-riuscita.png`: risposta arrivata dopo «Riprova», senza domanda duplicata.
+- `step8/giro1-router/4-agente-spento-errore-riprova.png`: primo giro, errore con «Quanto fa 137 * 49?».
+- `step8/giro1-router/5-riprova-in-attesa.png`: primo giro, attesa dopo «Riprova».
+- `step8/giro1-router/6-riprova-riuscita.png`: primo giro, «Riprova» riuscito ma il router rifiuta la domanda.
+- `step9/1-attesa-cronometro.png`: in Docker Compose, prima domanda di una chat nuova con cronometro.
+- `step9/2-conversazione-con-strumento.png`: in Docker Compose, due turni con `giorni_scadenze`.
+- `step9/3-dopo-riavvio-backend.png`: in Docker Compose, la stessa chat dopo `docker compose down` e `up`.
+
 ## Requisiti
 
 - Windows con PowerShell; Python 3.13.

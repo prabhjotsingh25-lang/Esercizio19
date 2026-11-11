@@ -243,6 +243,14 @@ Struttura:
 - `src/assistente/cli.py` e `__main__.py`: interfaccia da terminale e avvio;
 - `tests/`: test automatici (offline) e prove reali (`reale`).
 
+## Streaming della risposta
+
+Lo streaming non è implementato in questa consegna. La risposta compare nel browser solo quando è completa: nelle prove con LM Studio e un modello locale piccolo un turno dura tra circa 100 e 450 secondi, perché ogni domanda richiede più chiamate al modello (router, agente, eventuali strumenti, revisore).
+
+Per ora il front-end mostra la domanda subito, con un cronometro di attesa, e il back-end usa un timeout lungo verso l'agente (AGENTE_TIMEOUT).
+
+Decisione sul revisore: con il revisore attivo la bozza dell'agente può essere rifiutata e riscritta. Si sceglie quindi di mostrare in streaming solo la risposta approvata, non la bozza, per non far comparire testo poi scartato. Percorso previsto: l'agente emette testo ed eventi degli strumenti, il back-end inoltra il flusso con Server-Sent Events e salva il messaggio completo alla fine, il front-end mostra il testo mentre arriva e segnala l'uso di uno strumento.
+
 ## Requisiti
 
 - Windows con PowerShell; Python 3.13.

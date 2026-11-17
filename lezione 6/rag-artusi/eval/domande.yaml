@@ -1,0 +1,39 @@
+# Domande di valutazione: `attese` = numeri delle ricette che contengono la risposta
+# (lista vuota = nessuna fonte attesa); `nota` facoltativa, riportata sotto la tabella.
+# Fonti verificate sul testo il 2026-11-17.
+
+- domanda: Quanta farina serve per 400 grammi di patate negli gnocchi?
+  attese: [89]   # «Patate grosse e gialle, grammi 400. Farina di grano, grammi 150.»
+
+- domanda: Che vino si usa per il pollo alla cacciatora?
+  attese: [208]  # «mezzo bicchiere di San Giovese od altro vino rosso»
+
+- domanda: Come si chiama il cacciucco sulle coste dell'Adriatico?
+  attese: [455, 456]  # 455: «ne' paesi che costeggiano l'Adriatico è sostituita dalla voce brodetto»
+
+- domanda: Qual è la ricetta del tiramisù?
+  attese: []     # non esiste nel libro
+
+- domanda: Quanti cappelletti bastano a un mangiatore moderato?
+  attese: [7]
+  nota: >-
+    La domanda dice «moderato», il testo della ricetta 7 dice «A un mangiatore discreto bastano
+    due dozzine»: caso utile di parole diverse da quelle del testo.
+
+- domanda: Perché gli gnocchi possono sciogliersi nell'acqua?
+  attese: [89]   # «intrisi con poca farina e appena furono nell'acqua bollente si liquefecero»
+
+# --- domande dell'utente, con parole diverse da quelle del testo ---
+
+- domanda: Per quanto tempo si deve cuocere il baccalà?
+  attese: [510]  # «mettetelo al fuoco in acqua diaccia e appena abbia alzato il primo bollore levatelo che già è cotto»
+
+- domanda: Con che cosa si insaporisce il brodo?
+  attese: [1]    # «dare odore al brodo con un mazzettino di erbe aromatiche ... gambi del sedano, della carota»
+
+- domanda: Come si fa un dolce di mandorle e zucchero?
+  attese: [617, 785, 626, 620, 687]
+  nota: >-
+    Fonti multiple accettate: Croccante 617, Mandorle tostate 785, Amaretti I 626, Ricciarelli di
+    Siena 620, Pallottole di mandorle 687 (dolci fatti soprattutto di mandorle e zucchero). La
+    posizione è quella della prima fonte accettata che compare.

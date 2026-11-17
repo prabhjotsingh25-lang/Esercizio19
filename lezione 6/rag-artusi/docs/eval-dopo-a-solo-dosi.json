@@ -1,0 +1,86 @@
+[
+  {
+    "domanda": "Quanta farina serve per 400 grammi di patate negli gnocchi?",
+    "attese": [
+      89
+    ],
+    "posizione": 1,
+    "score_migliore": 0.7693242,
+    "primo": "Ricetta 89 — Gnocchi di patate"
+  },
+  {
+    "domanda": "Che vino si usa per il pollo alla cacciatora?",
+    "attese": [
+      208
+    ],
+    "posizione": null,
+    "score_migliore": 0.6852368,
+    "primo": "Ricetta 727 — Marena"
+  },
+  {
+    "domanda": "Come si chiama il cacciucco sulle coste dell'Adriatico?",
+    "attese": [
+      455,
+      456
+    ],
+    "posizione": null,
+    "score_migliore": 0.67050487,
+    "primo": "Ricetta 502 — Pasticcio di magro"
+  },
+  {
+    "domanda": "Qual è la ricetta del tiramisù?",
+    "attese": [],
+    "posizione": null,
+    "score_migliore": 0.71653706,
+    "primo": "Ricetta 609 — Pizza alla napoletana"
+  },
+  {
+    "domanda": "Quanti cappelletti bastano a un mangiatore moderato?",
+    "attese": [
+      7
+    ],
+    "posizione": 1,
+    "score_migliore": 0.7293296,
+    "primo": "Ricetta 7 — Cappelletti all'uso di Romagna"
+  },
+  {
+    "domanda": "Perché gli gnocchi possono sciogliersi nell'acqua?",
+    "attese": [
+      89
+    ],
+    "posizione": 2,
+    "score_migliore": 0.70516354,
+    "primo": "Ricetta 729 — Orzata"
+  },
+  {
+    "domanda": "Per quanto tempo si deve cuocere il baccalà?",
+    "attese": [
+      510
+    ],
+    "posizione": null,
+    "score_migliore": 0.73799765,
+    "primo": "Ricetta 512 — Baccalà in salsa bianca"
+  },
+  {
+    "domanda": "Con che cosa si insaporisce il brodo?",
+    "attese": [
+      1
+    ],
+    "posizione": null,
+    "score_migliore": 0.7057112,
+    "primo": "Ricetta 87 — Maccheroni alla bolognese"
+  },
+  {
+    "domanda": "Come si fa un dolce di mandorle e zucchero?",
+    "attese": [
+      617,
+      785,
+      626,
+      620,
+      687
+    ],
+    "posizione": 1,
+    "score_migliore": 0.84680855,
+    "primo": "Ricetta 785 — Mandorle tostate"
+  }
+]

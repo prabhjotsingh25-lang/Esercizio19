@@ -1,0 +1,245 @@
+from pathlib import Path
+
+import pytest
+
+from rag.ricerca import Risultato
+from rag.valutazione import Domanda, Riga, carica_domande, tabella_markdown, valuta
+
+DOMANDE_REALI = Path(__file__).resolve().parent.parent / "eval" / "domande.yaml"
+
+
+def _r(numero: int, score: float, titolo: str = "Titolo") -> Risultato:
+    return Risultato(score, numero, titolo, "Salse", 0, f"artusi-{numero:03d}", "testo", "fonte")
+
+
+def _cerca_fissa(risultati, chiamate=None):
+    def cerca_fn(domanda, k):
+        if chiamate is not None:
+            chiamate.append((domanda, k))
+        return risultati[:k]
+
+    return cerca_fn
+
+
+def test_carica_domande(tmp_path):
+    f = tmp_path / "d.yaml"
+    f.write_text(
+        "- domanda: Come si chiama il cacciucco?\n  attese: [455, 456]\n"
+        "- domanda: Tiramisù?\n  attese: []\n",
+        encoding="utf-8",
+    )
+    domande = carica_domande(f)
+    assert domande == [Domanda("Come si chiama il cacciucco?", (455, 456)), Domanda("Tiramisù?", ())]
+
+
+def test_nota_facoltativa(tmp_path):
+    f = tmp_path / "d.yaml"
+    f.write_text("- domanda: A?\n  attese: [7]\n  nota: moderato contro discreto\n", encoding="utf-8")
+    (d,) = carica_domande(f)
+    assert d.nota == "moderato contro discreto"
+
+
+def test_note_markdown():
+    from rag.valutazione import note_markdown
+
+    domande = [Domanda("A?", (7,), "moderato contro discreto"), Domanda("B?", (1,))]
+    assert note_markdown(domande) == "\n## Note\n\n- «A?»: moderato contro discreto\n"
+    assert note_markdown([Domanda("B?", (1,))]) == ""
+
+
+def test_carica_domande_malformate(tmp_path):
+    f = tmp_path / "d.yaml"
+    f.write_text("- domanda: senza attese\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        carica_domande(f)
+
+
+def test_posizione_trovata():
+    (riga,) = valuta([Domanda("gnocchi", (89,))], _cerca_fissa([_r(12, 0.9), _r(89, 0.8), _r(89, 0.7)]))
+    assert riga.posizione == 2
+    assert riga.score_migliore == 0.9
+    assert riga.primo == "Ricetta 12 — Titolo"
+
+
+def test_posizione_assente():
+    (riga,) = valuta([Domanda("vino", (208,))], _cerca_fissa([_r(12, 0.9), _r(13, 0.8)]))
+    assert riga.posizione is None
+
+
+def test_nessuna_fonte_attesa():
+    (riga,) = valuta([Domanda("tiramisù", ())], _cerca_fissa([_r(700, 0.6)]))
+    assert riga.posizione is None
+    assert riga.score_migliore == 0.6
+
+
+def test_nessun_risultato():
+    (riga,) = valuta([Domanda("x", (1,))], _cerca_fissa([]))
+    assert (riga.posizione, riga.score_migliore, riga.primo) == (None, None, "—")
+
+
+def test_k_passato():
+    chiamate = []
+    valuta([Domanda("a", (1,))], _cerca_fissa([_r(1, 0.5)], chiamate))
+    assert chiamate == [("a", 5)]
+
+
+def test_tabella():
+    righe = [
+        Riga("Come si chiama il cacciucco?", (455, 456), 1, 0.8123, "Ricetta 455 — Cacciucco I"),
+        Riga("Tiramisù?", (), None, 0.5, "Ricetta 700 — Zuppa inglese"),
+        Riga("Vino?", (208,), None, None, "—"),
+    ]
+    testo = tabella_markdown(righe)
+    linee = testo.splitlines()
+    assert linee[0] == "| Domanda | Fonte attesa | Posizione | Score migliore | Primo risultato |"
+    assert linee[2] == "| Come si chiama il cacciucco? | 455, 456 | 1 | 0.812 | Ricetta 455 — Cacciucco I |"
+    assert linee[3] == "| Tiramisù? | nessuna | — | 0.500 | Ricetta 700 — Zuppa inglese |"
+    assert linee[4] == "| Vino? | 208 | — | — | — |"
+
+
+def test_json_andata_e_ritorno(tmp_path):
+    from rag.valutazione import righe_da_json, salva_json
+
+    righe = [Riga("A?", (455, 456), 1, 0.8, "Ricetta 455 — Cacciucco I"), Riga("B?", (), None, None, "—")]
+    f = tmp_path / "r.json"
+    salva_json(righe, f)
+    assert righe_da_json(f) == righe
+
+
+@pytest.mark.parametrize(
+    "prima, dopo, simbolo",
+    [(1, 1, "="), (3, 1, "↑2"), (1, 4, "↓3"), (2, None, "persa"), (None, 5, "trovata"), (None, None, "=")],
+)
+def test_variazione(prima, dopo, simbolo):
+    from rag.valutazione import variazione
+
+    assert variazione(prima, dopo) == simbolo
+
+
+def test_tabella_confronto():
+    from rag.valutazione import tabella_confronto
+
+    base = [Riga("A?", (89,), 2, 0.7, "x"), Riga("B?", (208,), None, 0.6, "y")]
+    nuove = [Riga("A?", (89,), 1, 0.75, "x"), Riga("B?", (208,), 3, 0.65, "y")]
+    linee = tabella_confronto(nuove, base).splitlines()
+    assert linee[0] == "| Domanda | Fonte attesa | Posizione baseline | Posizione | Variazione | Score migliore |"
+    assert linee[2] == "| A? | 89 | 2 | 1 | ↑1 | 0.750 |"
+    assert linee[3] == "| B? | 208 | — | 3 | trovata | 0.650 |"
+
+
+def test_tabella_confronto_domande_diverse():
+    from rag.valutazione import tabella_confronto
+
+    with pytest.raises(ValueError):
+        tabella_confronto([Riga("A?", (1,), 1, 0.5, "x")], [Riga("Z?", (1,), 1, 0.5, "x")])
+
+
+def test_valuta_passa_solo_dosi():
+    chiamate = []
+
+    def cerca_fn(domanda, k, solo_dosi=False):
+        chiamate.append(solo_dosi)
+        return []
+
+    valuta([Domanda("a", (1,))], cerca_fn, solo_dosi=True)
+    assert chiamate == [True]
+
+
+RIGHE_TOTALI = [
+    Riga("A?", (89,), 1, 0.7, "x"),
+    Riga("B?", (208,), None, 0.6, "y"),
+    Riga("C?", (7,), 2, 0.6, "z"),
+    Riga("Tiramisù?", (), None, 0.7, "w"),  # senza fonte: non conta nei totali
+]
+
+
+def test_totali_calcolati_dai_dati():
+    from rag.valutazione import totali
+
+    assert totali(RIGHE_TOTALI) == (2, 1, 3)  # nei primi k, al primo posto, domande con fonte
+
+
+def test_riga_totali():
+    from rag.valutazione import riga_totali
+
+    assert riga_totali(RIGHE_TOTALI, 5) == "fonte trovata nei primi 5: 2/3 · al primo posto: 1/3"
+
+
+def test_riepilogo_dai_json(tmp_path):
+    from rag.valutazione import riepilogo_markdown, salva_json
+
+    f1, f2 = tmp_path / "a.json", tmp_path / "b.json"
+    salva_json(RIGHE_TOTALI, f1)
+    salva_json([Riga("A?", (89,), None, 0.7, "x")], f2)
+    linee = riepilogo_markdown([f1, f2]).splitlines()
+    assert linee[0] == "| Valutazione | Fonte nei primi k | Al primo posto |"
+    assert linee[2] == "| a.json | 2/3 | 1/3 |"
+    assert linee[3] == "| b.json | 0/1 | 0/1 |"
+
+
+def test_main_riepilogo_senza_servizi(tmp_path, capsys, monkeypatch):
+    from rag.valutazione import main, salva_json
+
+    monkeypatch.setattr("rag.config.load_dotenv", lambda *a, **k: None)
+    for nome in ("QDRANT_URL", "COLLEZIONE", "LMSTUDIO_URL", "MODELLO_EMBEDDING"):
+        monkeypatch.delenv(nome, raising=False)
+    f = tmp_path / "a.json"
+    salva_json(RIGHE_TOTALI, f)
+    assert main(["--riepilogo", str(f)]) == 0
+    assert "| a.json | 2/3 | 1/3 |" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "nome, nei_primi, primo",
+    [
+        ("eval-baseline", 6, 4),
+        ("eval-dopo-a", 6, 4),
+        ("eval-dopo-a-solo-dosi", 4, 3),
+        ("eval-dopo-b", 8, 6),
+        ("eval-dopo-b-solo-dosi", 4, 3),
+    ],
+)
+def test_totali_dei_json_salvati(nome, nei_primi, primo):
+    from rag.valutazione import righe_da_json, totali
+
+    percorso = DOMANDE_REALI.parent.parent / "docs" / f"{nome}.json"
+    assert totali(righe_da_json(percorso)) == (nei_primi, primo, 8)
+
+
+def test_totali_di_retrieval_md_coincidono_con_i_json():
+    import re
+
+    from rag.valutazione import righe_da_json, totali
+
+    docs = DOMANDE_REALI.parent.parent / "docs"
+    colonne = ["eval-baseline", "eval-dopo-a", "eval-dopo-a-solo-dosi", "eval-dopo-b"]
+    calcolati = [totali(righe_da_json(docs / f"{n}.json")) for n in colonne]
+    testo = (docs / "retrieval.md").read_text(encoding="utf-8")
+    for etichetta, indice in (("Fonte nei primi 5", 0), ("Fonte al primo posto", 1)):
+        (riga,) = [r for r in testo.splitlines() if r.startswith(f"| **{etichetta}**")]
+        scritti = [(int(a), int(b)) for a, b in re.findall(r"(\d+)/(\d+)", riga)]
+        assert scritti == [(t[indice], t[2]) for t in calcolati], etichetta
+
+
+def test_uscita_predefinita_non_sovrascrive_la_baseline():
+    from rag.valutazione import crea_parser
+
+    args = crea_parser().parse_args([])
+    assert args.uscita == Path("docs/eval-ultima.md")
+    assert args.uscita != Path("docs/eval-baseline.md")
+
+
+def test_domande_reali_valide():
+    domande = carica_domande(DOMANDE_REALI)
+    assert len(domande) == 9
+    assert all(1 <= n <= 790 for d in domande for n in d.attese)
+    assert sum(1 for d in domande if not d.attese) >= 1  # il tiramisù
+    (mandorle,) = [d for d in domande if d.testo == "Come si fa un dolce di mandorle e zucchero?"]
+    assert set(mandorle.attese) == {617, 785, 626, 620, 687}
+    assert "multiple" in mandorle.nota
+
+
+def test_fonti_multiple_prima_accettata():
+    risultati = [_r(500, 0.9), _r(626, 0.8), _r(617, 0.7)]
+    (riga,) = valuta([Domanda("mandorle", (617, 785, 626, 620, 687))], _cerca_fissa(risultati))
+    assert riga.posizione == 2

@@ -36,16 +36,25 @@ In `.env`, `MODELLO_EMBEDDING` deve essere l'identificativo esatto restituito da
 di numpy 2.5.5.
 
 ## Uso
-Da verificare con i servizi accesi (Fase 2):
+Comandi verificati il 2026-11-17 con Qdrant 1.20.2 e LM Studio accesi:
 ```powershell
 docker compose up -d                                   # Qdrant su http://localhost:6333
-.\.venv\Scripts\python.exe -m rag.ingestion            # idempotente: rieseguibile
+.\.venv\Scripts\python.exe -m rag.ingestion            # idempotente: rieseguibile (~2 min)
+.\.venv\Scripts\python.exe -m rag.ingestion --solo-payload   # aggiorna contiene_dosi senza embedding
 .\.venv\Scripts\python.exe -m rag.ricerca "Che vino si usa per il pollo alla cacciatora?" --k 3
-.\.venv\Scripts\python.exe -m rag.ricerca "come si cuoce il pesce" --capitolo "Piatti di pesce" --k 5
+.\.venv\Scripts\python.exe -m rag.ricerca "come si cuoce il pesce in umido" --capitolo "piatti di pesce" --k 3
+.\.venv\Scripts\python.exe -m rag.ricerca "quanta farina per gli gnocchi" --solo-dosi --capitolo "Minestre asciutte e di magro"
+.\.venv\Scripts\python.exe -m rag.valutazione --titolo "Valutazione" --confronta docs/eval-baseline.json
+.\.venv\Scripts\python.exe -m rag.dosi --campione 30 --seme 42   # campione per verificare contiene_dosi
 docker compose down                                    # i dati restano nel volume qdrant_dati
 ```
 - `--k` va da 1 a 20 (massimo imposto dal codice); `--capitolo` accetta il nome del capitolo con
-  maiuscole qualsiasi; il filtro è applicato da Qdrant durante la ricerca.
+  maiuscole qualsiasi; `--solo-dosi` tiene solo i chunk con un elenco «Ingrediente, quantità»; i
+  filtri sono applicati da Qdrant durante la ricerca e si possono combinare.
+- `TESTO_INDICIZZATO` (`titolo_capitolo` predefinito, oppure `solo_testo`) decide se il testo passato
+  all'embedder comincia con titolo e capitolo della ricetta; cambiarlo richiede un'ingestion completa,
+  che ricalcola gli embedding nella stessa collezione. Payload e risultati restano il testo originale.
+- Resoconto e valutazioni: `docs/retrieval.md`.
 - L'ingestion registra nei metadati della collezione modello, prefissi e dimensione del vettore:
   se la configurazione cambia modello o prefissi si ferma con un errore (usare un'altra
   `COLLEZIONE` o cancellare la collezione). Un cambio di chunking invece è ammesso: i chunk non

@@ -117,6 +117,71 @@ def test_modello_diverso_in_ricerca(indicizzato):
         cerca("gnocchi", client=client, embedder=EmbedderFinto(), config=crea_config(modello_embedding="altro"))
 
 
+def _dosi_nel_punto(client, config, r):
+    (punto,) = [p for p in client.scroll(config.collezione, limit=5000)[0] if p.payload["testo"] == r.testo]
+    return punto.payload["contiene_dosi"]
+
+
+def test_solo_dosi_tutti_veri(indicizzato):
+    """(1) con --solo-dosi tutti i risultati hanno contiene_dosi vero e sono al massimo k."""
+    client, config, _ = indicizzato
+    for k in (20, 3):
+        risultati = _cerca(indicizzato, k=k, solo_dosi=True)
+        assert risultati and len(risultati) <= k
+        assert all(r.contiene_dosi is True for r in risultati)
+        assert all(_dosi_nel_punto(client, config, r) is True for r in risultati)
+
+
+def test_solo_dosi_e_capitolo(indicizzato):
+    """(2) --solo-dosi con --capitolo: tutti veri e tutti del capitolo richiesto."""
+    client, config, _ = indicizzato
+    capitolo = "Pasticceria" if CORPUS_REALE.exists() else "Minestre in brodo"
+    risultati = _cerca(indicizzato, k=20, capitolo=capitolo, solo_dosi=True)
+    assert risultati and len(risultati) <= 20
+    assert all(r.capitolo == capitolo and r.contiene_dosi for r in risultati)
+    assert all(_dosi_nel_punto(client, config, r) is True for r in risultati)
+
+
+def test_filtro_nativo_dosi(indicizzato, monkeypatch):
+    """(3) il filtro è passato a Qdrant nella query: nessun risultato viene scartato dopo."""
+    client = indicizzato[0]
+    chiamate, restituiti = [], []
+    originale = client.query_points
+
+    def spia(*a, **kw):
+        chiamate.append(kw)
+        risposta = originale(*a, **kw)
+        restituiti.append(len(risposta.points))
+        return risposta
+
+    monkeypatch.setattr(client, "query_points", spia)
+    risultati = _cerca(indicizzato, k=4, capitolo=indicizzato[2], solo_dosi=True)
+    assert chiamate[0]["query_filter"] == models.Filter(
+        must=[
+            models.FieldCondition(key="capitolo", match=models.MatchValue(value=indicizzato[2])),
+            models.FieldCondition(key="contiene_dosi", match=models.MatchValue(value=True)),
+        ]
+    )
+    assert chiamate[0]["limit"] == 4
+    assert len(risultati) == restituiti[0]
+
+
+def test_filtro_solo_dosi_senza_capitolo():
+    from rag.ricerca import costruisci_filtro
+
+    assert costruisci_filtro(None, False) is None
+    assert costruisci_filtro(None, True) == models.Filter(
+        must=[models.FieldCondition(key="contiene_dosi", match=models.MatchValue(value=True))]
+    )
+
+
+def test_solo_dosi_capitolo_senza_dosi():
+    client = QdrantClient(":memory:")
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), carica_corpus(FIXTURE_MINI))
+    risultati = cerca("brodo", 5, "Brodi, gelatina e sughi", True, client=client, embedder=EmbedderFinto(), config=crea_config())
+    assert risultati == []
+
+
 ENV = {
     "QDRANT_URL": "http://127.0.0.1:1",
     "COLLEZIONE": "test",
@@ -147,6 +212,12 @@ def test_main_stampa(ambiente, capsys):
 def test_main_capitolo(ambiente, capsys, indicizzato):
     assert main(["gnocchi", "--capitolo", indicizzato[2].upper(), "--k", "3"]) == 0
     assert indicizzato[2] in capsys.readouterr().out
+
+
+def test_main_solo_dosi_e_capitolo(ambiente, capsys, indicizzato):
+    assert main(["farina", "--solo-dosi", "--capitolo", indicizzato[2], "--k", "3"]) == 0
+    righe = [r for r in capsys.readouterr().out.splitlines() if r.startswith(("1.", "2.", "3."))]
+    assert righe and all("| dosi" in r and indicizzato[2] in r for r in righe)
 
 
 def test_main_k_troppo_grande(ambiente, capsys):

@@ -30,6 +30,19 @@ class Risultato:
     documento_id: str
     testo: str
     fonte: str
+    contiene_dosi: bool = False
+
+
+def costruisci_filtro(capitolo: str | None, solo_dosi: bool) -> models.Filter | None:
+    """Filtro nativo Qdrant: le condizioni sono applicate durante la ricerca, non dopo."""
+    condizioni = []
+    if capitolo is not None:
+        condizioni.append(
+            models.FieldCondition(key="capitolo", match=models.MatchValue(value=normalizza_capitolo(capitolo)))
+        )
+    if solo_dosi:
+        condizioni.append(models.FieldCondition(key="contiene_dosi", match=models.MatchValue(value=True)))
+    return models.Filter(must=condizioni) if condizioni else None
 
 
 def normalizza_capitolo(nome: str) -> str:
@@ -44,6 +57,7 @@ def cerca(
     domanda: str,
     k: int = 5,
     capitolo: str | None = None,
+    solo_dosi: bool = False,
     *,
     client: QdrantClient,
     embedder: Embedder,
@@ -53,15 +67,7 @@ def cerca(
         raise ValueError("La domanda è vuota")
     if not 1 <= k <= K_MASSIMO:
         raise ValueError(f"k deve essere tra 1 e {K_MASSIMO}, ricevuto {k}")
-    filtro = None
-    if capitolo is not None:
-        filtro = models.Filter(
-            must=[
-                models.FieldCondition(
-                    key="capitolo", match=models.MatchValue(value=normalizza_capitolo(capitolo))
-                )
-            ]
-        )
+    filtro = costruisci_filtro(capitolo, solo_dosi)
     if not verifica_compatibilita(client, config):
         raise ErroreCollezione(
             f'La collezione "{config.collezione}" non esiste: esegui prima python -m rag.ingestion'
@@ -81,6 +87,7 @@ def cerca(
             documento_id=p.payload["documento_id"],
             testo=p.payload["testo"],
             fonte=p.payload["fonte"],
+            contiene_dosi=bool(p.payload.get("contiene_dosi", False)),
         )
         for p in risposta.points
     ]
@@ -88,8 +95,9 @@ def cerca(
 
 def _formatta(i: int, r: Risultato) -> str:
     estratto = " ".join(r.testo.split())[:200]
+    dosi = " | dosi" if r.contiene_dosi else ""
     return (
-        f"{i}. [{r.score:.3f}] Ricetta {r.numero} — {r.titolo} | {r.capitolo} | chunk {r.posizione}\n"
+        f"{i}. [{r.score:.3f}] Ricetta {r.numero} — {r.titolo} | {r.capitolo} | chunk {r.posizione}{dosi}\n"
         f"   {estratto}"
     )
 
@@ -98,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m rag.ricerca", description=__doc__.splitlines()[0])
     parser.add_argument("domanda")
     parser.add_argument("--capitolo", default=None, help="nome del capitolo (maiuscole indifferenti)")
+    parser.add_argument("--solo-dosi", action="store_true", help="solo chunk con un elenco di ingredienti e quantità")
     parser.add_argument("--k", type=int, default=5, help=f"numero di risultati (1-{K_MASSIMO})")
     args = parser.parse_args(argv)
 
@@ -106,7 +115,9 @@ def main(argv: list[str] | None = None) -> int:
         config = carica_config()
         client = QdrantClient(url=config.qdrant_url)
         embedder = EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch)
-        risultati = cerca(args.domanda, args.k, args.capitolo, client=client, embedder=embedder, config=config)
+        risultati = cerca(
+            args.domanda, args.k, args.capitolo, args.solo_dosi, client=client, embedder=embedder, config=config
+        )
     except (ValueError, ErroreConfigurazione, ErroreCollezione, ErroreEmbedding) as e:
         print(f"Errore: {e}", file=sys.stderr)
         return 1

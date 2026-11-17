@@ -291,6 +291,40 @@ def test_main_corpus_troncato_chiede_opzione(ambiente, capsys, tmp_path):
     assert main(["--consenti-meno-ricette"]) == 0
 
 
+def _main_con_corpus(ambiente, percorso, argv=()):
+    ambiente.setenv("CORPUS", str(percorso))
+    ambiente.setattr(ingestion, "QdrantClient", lambda *a, **k: QdrantClient(":memory:"))
+    ambiente.setattr(ingestion, "EmbedderLMStudio", lambda *a, **k: EmbedderFinto())
+    return main(list(argv))
+
+
+@pytest.mark.parametrize("argv", [(), ("--solo-payload",)])
+def test_main_numerazione_inattesa(ambiente, capsys, tmp_path, argv):
+    rotto = tmp_path / "rotto.txt"
+    rotto.write_text(
+        FIXTURE_MINI.read_text(encoding="utf-8").replace("2. Cappelletti", "4. Cappelletti"), encoding="utf-8"
+    )
+    assert _main_con_corpus(ambiente, rotto, argv) == 1
+    errore = capsys.readouterr().err
+    assert errore.startswith("Errore:") and "Numerazione inattesa" in errore and "Traceback" not in errore
+    assert str(rotto) in errore
+
+
+def test_main_corpus_non_utf8(ambiente, capsys, tmp_path):
+    latino = tmp_path / "latino.txt"
+    latino.write_bytes(FIXTURE_MINI.read_text(encoding="utf-8").encode("cp1252", errors="replace") + b"\x81")
+    assert _main_con_corpus(ambiente, latino) == 1
+    errore = capsys.readouterr().err
+    assert errore.startswith("Errore:") and "UTF-8" in errore and "Traceback" not in errore
+
+
+def test_main_corpus_vuoto(ambiente, capsys, tmp_path):
+    vuoto = tmp_path / "vuoto.txt"
+    vuoto.write_text("", encoding="utf-8")
+    assert _main_con_corpus(ambiente, vuoto) == 1
+    assert capsys.readouterr().err.startswith("Errore: Nessuna ricetta")
+
+
 ENV = {
     "QDRANT_URL": "http://127.0.0.1:1",
     "COLLEZIONE": "test",

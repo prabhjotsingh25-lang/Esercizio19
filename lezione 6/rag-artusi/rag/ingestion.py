@@ -133,6 +133,16 @@ def aggiorna_payload(config: Config, client: QdrantClient, ricette: list[Ricetta
     )
 
 
+def leggi_corpus(percorso) -> list[Ricetta]:
+    """Legge il corpus trasformando gli errori di lettura e di parsing in ErroreCorpus (senza traceback)."""
+    try:
+        return carica_corpus(percorso)
+    except UnicodeDecodeError as e:
+        raise ErroreCorpus(f"il corpus {percorso} non è in UTF-8 ({e}): scarica la versione «Plain Text UTF-8»") from e
+    except ValueError as e:  # per esempio «Numerazione inattesa…» da estrai_ricette
+        raise ErroreCorpus(f"corpus {percorso} non valido: {e}") from e
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m rag.ingestion")
     parser.add_argument(
@@ -150,13 +160,14 @@ def main(argv: list[str] | None = None) -> int:
     config = None
     try:
         config = carica_config()
+        ricette = leggi_corpus(config.corpus)
         client = QdrantClient(url=config.qdrant_url)
         if args.solo_payload:
-            rapporto = aggiorna_payload(config, client)
+            rapporto = aggiorna_payload(config, client, ricette)
         else:
             embedder = EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch)
             rapporto = esegui_ingestion(
-                config, client, embedder, consenti_meno_ricette=args.consenti_meno_ricette
+                config, client, embedder, ricette, consenti_meno_ricette=args.consenti_meno_ricette
             )
     except (ErroreConfigurazione, ErroreCollezione, ErroreEmbedding, ErroreCorpus) as e:
         print(f"Errore: {e}", file=sys.stderr)

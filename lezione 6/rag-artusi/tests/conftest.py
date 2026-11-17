@@ -25,6 +25,7 @@ def crea_config(**modifiche) -> Config:
         chunk_overlap=200,
         embedding_batch=32,
         corpus=CORPUS_REALE,
+        testo_indicizzato="titolo_capitolo",
     )
     valori.update(modifiche)
     return Config(**valori)

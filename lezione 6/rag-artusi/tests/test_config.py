@@ -76,6 +76,13 @@ def test_env_example_valido_con_spazio_nei_prefissi():
     assert c.chunk_dimensione == 1200 and c.chunk_overlap == 200
 
 
+def test_testo_indicizzato_default_e_valori():
+    assert carica_config(dict(OBBLIGATORIE)).testo_indicizzato == "titolo_capitolo"
+    assert carica_config({**OBBLIGATORIE, "TESTO_INDICIZZATO": "solo_testo"}).testo_indicizzato == "solo_testo"
+    with pytest.raises(ErroreConfigurazione, match="TESTO_INDICIZZATO"):
+        carica_config({**OBBLIGATORIE, "TESTO_INDICIZZATO": "altro"})
+
+
 def test_numero_non_valido():
     with pytest.raises(ErroreConfigurazione, match="CHUNK_DIMENSIONE"):
         carica_config({**OBBLIGATORIE, "CHUNK_DIMENSIONE": "tanti"})

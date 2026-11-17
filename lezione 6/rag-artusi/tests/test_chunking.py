@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from rag.chunking import FONTE, crea_chunk, dividi, documento_id, id_punto
+from rag.chunking import FONTE, crea_chunk, dividi, documento_id, id_punto, testo_da_indicizzare
 from rag.corpus import Ricetta, carica_corpus
 from tests.conftest import CORPUS_REALE, crea_config, serve_corpus
 
@@ -130,6 +130,25 @@ def test_fonte():
     assert FONTE == "Artusi, La scienza in cucina (Project Gutenberg n. 59047)"
 
 
+def test_testo_da_indicizzare_stringa_esatta():
+    """(1) prefisso del modello, poi titolo e capitolo, poi il testo del chunk."""
+    (c,) = crea_chunk([Ricetta(1, "Brodo", "Brodi, gelatina e sughi", "Lo sa il popolo.")], crea_config())
+    assert testo_da_indicizzare(c, crea_config()) == (
+        "search_document: Titolo: Brodo\nCapitolo: Brodi, gelatina e sughi\n\nLo sa il popolo."
+    )
+    assert c.testo == c.payload["testo"] == "Lo sa il popolo."
+
+
+def test_testo_da_indicizzare_solo_testo():
+    (c,) = crea_chunk([Ricetta(1, "Brodo", "Brodi, gelatina e sughi", "Lo sa il popolo.")], crea_config())
+    assert testo_da_indicizzare(c, crea_config(testo_indicizzato="solo_testo")) == "search_document: Lo sa il popolo."
+
+
+def test_testo_da_indicizzare_caratteri_speciali():
+    (c,) = crea_chunk([Ricetta(564, "Gâteau à la noisette", "Pasticceria", "Nocciole.")], crea_config())
+    assert testo_da_indicizzare(c, crea_config()).startswith("search_document: Titolo: Gâteau à la noisette\n")
+
+
 @pytest.fixture(scope="module")
 def ricette():
     return {r.numero: r for r in carica_corpus(CORPUS_REALE)}
@@ -154,6 +173,19 @@ def test_ricetta_lunga_reale(ricette):
     for paragrafo in corpo.split("\n\n"):
         if len(paragrafo) <= 1200:
             assert any(paragrafo in t for t in testi)
+
+
+@serve_corpus
+def test_testo_indicizzato_208_reale(ricette):
+    (c,) = crea_chunk([ricette[208]], crea_config())
+    atteso_inizio = (
+        "search_document: Titolo: Pollo alla cacciatora\nCapitolo: Fritti\n\n"
+        "Trinciate una grossa cipolla e tenetela per più di mezz'ora nell'acqua fresca,"
+    )
+    testo = testo_da_indicizzare(c, crea_config())
+    assert testo.startswith(atteso_inizio)
+    assert testo == "search_document: Titolo: Pollo alla cacciatora\nCapitolo: Fritti\n\n" + c.testo
+    assert not c.testo.startswith("Titolo")
 
 
 @serve_corpus

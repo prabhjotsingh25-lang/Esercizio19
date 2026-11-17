@@ -127,6 +127,18 @@ def dividi(testo: str, strategia: str, dimensione: int, overlap: int) -> list[st
     return _per_caratteri(testo, dimensione, overlap)
 
 
+def testo_da_indicizzare(chunk: Chunk, config: Config) -> str:
+    """Testo passato all'embedder: prefisso del modello, poi (se configurato) titolo e capitolo, poi il chunk.
+
+    Il payload `testo` resta il testo originale del chunk.
+    """
+    if config.testo_indicizzato == "titolo_capitolo":
+        contesto = f"Titolo: {chunk.payload['titolo']}\nCapitolo: {chunk.payload['capitolo']}\n\n"
+    else:
+        contesto = ""
+    return config.prefisso_documento + contesto + chunk.testo
+
+
 def crea_chunk(ricette: list[Ricetta], config: Config) -> list[Chunk]:
     risultato: list[Chunk] = []
     for ricetta in ricette:

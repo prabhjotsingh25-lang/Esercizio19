@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 OBBLIGATORIE = ("QDRANT_URL", "COLLEZIONE", "LMSTUDIO_URL", "MODELLO_EMBEDDING")
 STRATEGIE = ("paragrafi", "caratteri")
+FORMATI_TESTO = ("solo_testo", "titolo_capitolo")
 
 
 class ErroreConfigurazione(Exception):
@@ -30,6 +31,7 @@ class Config:
     chunk_overlap: int
     embedding_batch: int
     corpus: Path
+    testo_indicizzato: str = "titolo_capitolo"
 
 
 def _intero(env: Mapping[str, str], nome: str, default: int) -> int:
@@ -68,6 +70,11 @@ def carica_config(env: Mapping[str, str] | None = None) -> Config:
         raise ErroreConfigurazione(
             f"CHUNK_OVERLAP ({overlap}) deve essere >= 0 e minore di CHUNK_DIMENSIONE ({dimensione})"
         )
+    formato = env.get("TESTO_INDICIZZATO", "").strip() or "titolo_capitolo"
+    if formato not in FORMATI_TESTO:
+        raise ErroreConfigurazione(
+            f"TESTO_INDICIZZATO {formato!r} sconosciuto: valori ammessi {', '.join(FORMATI_TESTO)}"
+        )
     batch = _intero(env, "EMBEDDING_BATCH", 32)
     if batch <= 0:
         raise ErroreConfigurazione("EMBEDDING_BATCH deve essere positivo")
@@ -84,4 +91,5 @@ def carica_config(env: Mapping[str, str] | None = None) -> Config:
         chunk_overlap=overlap,
         embedding_batch=batch,
         corpus=Path(env.get("CORPUS", "").strip() or "dati/artusi.txt"),
+        testo_indicizzato=formato,
     )

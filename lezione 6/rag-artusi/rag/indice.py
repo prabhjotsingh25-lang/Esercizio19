@@ -9,6 +9,8 @@ from rag.config import Config
 
 LOTTO_SCRITTURA = 256
 LOTTO_SCROLL = 1000
+CHIAVE_FORMATO = "testo_indicizzato"  # non blocca: un formato diverso vuol dire «ricalcola tutto»
+IN_AGGIORNAMENTO = "in_aggiornamento"
 INDICI = {
     "capitolo": models.PayloadSchemaType.KEYWORD,
     "contiene_dosi": models.PayloadSchemaType.BOOL,
@@ -51,13 +53,23 @@ def verifica_compatibilita(client: QdrantClient, config: Config, dimensione: int
     return True
 
 
-def crea_collezione(client: QdrantClient, config: Config, dimensione: int) -> None:
+def crea_collezione(client: QdrantClient, config: Config, dimensione: int, formato: str | None = None) -> None:
     client.create_collection(
         config.collezione,
         vectors_config=models.VectorParams(size=dimensione, distance=models.Distance.COSINE),
-        metadata=metadati_attesi(config, dimensione),
+        metadata={**metadati_attesi(config, dimensione), CHIAVE_FORMATO: formato or config.testo_indicizzato},
     )
     assicura_indici(client, config.collezione)
+
+
+def formato_salvato(client: QdrantClient, nome: str) -> str:
+    """Formato del testo indicizzato registrato; una collezione creata prima della modifica B è solo_testo."""
+    return (client.get_collection(nome).config.metadata or {}).get(CHIAVE_FORMATO, "solo_testo")
+
+
+def imposta_formato(client: QdrantClient, nome: str, valore: str) -> None:
+    """Aggiorna solo il metadato del formato (merge): la collezione non viene ricreata."""
+    client.update_collection(nome, metadata={CHIAVE_FORMATO: valore})
 
 
 def assicura_indici(client: QdrantClient, nome: str) -> list[str]:

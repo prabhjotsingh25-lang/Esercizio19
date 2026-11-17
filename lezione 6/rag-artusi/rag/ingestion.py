@@ -10,17 +10,19 @@ import httpx
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
-from rag.chunking import crea_chunk
+from rag.chunking import crea_chunk, testo_da_indicizzare
 from rag.config import Config, ErroreConfigurazione, carica_config
 from rag.corpus import Ricetta, carica_corpus
 from rag.embedder import Embedder, EmbedderLMStudio, ErroreEmbedding
 from rag.indice import (
+    IN_AGGIORNAMENTO,
     ErroreCollezione,
     aggiorna_campo,
     assicura_indici,
     conta,
     crea_collezione,
     elimina_orfani,
+    imposta_formato,
     scrivi,
     testi_salvati,
     verifica_compatibilita,
@@ -37,6 +39,7 @@ class Rapporto:
     scritti: int
     eliminati: int
     punti: int
+    formato: str = "titolo_capitolo"
 
 
 def esegui_ingestion(
@@ -49,16 +52,19 @@ def esegui_ingestion(
     # Controllo del modello prima di calcolare qualsiasi embedding.
     esiste = verifica_compatibilita(client, config)
 
-    vettori = embedder.embed([config.prefisso_documento + c.testo for c in chunk])
+    # Tutti gli embedding prima di scrivere: se il calcolo si interrompe, la collezione resta intatta.
+    vettori = embedder.embed([testo_da_indicizzare(c, config) for c in chunk])
     dimensione = len(vettori[0])
     if esiste:
         verifica_compatibilita(client, config, dimensione=dimensione)
         assicura_indici(client, config.collezione)
+        imposta_formato(client, config.collezione, IN_AGGIORNAMENTO)  # stessa collezione, mai ricreata
     else:
-        crea_collezione(client, config, dimensione)
+        crea_collezione(client, config, dimensione, formato=IN_AGGIORNAMENTO)
 
     scritti = scrivi(client, config.collezione, chunk, vettori)
     eliminati = elimina_orfani(client, config.collezione, {c.id for c in chunk})
+    imposta_formato(client, config.collezione, config.testo_indicizzato)
     return Rapporto(
         ricette=len(ricette),
         capitoli=len({r.capitolo for r in ricette}),
@@ -66,6 +72,7 @@ def esegui_ingestion(
         scritti=scritti,
         eliminati=eliminati,
         punti=conta(client, config.collezione),
+        formato=config.testo_indicizzato,
     )
 
 

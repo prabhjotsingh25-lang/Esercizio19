@@ -8,6 +8,8 @@ from rag.indice import (
     conta,
     crea_collezione,
     elimina_orfani,
+    formato_salvato,
+    imposta_formato,
     metadati_attesi,
     scrivi,
     verifica_compatibilita,
@@ -53,7 +55,7 @@ def test_crea_collezione(client, config_test):
     info = client.get_collection("test")
     assert info.config.params.vectors.distance == models.Distance.COSINE
     assert info.config.params.vectors.size == 8
-    assert info.config.metadata == metadati_attesi(config_test, 8)
+    assert info.config.metadata == {**metadati_attesi(config_test, 8), "testo_indicizzato": "titolo_capitolo"}
     # in memoria l'indice non ha effetto: si verifica che venga richiesto
     assert sorted(indici) == [
         ("test", "capitolo", models.PayloadSchemaType.KEYWORD),
@@ -75,6 +77,19 @@ def test_assicura_indici_solo_mancanti(client, config_test):
     )
     assert assicura_indici(client, "test") == ["contiene_dosi"]
     assert richiesti == [("contiene_dosi", models.PayloadSchemaType.BOOL)]
+
+
+def test_formato_salvato_e_imposta(client, config_test):
+    crea_collezione(client, config_test, 3, formato="in_aggiornamento")
+    assert formato_salvato(client, "test") == "in_aggiornamento"
+    imposta_formato(client, "test", "titolo_capitolo")
+    assert formato_salvato(client, "test") == "titolo_capitolo"
+    assert client.get_collection("test").config.metadata["modello_embedding"] == "finto"  # merge, non sostituzione
+
+
+def test_formato_non_blocca(client, config_test):
+    crea_collezione(client, config_test, 3, formato="solo_testo")
+    assert verifica_compatibilita(client, config_test) is True  # config titolo_capitolo
 
 
 def test_verifica_assente(client, config_test):

@@ -59,11 +59,18 @@ al testo passato all'embedder**, lasciando invariato tutto il resto.
   `in_aggiornamento`). Una collezione creata prima di B non ha la chiave: vale `solo_testo`.
 - `testo_indicizzato` **non blocca** l'ingestion (al contrario di modello, prefissi e dimensione): un
   valore diverso significa «ricalcola tutto», che l'ingestion fa già a ogni esecuzione.
-- Sequenza dell'ingestion completa: controlli di compatibilità come oggi → **metadato
-  `testo_indicizzato = "in_aggiornamento"`** (`update_collection`, merge dei metadati) → embedding di
-  tutti i chunk nel formato configurato → upsert con gli stessi ID → eliminazione degli orfani →
-  **metadato = formato configurato**. Se il processo si interrompe a metà, la collezione dice
-  `in_aggiornamento` e la prossima ingestion completa la ripara.
+- Sequenza dell'ingestion completa (aggiornata il 2026-11-17 durante l'implementazione, vedi nota):
+  controlli di compatibilità come oggi → embedding di **tutti** i chunk nel formato configurato (nessuna
+  scrittura) → controllo della dimensione → **metadato `testo_indicizzato = "in_aggiornamento"`**
+  (`update_collection`, merge dei metadati), segnato **subito prima della scrittura** → upsert con gli
+  stessi ID → eliminazione degli orfani → **metadato = formato configurato**.
+  - Se il processo si interrompe **durante gli embedding**, nella collezione non è stato scritto nulla:
+    il metadato resta quello di prima, che è ancora vero.
+  - Se si interrompe **durante la scrittura** (l'unico momento in cui i vettori possono essere misti),
+    la collezione dice `in_aggiornamento` e la prossima ingestion completa la ripara.
+  - Nota: la prima versione approvata segnava `in_aggiornamento` prima degli embedding; la sequenza
+    attuale è più precisa (segnala solo il caso in cui i vettori possono davvero essere misti) ed è
+    stata riportata all'utente e confermata dalla revisione del branch.
 - La ricerca, se trova `testo_indicizzato = "in_aggiornamento"`, stampa un **avviso** su stderr
   (risultati possibili ma con vettori misti); non blocca.
 - `--solo-payload` (modifica A) non cambia: confronta il `testo` del payload, che resta l'originale.
@@ -82,8 +89,11 @@ al testo passato all'embedder**, lasciando invariato tutto il resto.
   memoria) → stessi ID, stesso numero di punti, `eliminati == 0`, vettori **diversi** da prima, payload
   identico, `create_collection` e `delete_collection` **mai chiamati** la seconda volta (spia), metadato
   `testo_indicizzato == "titolo_capitolo"`.
-- Interruzione simulata (embedder che fallisce) → il metadato resta `in_aggiornamento`; una nuova
-  ingestion lo porta a `titolo_capitolo`; la ricerca con il metadato `in_aggiornamento` stampa l'avviso.
+- Embedder che fallisce → collezione intatta: vettori e metadati identici a prima (nessun
+  `in_aggiornamento`).
+- Interruzione simulata durante la scrittura (upsert che fallisce) → il metadato resta
+  `in_aggiornamento`, punti invariati; una nuova ingestion lo porta a `titolo_capitolo`; la ricerca con
+  il metadato `in_aggiornamento` stampa l'avviso.
 - Collezione senza la chiave `testo_indicizzato` (creata prima di B) → non bloccata, trattata come
   `solo_testo`; modello diverso → ancora bloccata.
 - Configurazione: `TESTO_INDICIZZATO=altro` → errore.

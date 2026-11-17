@@ -16,7 +16,8 @@
 ## Attenzione in revisione
 1. **Collezione creata prima di B** senza la chiave `testo_indicizzato` → trattata come `solo_testo`,
    non bloccata (Task B2).
-2. **Interruzione a metà del ricalcolo** → metadato `in_aggiornamento`, riparato dalla prossima
+2. **Interruzione durante la scrittura** (non durante gli embedding, che precedono ogni scrittura)
+   → metadato `in_aggiornamento`, riparato dalla prossima
    ingestion; la ricerca avvisa (Task B2, B3).
 3. **`TESTO_INDICIZZATO` cambiato senza ricalcolo** (ricerca o `--solo-payload`) → nessuna modifica a
    vettori, payload o metadati (Task B2).
@@ -45,7 +46,8 @@
   per primo; **(2)** payload `testo` senza `"Titolo:"`, `"Capitolo:"`, prefisso; **(3)** ingestion
   `solo_testo` poi `titolo_capitolo`: spie su `create_collection`/`delete_collection` mai chiamate la
   seconda volta, stessi ID, stesso numero di punti, `eliminati == 0`, vettori diversi, payload
-  identico, metadato finale `titolo_capitolo`; interruzione (embedder che fallisce) → metadato
+  identico, metadato finale `titolo_capitolo`; embedder che fallisce → collezione intatta (metadato e
+  vettori come prima); interruzione durante la scrittura (upsert che fallisce) → metadato
   `in_aggiornamento`, punti invariati, nuova ingestion → `titolo_capitolo`; collezione senza la
   chiave → non bloccata; **(5)** dopo un'ingestion `solo_testo`, `cerca` e `aggiorna_payload` con
   config `titolo_capitolo` → vettori, payload e metadati identici a prima.

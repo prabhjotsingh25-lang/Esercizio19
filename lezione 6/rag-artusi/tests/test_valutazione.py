@@ -97,6 +97,54 @@ def test_tabella():
     assert linee[4] == "| Vino? | 208 | — | — | — |"
 
 
+def test_json_andata_e_ritorno(tmp_path):
+    from rag.valutazione import righe_da_json, salva_json
+
+    righe = [Riga("A?", (455, 456), 1, 0.8, "Ricetta 455 — Cacciucco I"), Riga("B?", (), None, None, "—")]
+    f = tmp_path / "r.json"
+    salva_json(righe, f)
+    assert righe_da_json(f) == righe
+
+
+@pytest.mark.parametrize(
+    "prima, dopo, simbolo",
+    [(1, 1, "="), (3, 1, "↑2"), (1, 4, "↓3"), (2, None, "persa"), (None, 5, "trovata"), (None, None, "=")],
+)
+def test_variazione(prima, dopo, simbolo):
+    from rag.valutazione import variazione
+
+    assert variazione(prima, dopo) == simbolo
+
+
+def test_tabella_confronto():
+    from rag.valutazione import tabella_confronto
+
+    base = [Riga("A?", (89,), 2, 0.7, "x"), Riga("B?", (208,), None, 0.6, "y")]
+    nuove = [Riga("A?", (89,), 1, 0.75, "x"), Riga("B?", (208,), 3, 0.65, "y")]
+    linee = tabella_confronto(nuove, base).splitlines()
+    assert linee[0] == "| Domanda | Fonte attesa | Posizione baseline | Posizione | Variazione | Score migliore |"
+    assert linee[2] == "| A? | 89 | 2 | 1 | ↑1 | 0.750 |"
+    assert linee[3] == "| B? | 208 | — | 3 | trovata | 0.650 |"
+
+
+def test_tabella_confronto_domande_diverse():
+    from rag.valutazione import tabella_confronto
+
+    with pytest.raises(ValueError):
+        tabella_confronto([Riga("A?", (1,), 1, 0.5, "x")], [Riga("Z?", (1,), 1, 0.5, "x")])
+
+
+def test_valuta_passa_solo_dosi():
+    chiamate = []
+
+    def cerca_fn(domanda, k, solo_dosi=False):
+        chiamate.append(solo_dosi)
+        return []
+
+    valuta([Domanda("a", (1,))], cerca_fn, solo_dosi=True)
+    assert chiamate == [True]
+
+
 def test_domande_reali_valide():
     domande = carica_domande(DOMANDE_REALI)
     assert len(domande) == 9

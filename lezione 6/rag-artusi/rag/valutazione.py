@@ -6,9 +6,10 @@ Uso: python -m rag.valutazione [--domande eval/domande.yaml] [--k 5] [--uscita d
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 
@@ -58,11 +59,14 @@ def note_markdown(domande: list[Domanda]) -> str:
 
 
 def valuta(
-    domande: list[Domanda], cerca_fn: Callable[[str, int], list[Risultato]], k: int = 5
+    domande: list[Domanda],
+    cerca_fn: Callable[..., list[Risultato]],
+    k: int = 5,
+    solo_dosi: bool = False,
 ) -> list[Riga]:
     righe = []
     for d in domande:
-        risultati = cerca_fn(d.testo, k)
+        risultati = cerca_fn(d.testo, k, solo_dosi=True) if solo_dosi else cerca_fn(d.testo, k)
         posizione = next((i for i, r in enumerate(risultati, start=1) if r.numero in d.attese), None)
         primo = risultati[0] if risultati else None
         righe.append(
@@ -90,12 +94,59 @@ def tabella_markdown(righe: list[Riga]) -> str:
     return "\n".join(linee) + "\n"
 
 
+def _fmt_posizione(p: int | None) -> str:
+    return str(p) if p is not None else TRATTINO
+
+
+def salva_json(righe: list[Riga], percorso: Path) -> None:
+    dati = [{**asdict(r), "attese": list(r.attese)} for r in righe]
+    Path(percorso).write_text(json.dumps(dati, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def righe_da_json(percorso: Path) -> list[Riga]:
+    dati = json.loads(Path(percorso).read_text(encoding="utf-8"))
+    return [Riga(**{**d, "attese": tuple(d["attese"])}) for d in dati]
+
+
+def variazione(prima: int | None, dopo: int | None) -> str:
+    if prima == dopo:
+        return "="
+    if dopo is None:
+        return "persa"
+    if prima is None:
+        return "trovata"
+    return f"↑{prima - dopo}" if dopo < prima else f"↓{dopo - prima}"
+
+
+def tabella_confronto(righe: list[Riga], base: list[Riga]) -> str:
+    per_domanda = {b.domanda: b for b in base}
+    mancanti = [r.domanda for r in righe if r.domanda not in per_domanda]
+    if mancanti:
+        raise ValueError(f"Domande assenti nel file di confronto: {mancanti}")
+    linee = [
+        "| Domanda | Fonte attesa | Posizione baseline | Posizione | Variazione | Score migliore |",
+        "|---|---|---|---|---|---|",
+    ]
+    for r in righe:
+        b = per_domanda[r.domanda]
+        attese = ", ".join(map(str, r.attese)) if r.attese else "nessuna"
+        score = f"{r.score_migliore:.3f}" if r.score_migliore is not None else TRATTINO
+        linee.append(
+            f"| {r.domanda} | {attese} | {_fmt_posizione(b.posizione)} | {_fmt_posizione(r.posizione)} "
+            f"| {variazione(b.posizione, r.posizione)} | {score} |"
+        )
+    return "\n".join(linee) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m rag.valutazione")
     parser.add_argument("--domande", type=Path, default=Path("eval/domande.yaml"))
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--uscita", type=Path, default=Path("docs/eval-baseline.md"))
     parser.add_argument("--titolo", default="Valutazione")
+    parser.add_argument("--solo-dosi", action="store_true", help="applica il filtro contiene_dosi a ogni domanda")
+    parser.add_argument("--json", type=Path, default=None, help="salva anche le righe in JSON")
+    parser.add_argument("--confronta", type=Path, default=None, help="JSON di una valutazione precedente")
     args = parser.parse_args(argv)
 
     config = None
@@ -105,25 +156,36 @@ def main(argv: list[str] | None = None) -> int:
         client = QdrantClient(url=config.qdrant_url)
         embedder = EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch)
         righe = valuta(
-            domande, lambda testo, k: cerca(testo, k, client=client, embedder=embedder, config=config), args.k
+            domande,
+            lambda testo, k, solo_dosi=False: cerca(
+                testo, k, solo_dosi=solo_dosi, client=client, embedder=embedder, config=config
+            ),
+            args.k,
+            solo_dosi=args.solo_dosi,
         )
-    except (ValueError, ErroreConfigurazione, ErroreCollezione, ErroreEmbedding) as e:
+        base = righe_da_json(args.confronta) if args.confronta else None
+        tabella = tabella_confronto(righe, base) if base else tabella_markdown(righe)
+    except (ValueError, OSError, ErroreConfigurazione, ErroreCollezione, ErroreEmbedding) as e:
         print(f"Errore: {e}", file=sys.stderr)
         return 1
     except ERRORI_QDRANT as e:
         print(f"Errore: Qdrant non raggiungibile su {config.qdrant_url} ({e})", file=sys.stderr)
         return 1
 
-    tabella = tabella_markdown(righe) + note_markdown(domande)
+    tabella += note_markdown(domande)
     trovate = sum(1 for r in righe if r.posizione is not None)
     con_fonte = sum(1 for r in righe if r.attese)
+    filtro = " · filtro: solo chunk con dosi" if args.solo_dosi else ""
+    confronto = f" · confronto con `{args.confronta.as_posix()}`" if args.confronta else ""
     intestazione = (
         f"# {args.titolo}\n\n"
         f"- Data: {date.today().isoformat()}\n"
         f"- Modello: `{config.modello_embedding}` · collezione `{config.collezione}`\n"
         f"- Chunking: {config.chunk_strategia}, {config.chunk_dimensione} caratteri, overlap {config.chunk_overlap}\n"
-        f"- k = {args.k} · fonte trovata nei primi {args.k}: {trovate}/{con_fonte}\n\n"
+        f"- k = {args.k}{filtro}{confronto} · fonte trovata nei primi {args.k}: {trovate}/{con_fonte}\n\n"
     )
+    if args.json:
+        salva_json(righe, args.json)
     args.uscita.parent.mkdir(parents=True, exist_ok=True)
     args.uscita.write_text(intestazione + tabella, encoding="utf-8")
     print(intestazione + tabella)

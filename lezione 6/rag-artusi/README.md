@@ -44,7 +44,7 @@ docker compose up -d                                   # Qdrant su http://localh
 .\.venv\Scripts\python.exe -m rag.ricerca "Che vino si usa per il pollo alla cacciatora?" --k 3
 .\.venv\Scripts\python.exe -m rag.ricerca "come si cuoce il pesce in umido" --capitolo "piatti di pesce" --k 3
 .\.venv\Scripts\python.exe -m rag.ricerca "quanta farina per gli gnocchi" --solo-dosi --capitolo "Minestre asciutte e di magro"
-.\.venv\Scripts\python.exe -m rag.valutazione --titolo "Valutazione" --confronta docs/eval-baseline.json
+.\.venv\Scripts\python.exe -m rag.valutazione --titolo "Valutazione" --confronta docs/eval-baseline.json --uscita docs/eval-ultima.md
 .\.venv\Scripts\python.exe -m rag.dosi --campione 30 --seme 42   # campione per verificare contiene_dosi
 docker compose down                                    # i dati restano nel volume qdrant_dati
 ```

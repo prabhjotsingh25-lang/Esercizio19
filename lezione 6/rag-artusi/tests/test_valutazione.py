@@ -145,6 +145,14 @@ def test_valuta_passa_solo_dosi():
     assert chiamate == [True]
 
 
+def test_uscita_predefinita_non_sovrascrive_la_baseline():
+    from rag.valutazione import crea_parser
+
+    args = crea_parser().parse_args([])
+    assert args.uscita == Path("docs/eval-ultima.md")
+    assert args.uscita != Path("docs/eval-baseline.md")
+
+
 def test_domande_reali_valide():
     domande = carica_domande(DOMANDE_REALI)
     assert len(domande) == 9

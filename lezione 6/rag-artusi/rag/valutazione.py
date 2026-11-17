@@ -138,16 +138,21 @@ def tabella_confronto(righe: list[Riga], base: list[Riga]) -> str:
     return "\n".join(linee) + "\n"
 
 
-def main(argv: list[str] | None = None) -> int:
+def crea_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m rag.valutazione")
     parser.add_argument("--domande", type=Path, default=Path("eval/domande.yaml"))
     parser.add_argument("--k", type=int, default=5)
-    parser.add_argument("--uscita", type=Path, default=Path("docs/eval-baseline.md"))
+    # mai la baseline come default: un'esecuzione di prova non deve sovrascrivere il rapporto di partenza
+    parser.add_argument("--uscita", type=Path, default=Path("docs/eval-ultima.md"))
     parser.add_argument("--titolo", default="Valutazione")
     parser.add_argument("--solo-dosi", action="store_true", help="applica il filtro contiene_dosi a ogni domanda")
     parser.add_argument("--json", type=Path, default=None, help="salva anche le righe in JSON")
     parser.add_argument("--confronta", type=Path, default=None, help="JSON di una valutazione precedente")
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = crea_parser().parse_args(argv)
 
     config = None
     try:

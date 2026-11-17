@@ -38,7 +38,21 @@ La collezione non è stata ricreata: stessi ID, stesso numero di punti, indici e
 | Come si fa un dolce di mandorle e zucchero? | 617, 785, 626, 620, 687 | 1 (0.847) | 1 (0.847) | 2 (0.821) | **↓1** |
 
 Lo score è quello del primo risultato. Fonte trovata nei primi 5: **baseline 6/8 · dopo A 6/8 ·
-dopo B 8/8**; al primo posto: baseline 5/8 · dopo B 6/8.
+dopo B 8/8**; al primo posto: baseline 4/8 · dopo A 4/8 · dopo B 6/8.
+
+### Totali (generati dai dati)
+
+```
+python -m rag.valutazione --riepilogo docs/eval-baseline.json docs/eval-dopo-a.json docs/eval-dopo-a-solo-dosi.json docs/eval-dopo-b.json docs/eval-dopo-b-solo-dosi.json
+```
+
+| Valutazione | Fonte nei primi k | Al primo posto |
+|---|---|---|
+| eval-baseline.json | 6/8 | 4/8 |
+| eval-dopo-a.json | 6/8 | 4/8 |
+| eval-dopo-a-solo-dosi.json | 4/8 | 3/8 |
+| eval-dopo-b.json | 8/8 | 6/8 |
+| eval-dopo-b-solo-dosi.json | 4/8 | 3/8 |
 
 ### Con `--solo-dosi` (confronto con dopo A con lo stesso filtro)
 

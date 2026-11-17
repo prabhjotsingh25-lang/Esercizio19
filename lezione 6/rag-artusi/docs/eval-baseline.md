@@ -3,7 +3,7 @@
 - Data: 2026-11-17
 - Modello: `text-embedding-nomic-embed-text-v1.5@q8_0` · collezione `artusi`
 - Chunking: paragrafi, 1200 caratteri, overlap 200
-- k = 5 · fonte trovata nei primi 5: 6/8
+- k = 5 · fonte trovata nei primi 5: 6/8 · al primo posto: 4/8
 
 ## Ingestion (Qdrant 1.20.2 in Docker, LM Studio sull'host)
 

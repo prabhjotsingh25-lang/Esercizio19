@@ -145,6 +145,82 @@ def test_valuta_passa_solo_dosi():
     assert chiamate == [True]
 
 
+RIGHE_TOTALI = [
+    Riga("A?", (89,), 1, 0.7, "x"),
+    Riga("B?", (208,), None, 0.6, "y"),
+    Riga("C?", (7,), 2, 0.6, "z"),
+    Riga("Tiramisù?", (), None, 0.7, "w"),  # senza fonte: non conta nei totali
+]
+
+
+def test_totali_calcolati_dai_dati():
+    from rag.valutazione import totali
+
+    assert totali(RIGHE_TOTALI) == (2, 1, 3)  # nei primi k, al primo posto, domande con fonte
+
+
+def test_riga_totali():
+    from rag.valutazione import riga_totali
+
+    assert riga_totali(RIGHE_TOTALI, 5) == "fonte trovata nei primi 5: 2/3 · al primo posto: 1/3"
+
+
+def test_riepilogo_dai_json(tmp_path):
+    from rag.valutazione import riepilogo_markdown, salva_json
+
+    f1, f2 = tmp_path / "a.json", tmp_path / "b.json"
+    salva_json(RIGHE_TOTALI, f1)
+    salva_json([Riga("A?", (89,), None, 0.7, "x")], f2)
+    linee = riepilogo_markdown([f1, f2]).splitlines()
+    assert linee[0] == "| Valutazione | Fonte nei primi k | Al primo posto |"
+    assert linee[2] == "| a.json | 2/3 | 1/3 |"
+    assert linee[3] == "| b.json | 0/1 | 0/1 |"
+
+
+def test_main_riepilogo_senza_servizi(tmp_path, capsys, monkeypatch):
+    from rag.valutazione import main, salva_json
+
+    monkeypatch.setattr("rag.config.load_dotenv", lambda *a, **k: None)
+    for nome in ("QDRANT_URL", "COLLEZIONE", "LMSTUDIO_URL", "MODELLO_EMBEDDING"):
+        monkeypatch.delenv(nome, raising=False)
+    f = tmp_path / "a.json"
+    salva_json(RIGHE_TOTALI, f)
+    assert main(["--riepilogo", str(f)]) == 0
+    assert "| a.json | 2/3 | 1/3 |" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "nome, nei_primi, primo",
+    [
+        ("eval-baseline", 6, 4),
+        ("eval-dopo-a", 6, 4),
+        ("eval-dopo-a-solo-dosi", 4, 3),
+        ("eval-dopo-b", 8, 6),
+        ("eval-dopo-b-solo-dosi", 4, 3),
+    ],
+)
+def test_totali_dei_json_salvati(nome, nei_primi, primo):
+    from rag.valutazione import righe_da_json, totali
+
+    percorso = DOMANDE_REALI.parent.parent / "docs" / f"{nome}.json"
+    assert totali(righe_da_json(percorso)) == (nei_primi, primo, 8)
+
+
+def test_totali_di_retrieval_md_coincidono_con_i_json():
+    import re
+
+    from rag.valutazione import righe_da_json, totali
+
+    docs = DOMANDE_REALI.parent.parent / "docs"
+    colonne = ["eval-baseline", "eval-dopo-a", "eval-dopo-a-solo-dosi", "eval-dopo-b"]
+    calcolati = [totali(righe_da_json(docs / f"{n}.json")) for n in colonne]
+    testo = (docs / "retrieval.md").read_text(encoding="utf-8")
+    for etichetta, indice in (("Fonte nei primi 5", 0), ("Fonte al primo posto", 1)):
+        (riga,) = [r for r in testo.splitlines() if r.startswith(f"| **{etichetta}**")]
+        scritti = [(int(a), int(b)) for a, b in re.findall(r"(\d+)/(\d+)", riga)]
+        assert scritti == [(t[indice], t[2]) for t in calcolati], etichetta
+
+
 def test_uscita_predefinita_non_sovrascrive_la_baseline():
     from rag.valutazione import crea_parser
 

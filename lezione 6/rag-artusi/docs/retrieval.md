@@ -45,7 +45,19 @@ risultato.
 | Per quanto tempo si deve cuocere il baccalà? | 510 | — (0.750) | — (0.750) | — (0.738) | **4 (0.766)** |
 | Con che cosa si insaporisce il brodo? | 1 | 1 (0.752) | 1 (0.752) | — (0.706) | 1 (0.768) |
 | Come si fa un dolce di mandorle e zucchero? ³ | 617, 785, 626, 620, 687 | 1 (0.847) | 1 (0.847) | 1 (0.847) | 2 (0.821) |
-| **Fonte nei primi 5** | | **6/8** | **6/8** | **5/8** | **8/8** |
+| **Fonte nei primi 5** | | **6/8** | **6/8** | **4/8** | **8/8** |
+| **Fonte al primo posto** | | 4/8 | 4/8 | 3/8 | 6/8 |
+
+Totali generati dai JSON delle valutazioni (non scritti a mano) con
+`python -m rag.valutazione --riepilogo docs/eval-baseline.json docs/eval-dopo-a.json docs/eval-dopo-a-solo-dosi.json docs/eval-dopo-b.json docs/eval-dopo-b-solo-dosi.json`:
+
+| Valutazione | Fonte nei primi k | Al primo posto |
+|---|---|---|
+| eval-baseline.json | 6/8 | 4/8 |
+| eval-dopo-a.json | 6/8 | 4/8 |
+| eval-dopo-a-solo-dosi.json | 4/8 | 3/8 |
+| eval-dopo-b.json | 8/8 | 6/8 |
+| eval-dopo-b-solo-dosi.json | 4/8 | 3/8 |
 
 ¹ La domanda dice «moderato», il testo della ricetta 7 dice «A un mangiatore **discreto** bastano due
 dozzine»: caso voluto di parole diverse da quelle del testo.

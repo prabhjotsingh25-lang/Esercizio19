@@ -33,7 +33,7 @@
 | Con che cosa si insaporisce il brodo? | 1 | 1 | 1 | = | 0.752 |
 | Come si fa un dolce di mandorle e zucchero? | 617, 785, 626, 620, 687 | 1 | 1 | = | 0.847 |
 
-Fonte trovata nei primi 5: **6/8**, come la baseline. Posizioni, primi risultati e score sono
+Fonte trovata nei primi 5: **6/8** (al primo posto 4/8), come la baseline. Posizioni, primi risultati e score sono
 identici: è la conferma che la modifica A non ha toccato i vettori.
 
 ## 2. Con `--solo-dosi`
@@ -50,7 +50,19 @@ identici: è la conferma che la modifica A non ha toccato i vettori.
 | Con che cosa si insaporisce il brodo? | 1 | 1 | — | **persa** | 0.706 | 87 — Maccheroni alla bolognese |
 | Come si fa un dolce di mandorle e zucchero? | 617, 785, 626, 620, 687 | 1 | 1 | = | 0.847 | 785 — Mandorle tostate |
 
-Fonte trovata nei primi 5: **5/8**.
+Fonte trovata nei primi 5: **4/8** · al primo posto: 3/8 (totali calcolati dai JSON, vedi sotto).
+
+### Totali (generati dai dati)
+
+```
+python -m rag.valutazione --riepilogo docs/eval-baseline.json docs/eval-dopo-a.json docs/eval-dopo-a-solo-dosi.json
+```
+
+| Valutazione | Fonte nei primi k | Al primo posto |
+|---|---|---|
+| eval-baseline.json | 6/8 | 4/8 |
+| eval-dopo-a.json | 6/8 | 4/8 |
+| eval-dopo-a-solo-dosi.json | 4/8 | 3/8 |
 
 ## Commento: dove il filtro aiuta e dove fa perdere la fonte
 

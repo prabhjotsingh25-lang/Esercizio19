@@ -138,6 +138,29 @@ def tabella_confronto(righe: list[Riga], base: list[Riga]) -> str:
     return "\n".join(linee) + "\n"
 
 
+def totali(righe: list[Riga]) -> tuple[int, int, int]:
+    """(fonte nei primi k, fonte al primo posto, domande con fonte attesa): calcolati, mai scritti a mano."""
+    con_fonte = [r for r in righe if r.attese]
+    return (
+        sum(1 for r in con_fonte if r.posizione is not None),
+        sum(1 for r in con_fonte if r.posizione == 1),
+        len(con_fonte),
+    )
+
+
+def riga_totali(righe: list[Riga], k: int) -> str:
+    trovate, primo, con_fonte = totali(righe)
+    return f"fonte trovata nei primi {k}: {trovate}/{con_fonte} · al primo posto: {primo}/{con_fonte}"
+
+
+def riepilogo_markdown(percorsi: list[Path]) -> str:
+    linee = ["| Valutazione | Fonte nei primi k | Al primo posto |", "|---|---|---|"]
+    for percorso in percorsi:
+        trovate, primo, con_fonte = totali(righe_da_json(percorso))
+        linee.append(f"| {Path(percorso).name} | {trovate}/{con_fonte} | {primo}/{con_fonte} |")
+    return "\n".join(linee) + "\n"
+
+
 def crea_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m rag.valutazione")
     parser.add_argument("--domande", type=Path, default=Path("eval/domande.yaml"))
@@ -148,11 +171,22 @@ def crea_parser() -> argparse.ArgumentParser:
     parser.add_argument("--solo-dosi", action="store_true", help="applica il filtro contiene_dosi a ogni domanda")
     parser.add_argument("--json", type=Path, default=None, help="salva anche le righe in JSON")
     parser.add_argument("--confronta", type=Path, default=None, help="JSON di una valutazione precedente")
+    parser.add_argument(
+        "--riepilogo", type=Path, nargs="+", default=None,
+        help="stampa solo i totali dei JSON indicati (non servono Qdrant né LM Studio)",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = crea_parser().parse_args(argv)
+    if args.riepilogo:
+        try:
+            print(riepilogo_markdown(args.riepilogo), end="")
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            print(f"Errore: {e}", file=sys.stderr)
+            return 1
+        return 0
 
     config = None
     try:
@@ -178,8 +212,6 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     tabella += note_markdown(domande)
-    trovate = sum(1 for r in righe if r.posizione is not None)
-    con_fonte = sum(1 for r in righe if r.attese)
     filtro = " · filtro: solo chunk con dosi" if args.solo_dosi else ""
     confronto = f" · confronto con `{args.confronta.as_posix()}`" if args.confronta else ""
     intestazione = (
@@ -187,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
         f"- Data: {date.today().isoformat()}\n"
         f"- Modello: `{config.modello_embedding}` · collezione `{config.collezione}`\n"
         f"- Chunking: {config.chunk_strategia}, {config.chunk_dimensione} caratteri, overlap {config.chunk_overlap}\n"
-        f"- k = {args.k}{filtro}{confronto} · fonte trovata nei primi {args.k}: {trovate}/{con_fonte}\n\n"
+        f"- k = {args.k}{filtro}{confronto} · {riga_totali(righe, args.k)}\n\n"
     )
     if args.json:
         salva_json(righe, args.json)

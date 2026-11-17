@@ -31,10 +31,9 @@
 - domanda: Con che cosa si insaporisce il brodo?
   attese: [1]    # «dare odore al brodo con un mazzettino di erbe aromatiche ... gambi del sedano, della carota»
 
-# Sostituta PROVVISORIA (da confermare) di «Come si fa un dolce di mandorle e zucchero?»,
-# che non ha una fonte univoca (617, 785, 626, 620, 687... sono tutti dolci di mandorle e zucchero).
-- domanda: Come si fa un dolce di mandorle tagliate a filetti e versate nello zucchero fuso?
-  attese: [617]  # Croccante: «tagliate ognuno dei lobi in filetti ... zucchero ... perfettamente liquefatto, versatevi entro le mandorle»
+- domanda: Come si fa un dolce di mandorle e zucchero?
+  attese: [617, 785, 626, 620, 687]
   nota: >-
-    Sostituisce «Come si fa un dolce di mandorle e zucchero?», che non ha una fonte univoca
-    (Croccante 617, Mandorle tostate 785, Amaretti 626, Ricciarelli 620, Pallottole di mandorle 687...).
+    Fonti multiple accettate: Croccante 617, Mandorle tostate 785, Amaretti I 626, Ricciarelli di
+    Siena 620, Pallottole di mandorle 687 (dolci fatti soprattutto di mandorle e zucchero). La
+    posizione è quella della prima fonte accettata che compare.

@@ -29,9 +29,9 @@ distanza coseno; indice keyword su `capitolo` (1106 punti). Un'ingestion con
 | Perché gli gnocchi possono sciogliersi nell'acqua? | 89 | 5 | 0.725 | Ricetta 427 — Piselli colla carnesecca |
 | Per quanto tempo si deve cuocere il baccalà? | 510 | — | 0.750 | Ricetta 508 — Baccalà dolce-forte |
 | Con che cosa si insaporisce il brodo? | 1 | 1 | 0.752 | Ricetta 1 — Brodo |
-| Come si fa un dolce di mandorle tagliate a filetti e versate nello zucchero fuso? | 617 | 1 | 0.817 | Ricetta 617 — Croccante |
+| Come si fa un dolce di mandorle e zucchero? | 617, 785, 626, 620, 687 | 1 | 0.847 | Ricetta 785 — Mandorle tostate |
 
 ## Note
 
 - «Quanti cappelletti bastano a un mangiatore moderato?»: La domanda dice «moderato», il testo della ricetta 7 dice «A un mangiatore discreto bastano due dozzine»: caso utile di parole diverse da quelle del testo.
-- «Come si fa un dolce di mandorle tagliate a filetti e versate nello zucchero fuso?»: Sostituisce «Come si fa un dolce di mandorle e zucchero?», che non ha una fonte univoca (Croccante 617, Mandorle tostate 785, Amaretti 626, Ricciarelli 620, Pallottole di mandorle 687...).
+- «Come si fa un dolce di mandorle e zucchero?»: Fonti multiple accettate: Croccante 617, Mandorle tostate 785, Amaretti I 626, Ricciarelli di Siena 620, Pallottole di mandorle 687 (dolci fatti soprattutto di mandorle e zucchero). La posizione è quella della prima fonte accettata che compare.

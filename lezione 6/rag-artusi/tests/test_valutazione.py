@@ -102,3 +102,12 @@ def test_domande_reali_valide():
     assert len(domande) == 9
     assert all(1 <= n <= 790 for d in domande for n in d.attese)
     assert sum(1 for d in domande if not d.attese) >= 1  # il tiramisù
+    (mandorle,) = [d for d in domande if d.testo == "Come si fa un dolce di mandorle e zucchero?"]
+    assert set(mandorle.attese) == {617, 785, 626, 620, 687}
+    assert "multiple" in mandorle.nota
+
+
+def test_fonti_multiple_prima_accettata():
+    risultati = [_r(500, 0.9), _r(626, 0.8), _r(617, 0.7)]
+    (riga,) = valuta([Domanda("mandorle", (617, 785, 626, 620, 687))], _cerca_fissa(risultati))
+    assert riga.posizione == 2

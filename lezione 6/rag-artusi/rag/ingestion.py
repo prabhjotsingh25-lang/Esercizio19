@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from dataclasses import dataclass
 
@@ -15,11 +16,13 @@ from rag.corpus import Ricetta, carica_corpus
 from rag.embedder import Embedder, EmbedderLMStudio, ErroreEmbedding
 from rag.indice import (
     ErroreCollezione,
+    aggiorna_campo,
     assicura_indici,
     conta,
     crea_collezione,
     elimina_orfani,
     scrivi,
+    testi_salvati,
     verifica_compatibilita,
 )
 
@@ -66,13 +69,59 @@ def esegui_ingestion(
     )
 
 
+@dataclass
+class RapportoPayload:
+    aggiornati: int
+    con_dosi: int
+    punti: int
+
+
+def aggiorna_payload(config: Config, client: QdrantClient, ricette: list[Ricetta] | None = None) -> RapportoPayload:
+    """Scrive `contiene_dosi` sui punti esistenti con set_payload, senza calcolare embedding."""
+    if not verifica_compatibilita(client, config):
+        raise ErroreCollezione(
+            f'La collezione "{config.collezione}" non esiste: esegui prima l\'ingestion completa '
+            "(python -m rag.ingestion)"
+        )
+    if ricette is None:
+        ricette = carica_corpus(config.corpus)
+    chunk = crea_chunk(ricette, config)
+    salvati = testi_salvati(client, config.collezione)
+    attesi = {c.id: c.testo for c in chunk}
+    if salvati != attesi:
+        diversi = len(set(salvati) ^ set(attesi)) + sum(
+            1 for i in set(salvati) & set(attesi) if salvati[i] != attesi[i]
+        )
+        raise ErroreCollezione(
+            f"I chunk non coincidono con la collezione ({len(attesi)} calcolati, {len(salvati)} salvati, "
+            f"{diversi} differenze): è cambiato il chunking o il corpus. Esegui l'ingestion completa."
+        )
+    valori = {c.id: c.payload["contiene_dosi"] for c in chunk}
+    aggiornati = aggiorna_campo(client, config.collezione, "contiene_dosi", valori)
+    assicura_indici(client, config.collezione)
+    return RapportoPayload(
+        aggiornati=aggiornati, con_dosi=sum(valori.values()), punti=conta(client, config.collezione)
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m rag.ingestion")
+    parser.add_argument(
+        "--solo-payload",
+        action="store_true",
+        help="aggiorna solo i campi del payload (contiene_dosi) sui punti esistenti, senza embedding",
+    )
+    args = parser.parse_args(argv)
+
     config = None
     try:
         config = carica_config()
         client = QdrantClient(url=config.qdrant_url)
-        embedder = EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch)
-        rapporto = esegui_ingestion(config, client, embedder)
+        if args.solo_payload:
+            rapporto = aggiorna_payload(config, client)
+        else:
+            embedder = EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch)
+            rapporto = esegui_ingestion(config, client, embedder)
     except (ErroreConfigurazione, ErroreCollezione, ErroreEmbedding) as e:
         print(f"Errore: {e}", file=sys.stderr)
         return 1

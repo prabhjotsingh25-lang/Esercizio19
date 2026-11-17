@@ -1,10 +1,11 @@
 import pytest
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 
 import rag.ingestion as ingestion
+from rag.chunking import crea_chunk
 from rag.corpus import carica_corpus
 from rag.indice import ErroreCollezione, conta
-from rag.ingestion import esegui_ingestion, main
+from rag.ingestion import aggiorna_payload, esegui_ingestion, main
 from tests.conftest import CORPUS_REALE, FIXTURE_MINI, crea_config, serve_corpus
 from tests.finti import EmbedderFinto
 
@@ -81,6 +82,58 @@ def test_dimensione_cambiata(client, ricette):
         esegui_ingestion(crea_config(), client, EmbedderFinto(dimensione=16), ricette)
 
 
+class EmbedderVietato:
+    def embed(self, testi):
+        raise AssertionError("l'aggiornamento del payload non deve calcolare embedding")
+
+
+def _punti(client):
+    return {str(p.id): p for p in client.retrieve("test", list(_id(client)), with_vectors=True, with_payload=True)}
+
+
+def test_solo_payload_senza_embedding(client, ricette):
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
+    client.delete_payload("test", keys=["contiene_dosi"], points=models.FilterSelector(filter=models.Filter()))
+    prima = _punti(client)
+    assert not any("contiene_dosi" in p.payload for p in prima.values())
+
+    rapporto = aggiorna_payload(crea_config(), client, ricette)
+
+    dopo = _punti(client)
+    attesi = {c.id: c.payload["contiene_dosi"] for c in crea_chunk(ricette, crea_config())}
+    assert {i: p.payload["contiene_dosi"] for i, p in dopo.items()} == attesi
+    assert {i: p.vector for i, p in dopo.items()} == {i: p.vector for i, p in prima.items()}
+    assert rapporto.aggiornati == rapporto.punti == len(prima)
+    assert rapporto.con_dosi == sum(attesi.values()) == 1  # solo la ricetta 3 del fixture
+
+
+def test_solo_payload_crea_indice(client, ricette, monkeypatch):
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
+    chiamate = []
+    monkeypatch.setattr(ingestion, "assicura_indici", lambda c, nome: chiamate.append(nome) or [])
+    aggiorna_payload(crea_config(), client, ricette)
+    assert chiamate == ["test"]
+
+
+def test_solo_payload_chunk_diversi(client, ricette):
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
+    client.delete_payload("test", keys=["contiene_dosi"], points=models.FilterSelector(filter=models.Filter()))
+    with pytest.raises(ErroreCollezione, match="ingestion completa"):
+        aggiorna_payload(crea_config(chunk_dimensione=60, chunk_overlap=10), client, ricette)
+    assert not any("contiene_dosi" in p.payload for p in _punti(client).values())
+
+
+def test_solo_payload_collezione_assente(client, ricette):
+    with pytest.raises(ErroreCollezione, match="ingestion completa"):
+        aggiorna_payload(crea_config(), client, ricette)
+
+
+def test_solo_payload_modello_diverso(client, ricette):
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
+    with pytest.raises(ErroreCollezione):
+        aggiorna_payload(crea_config(modello_embedding="altro"), client, ricette)
+
+
 ENV = {
     "QDRANT_URL": "http://127.0.0.1:1",
     "COLLEZIONE": "test",
@@ -126,6 +179,22 @@ def test_main_riuscito(ambiente, capsys):
     assert main([]) == 0
     uscita = capsys.readouterr().out
     assert "ricette: 3" in uscita and "punti" in uscita
+
+
+def test_main_solo_payload_non_crea_embedder(ambiente, capsys):
+    memoria = QdrantClient(":memory:")
+    esegui_ingestion(crea_config(), memoria, EmbedderFinto(), carica_corpus(FIXTURE_MINI))
+    ambiente.setenv("PREFISSO_DOCUMENTO", "search_document: ")
+    ambiente.setenv("PREFISSO_QUERY", "search_query: ")
+    ambiente.setattr(ingestion, "QdrantClient", lambda *a, **k: memoria)
+
+    def vietato(*a, **k):
+        raise AssertionError("embedder creato")
+
+    ambiente.setattr(ingestion, "EmbedderLMStudio", vietato)
+    assert main(["--solo-payload"]) == 0
+    uscita = capsys.readouterr().out
+    assert "aggiornati: " in uscita and "con_dosi: 1" in uscita
 
 
 @serve_corpus

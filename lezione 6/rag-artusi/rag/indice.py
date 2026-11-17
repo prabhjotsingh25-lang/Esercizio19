@@ -96,5 +96,27 @@ def elimina_orfani(client: QdrantClient, nome: str, id_validi: set[str]) -> int:
     return len(orfani)
 
 
+def testi_salvati(client: QdrantClient, nome: str) -> dict[str, str]:
+    """ID del punto -> `testo` del payload, per tutti i punti della collezione."""
+    testi: dict[str, str] = {}
+    offset = None
+    while True:
+        punti, offset = client.scroll(
+            nome, limit=LOTTO_SCROLL, offset=offset, with_payload=["testo"], with_vectors=False
+        )
+        testi.update({str(p.id): (p.payload or {}).get("testo") for p in punti})
+        if offset is None:
+            return testi
+
+
+def aggiorna_campo(client: QdrantClient, nome: str, campo: str, valori: dict[str, bool]) -> int:
+    """Scrive `campo` con set_payload (una chiamata per valore, a lotti): i vettori non si toccano."""
+    for valore in sorted(set(valori.values())):
+        ids = [i for i, v in valori.items() if v == valore]
+        for j in range(0, len(ids), LOTTO_SCROLL):
+            client.set_payload(nome, payload={campo: valore}, points=ids[j : j + LOTTO_SCROLL], wait=True)
+    return len(valori)
+
+
 def conta(client: QdrantClient, nome: str) -> int:
     return client.count(nome, exact=True).count

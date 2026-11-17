@@ -182,6 +182,38 @@ def test_solo_dosi_capitolo_senza_dosi():
     assert risultati == []
 
 
+def test_query_senza_titolo_ne_capitolo(indicizzato):
+    """(4) la query resta "search_query: " + domanda, anche con la collezione indicizzata con titolo e capitolo."""
+    client = indicizzato[0]
+    assert client.get_collection("test").config.metadata["testo_indicizzato"] == "titolo_capitolo"
+    finto = EmbedderFinto()
+    _cerca(indicizzato, domanda="  pollo alla cacciatora ", embedder=finto, capitolo=None)
+    assert finto.ricevuti == ["search_query: pollo alla cacciatora"]
+
+
+def test_risultati_con_testo_originale(indicizzato):
+    """(2) i risultati riportano il testo originale del chunk, senza prefisso, titolo né capitolo."""
+    client, config, _ = indicizzato
+    payload = {p.payload["testo"] for p in client.scroll(config.collezione, limit=5000)[0]}
+    for r in _cerca(indicizzato, k=10):
+        assert r.testo in payload
+        assert not any(s in r.testo for s in ("search_document", "Titolo:", "Capitolo:"))
+
+
+def test_avviso_collezione_in_aggiornamento(ambiente, capsys, indicizzato):
+    from rag.indice import imposta_formato
+
+    client = indicizzato[0]
+    imposta_formato(client, "test", "in_aggiornamento")
+    try:
+        assert main(["gnocchi", "--k", "2"]) == 0
+        uscita = capsys.readouterr()
+        assert "in aggiornamento" in uscita.err
+        assert uscita.out.count("Ricetta ") == 2
+    finally:
+        imposta_formato(client, "test", "titolo_capitolo")
+
+
 ENV = {
     "QDRANT_URL": "http://127.0.0.1:1",
     "COLLEZIONE": "test",

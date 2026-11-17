@@ -14,7 +14,7 @@ from qdrant_client import QdrantClient, models
 from rag.config import Config, ErroreConfigurazione, carica_config
 from rag.corpus import CAPITOLI
 from rag.embedder import Embedder, EmbedderLMStudio, ErroreEmbedding
-from rag.indice import ErroreCollezione, verifica_compatibilita
+from rag.indice import IN_AGGIORNAMENTO, ErroreCollezione, formato_salvato, verifica_compatibilita
 from rag.ingestion import ERRORI_QDRANT
 
 K_MASSIMO = 20
@@ -126,6 +126,12 @@ def main(argv: list[str] | None = None) -> int:
               "Avvialo con: docker compose up -d", file=sys.stderr)
         return 1
 
+    if formato_salvato(client, config.collezione) == IN_AGGIORNAMENTO:
+        print(
+            f'Avviso: la collezione "{config.collezione}" è in aggiornamento (un\'ingestion si è interrotta): '
+            "i vettori possono essere misti. Riesegui python -m rag.ingestion.",
+            file=sys.stderr,
+        )
     if not risultati:
         print("Nessun risultato.")
     for i, r in enumerate(risultati, start=1):

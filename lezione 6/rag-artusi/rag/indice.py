@@ -9,6 +9,10 @@ from rag.config import Config
 
 LOTTO_SCRITTURA = 256
 LOTTO_SCROLL = 1000
+INDICI = {
+    "capitolo": models.PayloadSchemaType.KEYWORD,
+    "contiene_dosi": models.PayloadSchemaType.BOOL,
+}
 
 
 class ErroreCollezione(Exception):
@@ -53,7 +57,18 @@ def crea_collezione(client: QdrantClient, config: Config, dimensione: int) -> No
         vectors_config=models.VectorParams(size=dimensione, distance=models.Distance.COSINE),
         metadata=metadati_attesi(config, dimensione),
     )
-    client.create_payload_index(config.collezione, "capitolo", field_schema=models.PayloadSchemaType.KEYWORD)
+    assicura_indici(client, config.collezione)
+
+
+def assicura_indici(client: QdrantClient, nome: str) -> list[str]:
+    """Crea gli indici del payload che mancano; restituisce i campi indicizzati ora."""
+    presenti = client.get_collection(nome).payload_schema or {}
+    creati = []
+    for campo, tipo in INDICI.items():
+        if campo not in presenti:
+            client.create_payload_index(nome, campo, field_schema=tipo)
+            creati.append(campo)
+    return creati
 
 
 def scrivi(client: QdrantClient, nome: str, chunk: list[Chunk], vettori: list[list[float]]) -> int:

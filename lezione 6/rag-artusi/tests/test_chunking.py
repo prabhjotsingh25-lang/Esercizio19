@@ -6,7 +6,7 @@ from rag.chunking import FONTE, crea_chunk, dividi, documento_id, id_punto
 from rag.corpus import Ricetta, carica_corpus
 from tests.conftest import CORPUS_REALE, crea_config, serve_corpus
 
-CHIAVI_PAYLOAD = {"documento_id", "numero", "titolo", "capitolo", "posizione", "testo", "fonte"}
+CHIAVI_PAYLOAD = {"documento_id", "numero", "titolo", "capitolo", "posizione", "testo", "fonte", "contiene_dosi"}
 
 
 def _parola(i: int) -> str:
@@ -117,6 +117,13 @@ def test_crea_chunk_payload():
         assert c.payload["testo"] == c.testo
         assert "search_document" not in c.testo
         assert c.id == id_punto("artusi-089", i)
+        assert c.payload["contiene_dosi"] is False  # paragrafi sintetici senza dosi
+
+
+def test_payload_contiene_dosi():
+    corpo = "Patate grosse e gialle, grammi 400.\nFarina di grano, grammi 150.\n\nCuocete le patate."
+    (c,) = crea_chunk([Ricetta(89, "Gnocchi di patate", "Minestre asciutte e di magro", corpo)], crea_config())
+    assert c.payload["contiene_dosi"] is True
 
 
 def test_fonte():

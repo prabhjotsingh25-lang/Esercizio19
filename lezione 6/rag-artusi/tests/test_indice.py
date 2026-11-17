@@ -4,6 +4,7 @@ from qdrant_client import QdrantClient, models
 from rag.chunking import Chunk, id_punto
 from rag.indice import (
     ErroreCollezione,
+    assicura_indici,
     conta,
     crea_collezione,
     elimina_orfani,
@@ -54,7 +55,26 @@ def test_crea_collezione(client, config_test):
     assert info.config.params.vectors.size == 8
     assert info.config.metadata == metadati_attesi(config_test, 8)
     # in memoria l'indice non ha effetto: si verifica che venga richiesto
-    assert indici == [("test", "capitolo", models.PayloadSchemaType.KEYWORD)]
+    assert sorted(indici) == [
+        ("test", "capitolo", models.PayloadSchemaType.KEYWORD),
+        ("test", "contiene_dosi", models.PayloadSchemaType.BOOL),
+    ]
+
+
+class _SchemaFinto:
+    def __init__(self, presenti):
+        self.payload_schema = {nome: object() for nome in presenti}
+
+
+def test_assicura_indici_solo_mancanti(client, config_test):
+    crea_collezione(client, config_test, 3)
+    richiesti = []
+    client.get_collection = lambda nome: _SchemaFinto(["capitolo"])  # come un server con un solo indice
+    client.create_payload_index = lambda collection_name, field_name, field_schema=None, **kw: richiesti.append(
+        (field_name, field_schema)
+    )
+    assert assicura_indici(client, "test") == ["contiene_dosi"]
+    assert richiesti == [("contiene_dosi", models.PayloadSchemaType.BOOL)]
 
 
 def test_verifica_assente(client, config_test):

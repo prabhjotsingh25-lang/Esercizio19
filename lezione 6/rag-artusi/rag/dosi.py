@@ -12,8 +12,10 @@ import argparse
 import random
 import re
 import sys
+from typing import TYPE_CHECKING
 
-from rag.chunking import Chunk
+if TYPE_CHECKING:
+    from rag.chunking import Chunk
 
 RIGA_MASSIMA = 100
 MINIMO_VOCI = 2

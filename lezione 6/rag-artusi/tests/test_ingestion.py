@@ -33,6 +33,14 @@ def test_due_ingestion_stesso_numero(client, ricette):
     assert secondo.eliminati == 0
 
 
+def test_indici_assicurati_anche_su_collezione_esistente(client, ricette, monkeypatch):
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
+    chiamate = []
+    monkeypatch.setattr(ingestion, "assicura_indici", lambda c, nome: chiamate.append(nome) or [])
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
+    assert chiamate == ["test"]
+
+
 def test_rapporto(client, ricette):
     r = esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
     assert (r.ricette, r.capitoli) == (3, 2)

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from rag.config import Config
 from rag.corpus import Ricetta
+from rag.dosi import contiene_dosi
 
 # Costante del progetto: cambiarla cambierebbe tutti gli ID dei punti.
 NAMESPACE_PROGETTO = uuid.UUID("3f6c2a8e-1b7d-4e55-9a0c-5d2e8f4b7a61")
@@ -144,6 +145,7 @@ def crea_chunk(ricette: list[Ricetta], config: Config) -> list[Chunk]:
                         "posizione": posizione,
                         "testo": testo,
                         "fonte": FONTE,
+                        "contiene_dosi": contiene_dosi(testo),
                     },
                 )
             )

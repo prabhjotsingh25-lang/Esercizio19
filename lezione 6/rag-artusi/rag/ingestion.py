@@ -15,6 +15,7 @@ from rag.corpus import Ricetta, carica_corpus
 from rag.embedder import Embedder, EmbedderLMStudio, ErroreEmbedding
 from rag.indice import (
     ErroreCollezione,
+    assicura_indici,
     conta,
     crea_collezione,
     elimina_orfani,
@@ -49,6 +50,7 @@ def esegui_ingestion(
     dimensione = len(vettori[0])
     if esiste:
         verifica_compatibilita(client, config, dimensione=dimensione)
+        assicura_indici(client, config.collezione)
     else:
         crea_collezione(client, config, dimensione)
 

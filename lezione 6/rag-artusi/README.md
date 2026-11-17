@@ -9,7 +9,8 @@ piano: `docs/plans/pipeline-rag.md`.
 - Le **790 ricette** numerate, ciascuna con numero, titolo e uno dei **23 capitoli**.
 - Chunk per paragrafi (default 1200 caratteri, overlap 200); le ricette brevi sono un chunk solo.
 - Payload di ogni punto: `documento_id`, `numero`, `titolo`, `capitolo`, `posizione` (indice del
-  chunk nella ricetta), `testo`, `fonte`.
+  chunk nella ricetta), `testo`, `fonte`, `contiene_dosi` (vero se il chunk ha un elenco di almeno 2
+  voci «Ingrediente, quantità»; indice bool, filtro `--solo-dosi`).
 
 **Limiti noti:** non sono indicizzati prefazione, «Spiegazione di voci», Appendice («Cucina per
 gli stomachi deboli», «Note di pranzi»), i testi introduttivi dei capitoli (per esempio

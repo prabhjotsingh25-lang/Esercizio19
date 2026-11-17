@@ -21,6 +21,7 @@ from rag.indice import (
     assicura_indici,
     conta,
     crea_collezione,
+    documenti_salvati,
     elimina_orfani,
     imposta_formato,
     scrivi,
@@ -42,15 +43,36 @@ class Rapporto:
     formato: str = "titolo_capitolo"
 
 
+class ErroreCorpus(Exception):
+    """Corpus vuoto, non valido o con meno ricette di quelle già indicizzate."""
+
+
 def esegui_ingestion(
-    config: Config, client: QdrantClient, embedder: Embedder, ricette: list[Ricetta] | None = None
+    config: Config,
+    client: QdrantClient,
+    embedder: Embedder,
+    ricette: list[Ricetta] | None = None,
+    consenti_meno_ricette: bool = False,
 ) -> Rapporto:
     if ricette is None:
         ricette = carica_corpus(config.corpus)
+    if not ricette:
+        raise ErroreCorpus(
+            f"Nessuna ricetta trovata nel corpus {config.corpus}: controlla il file (righe START/END di "
+            "Gutenberg, riga RICETTE, ricette numerate «1. Titolo»)."
+        )
     chunk = crea_chunk(ricette, config)
 
     # Controllo del modello prima di calcolare qualsiasi embedding.
     esiste = verifica_compatibilita(client, config)
+    if esiste and not consenti_meno_ricette:
+        indicizzate = len(documenti_salvati(client, config.collezione))
+        if len(ricette) < indicizzate:
+            raise ErroreCorpus(
+                f"Il corpus ha {len(ricette)} ricette, la collezione ne contiene {indicizzate}: l'ingestion "
+                f"cancellerebbe i punti delle {indicizzate - len(ricette)} ricette mancanti. Se il corpus è "
+                "giusto, rilancia con --consenti-meno-ricette."
+            )
 
     # Tutti gli embedding prima di scrivere: se il calcolo si interrompe, la collezione resta intatta.
     vettori = embedder.embed([testo_da_indicizzare(c, config) for c in chunk])
@@ -118,6 +140,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="aggiorna solo i campi del payload (contiene_dosi) sui punti esistenti, senza embedding",
     )
+    parser.add_argument(
+        "--consenti-meno-ricette",
+        action="store_true",
+        help="conferma esplicita: il corpus ha meno ricette della collezione e i punti in più vanno cancellati",
+    )
     args = parser.parse_args(argv)
 
     config = None
@@ -128,8 +155,10 @@ def main(argv: list[str] | None = None) -> int:
             rapporto = aggiorna_payload(config, client)
         else:
             embedder = EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch)
-            rapporto = esegui_ingestion(config, client, embedder)
-    except (ErroreConfigurazione, ErroreCollezione, ErroreEmbedding) as e:
+            rapporto = esegui_ingestion(
+                config, client, embedder, consenti_meno_ricette=args.consenti_meno_ricette
+            )
+    except (ErroreConfigurazione, ErroreCollezione, ErroreEmbedding, ErroreCorpus) as e:
         print(f"Errore: {e}", file=sys.stderr)
         return 1
     except ERRORI_QDRANT as e:

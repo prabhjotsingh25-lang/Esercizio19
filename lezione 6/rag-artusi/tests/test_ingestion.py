@@ -6,7 +6,7 @@ from rag.chunking import crea_chunk
 from rag.corpus import carica_corpus
 from rag.embedder import ErroreEmbedding
 from rag.indice import ErroreCollezione, conta, formato_salvato
-from rag.ingestion import aggiorna_payload, esegui_ingestion, main
+from rag.ingestion import ErroreCorpus, aggiorna_payload, esegui_ingestion, main
 from rag.ricerca import cerca
 from tests.conftest import CORPUS_REALE, FIXTURE_MINI, crea_config, serve_corpus
 from tests.finti import EmbedderFinto
@@ -247,6 +247,48 @@ def test_solo_payload_modello_diverso(client, ricette):
     esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
     with pytest.raises(ErroreCollezione):
         aggiorna_payload(crea_config(modello_embedding="altro"), client, ricette)
+
+
+def test_corpus_vuoto_errore_chiaro(client):
+    finto = EmbedderFinto()
+    with pytest.raises(ErroreCorpus, match="Nessuna ricetta"):
+        esegui_ingestion(crea_config(), client, finto, [])
+    assert finto.chiamate == 0
+    assert not client.collection_exists("test")
+
+
+def test_corpus_troncato_non_cancella_in_silenzio(client, ricette):
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
+    prima = _punti(client)
+    finto = EmbedderFinto()
+    with pytest.raises(ErroreCorpus) as e:
+        esegui_ingestion(crea_config(), client, finto, ricette[:2])
+    assert "--consenti-meno-ricette" in str(e.value)
+    assert "2" in str(e.value) and "3" in str(e.value)
+    assert finto.chiamate == 0
+    assert set(_punti(client)) == set(prima)
+
+
+def test_corpus_troncato_con_conferma_esplicita(client, ricette):
+    primo = esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette)
+    rapporto = esegui_ingestion(crea_config(), client, EmbedderFinto(), ricette[:2], consenti_meno_ricette=True)
+    assert rapporto.ricette == 2
+    assert rapporto.eliminati == primo.punti - rapporto.punti > 0
+
+
+def test_main_corpus_troncato_chiede_opzione(ambiente, capsys, tmp_path):
+    memoria = QdrantClient(":memory:")
+    esegui_ingestion(crea_config(prefisso_documento="", prefisso_query=""), memoria, EmbedderFinto(), carica_corpus(FIXTURE_MINI))
+    troncato = tmp_path / "troncato.txt"
+    testo = FIXTURE_MINI.read_text(encoding="utf-8")
+    troncato.write_text(testo[: testo.index("MINESTRE\n")] + "APPENDICE\n", encoding="utf-8")
+    ambiente.setenv("CORPUS", str(troncato))
+    ambiente.setattr(ingestion, "QdrantClient", lambda *a, **k: memoria)
+    ambiente.setattr(ingestion, "EmbedderLMStudio", lambda *a, **k: EmbedderFinto())
+    assert main([]) == 1
+    errore = capsys.readouterr().err
+    assert errore.startswith("Errore:") and "--consenti-meno-ricette" in errore and "Traceback" not in errore
+    assert main(["--consenti-meno-ricette"]) == 0
 
 
 ENV = {

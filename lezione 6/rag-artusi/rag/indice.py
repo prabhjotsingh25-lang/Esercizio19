@@ -121,6 +121,20 @@ def testi_salvati(client: QdrantClient, nome: str) -> dict[str, str]:
             return testi
 
 
+def documenti_salvati(client: QdrantClient, nome: str) -> set[str]:
+    """I `documento_id` (ricette) presenti nella collezione."""
+    documenti: set[str] = set()
+    offset = None
+    while True:
+        punti, offset = client.scroll(
+            nome, limit=LOTTO_SCROLL, offset=offset, with_payload=["documento_id"], with_vectors=False
+        )
+        documenti.update((p.payload or {}).get("documento_id") for p in punti)
+        if offset is None:
+            documenti.discard(None)
+            return documenti
+
+
 def aggiorna_campo(client: QdrantClient, nome: str, campo: str, valori: dict[str, bool]) -> int:
     """Scrive `campo` con set_payload (una chiamata per valore, a lotti): i vettori non si toccano."""
     for valore in sorted(set(valori.values())):

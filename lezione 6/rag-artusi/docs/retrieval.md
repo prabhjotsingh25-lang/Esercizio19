@@ -144,4 +144,7 @@ python -m rag.ricerca "Per quanto tempo si deve cuocere il baccalà?" --k 3
   chunk che non contiene la risposta (cappelletti con `--solo-dosi`).
 - **Il titolo attira ricette con titolo simile** (dopo B): classifiche piene di «Pollo …» o «Baccalà
   …», e la 613 «Dolce di mandorle» davanti alle fonti accettate.
-- 9 domande sono poche per numeri stabili: le variazioni vanno lette caso per caso.
+- **8/8 non è una prova di generalità.** La valutazione ha solo 9 domande, e due di queste (208 e
+  baccalà 510) erano già note come casi falliti prima della modifica B, che è stata pensata proprio
+  per casi come la 208: il miglioramento è misurato sugli stessi esempi che l'hanno motivato. Per
+  dire che B funziona in generale servirebbero domande nuove, scritte prima di vedere i risultati.

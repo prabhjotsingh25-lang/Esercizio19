@@ -45,6 +45,20 @@ def costruisci_filtro(capitolo: str | None, solo_dosi: bool) -> models.Filter | 
     return models.Filter(must=condizioni) if condizioni else None
 
 
+def _verifica_campo_dosi(client: QdrantClient, nome: str) -> None:
+    """Con --solo-dosi, punti senza il campo vorrebbero dire risultati mancanti senza spiegazione."""
+    senza_campo = client.count(
+        nome,
+        count_filter=models.Filter(must=[models.IsEmptyCondition(is_empty=models.PayloadField(key="contiene_dosi"))]),
+        exact=True,
+    ).count
+    if senza_campo:
+        raise ErroreCollezione(
+            f'{senza_campo} punti della collezione "{nome}" non hanno il campo contiene_dosi '
+            "(collezione creata prima della modifica A): esegui python -m rag.ingestion --solo-payload"
+        )
+
+
 def normalizza_capitolo(nome: str) -> str:
     cercato = " ".join(nome.split()).casefold()
     for capitolo in CAPITOLI:
@@ -72,6 +86,9 @@ def cerca(
         raise ErroreCollezione(
             f'La collezione "{config.collezione}" non esiste: esegui prima python -m rag.ingestion'
         )
+
+    if solo_dosi:
+        _verifica_campo_dosi(client, config.collezione)
 
     (vettore,) = embedder.embed([config.prefisso_query + domanda.strip()])
     risposta = client.query_points(

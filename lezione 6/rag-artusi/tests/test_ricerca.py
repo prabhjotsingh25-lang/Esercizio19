@@ -214,6 +214,37 @@ def test_avviso_collezione_in_aggiornamento(ambiente, capsys, indicizzato):
         imposta_formato(client, "test", "titolo_capitolo")
 
 
+def _collezione_prima_di_a():
+    """Collezione indicizzata e poi privata del campo contiene_dosi, come una creata prima della modifica A."""
+    client = QdrantClient(":memory:")
+    esegui_ingestion(crea_config(), client, EmbedderFinto(), carica_corpus(FIXTURE_MINI))
+    client.delete_payload("test", keys=["contiene_dosi"], points=models.FilterSelector(filter=models.Filter()))
+    return client
+
+
+def test_solo_dosi_senza_campo_errore_chiaro():
+    client = _collezione_prima_di_a()
+    with pytest.raises(ErroreCollezione, match="--solo-payload"):
+        cerca("farina", 5, None, True, client=client, embedder=EmbedderFinto(), config=crea_config())
+
+
+def test_senza_solo_dosi_la_collezione_vecchia_funziona():
+    client = _collezione_prima_di_a()
+    assert cerca("farina", 3, client=client, embedder=EmbedderFinto(), config=crea_config())
+
+
+def test_main_solo_dosi_senza_campo(monkeypatch, capsys):
+    client = _collezione_prima_di_a()
+    for k, v in ENV.items():
+        monkeypatch.setenv(k, v)
+    monkeypatch.setattr("rag.config.load_dotenv", lambda *a, **k: None)
+    monkeypatch.setattr(ricerca, "QdrantClient", lambda *a, **k: client)
+    monkeypatch.setattr(ricerca, "EmbedderLMStudio", lambda *a, **k: EmbedderFinto())
+    assert main(["farina", "--solo-dosi"]) == 1
+    uscita = capsys.readouterr()
+    assert "--solo-payload" in uscita.err and "Nessun risultato" not in uscita.out
+
+
 ENV = {
     "QDRANT_URL": "http://127.0.0.1:1",
     "COLLEZIONE": "test",

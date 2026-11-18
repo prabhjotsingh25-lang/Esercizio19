@@ -69,7 +69,73 @@ Osservazioni:
   server stdio a ogni ricerca (log del server: 9 s per la ricerca del tiramisù, embedding compreso).
 
 ## Esercizio 3 — riscrittura, scomposizione e reranking a confronto
-_In corso: tabella, casi migliorati/peggiorati e commento vengono dal file `docs/confronto-l8.md`._
+Comando unico (da `lezione 6/rag-artusi`), riproducibile: stesse 14 domande, stesso indice, k = 5,
+temperatura 0, seed 42, `reasoning_effort=none`, soglie disattivate; cambia solo la modalità.
+
+```
+.\.venv\Scripts\python.exe -m rag.confronto --domande eval/domande_l8.yaml --k 5 --uscita docs/confronto-l8.md
+```
+
+Rapporto completo: `docs/confronto-l8.md`; righe grezze (query usate, id, score, ripieghi, latenze):
+`docs/confronto-l8.json`. Il codice della pipeline usato è quello del commit `33c8766` (l'intestazione
+del rapporto riporta `4807d6e`, il commit corrente alla fine dell'esecuzione: in mezzo sono cambiati
+solo calibrazione e documentazione).
+
+| Configurazione | Fonte nei primi 5 | MRR | Copertura composte | Astensioni corrette | Astensioni errate | Chiamate LLM | Latenza media | Latenza max | Ripieghi |
+|---|---|---|---|---|---|---|---|---|---|
+| base | 11/11 | 0,886 | 5/6 | 0/3 | 0 | 0 | 0,6 s | 5,9 s¹ | 0 |
+| riscrittura | 11/11 | 0,836 | 6/6 | 0/3 | 0 | 14 | 28,0 s | 30,4 s | 0 |
+| reranking | 11/11 | **1,000** | 6/6 | 0/3 | 0 | 14 | 36,8 s | 41,3 s | 1 (id duplicati) |
+| entrambe | 11/11 | 0,909 | 6/6 | 0/3 | 0 | 28 | 44,4 s | 49,0 s | 0 |
+
+¹ prima domanda della serie (caricamento del modello di embedding in LM Studio); le altre sono
+sotto il secondo.
+
+### Casi migliorati e peggiorati rispetto a base
+**riscrittura** — migliorati 2, peggiorati 2
+- ↑ «Per quanto tempo si deve cuocere il baccalà?»: 510 dalla 4ª alla 1ª posizione (la query
+  «baccalà Artusi» porta in cima il Baccalà fritto).
+- ↑ «Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?»: parti coperte 1/2 → 2/2:
+  è il caso per cui serve la scomposizione (in base i 5 posti vanno tutti al brodo).
+- ↓ «Che vino si usa per il pollo alla cacciatora?»: 208 dalla 1ª alla 5ª. Le query generate
+  («Artusi vino», «ricette carne Ottocento», «vino per pollo») sono generiche: le altre ricette di
+  pollo compaiono in più liste e l'RRF, che premia il consenso, le mette davanti alla 208 (che ha
+  ancora il coseno più alto, 0,749).
+- ↓ «Quanti cappelletti bastano a un mangiatore moderato?»: 7 dalla 1ª alla 2ª, sopravanzata da
+  579.1 per lo stesso motivo («porzioni ricette», «ricettario artusi»).
+
+**reranking** — migliorati 3, peggiorati 0
+- ↑ baccalà (4 → 1), ↑ mandorle e zucchero (2 → 1: il reranker scarta la 613 «Dolce di mandorle», il
+  falso positivo da titolo della lezione 7), ↑ brodo + baccalà (parti 1/2 → 2/2).
+- Un ripiego: per il baccalà il modello ha ripetuto un id; il duplicato è stato scartato e segnato.
+
+**entrambe** — migliorati 2, peggiorati 0
+- ↑ baccalà (4 → 2), ↑ brodo + baccalà (1/2 → 2/2). Il reranking recupera i due peggioramenti della
+  sola riscrittura (pollo e cappelletti tornano 1°).
+
+### Commento
+- **Chi funziona meglio e su quali domande.** Il **reranking** è il migliore su queste domande:
+  MRR 1,000 (fonte sempre al 1° posto), tutte le composte coperte, nessun peggioramento. La
+  **riscrittura** serve soprattutto alle **domande composte** (brodo + baccalà), ma da sola peggiora
+  due domande semplici: con gemma-4-e2b le query generate contengono spesso parole del contesto
+  del prompt («Artusi», «Ottocento») invece delle parole della domanda, e l'RRF premia le ricette che
+  queste query generiche trovano tutte. `entrambe` corregge quei peggioramenti ma costa il doppio.
+- **A quale costo.** base: 0 chiamate e meno di un secondo; ogni chiamata a gemma aggiunge circa
+  25-35 s su questo computer (riscrittura 28 s, reranking 37 s, entrambe 44 s per domanda). Nel
+  turno dell'agente (110-313 s nelle tracce dell'es. 2) il reranking aggiunge circa 35 s per ogni
+  ricerca.
+- **Astensioni: nessuna configurazione si astiene davvero** (0/3). Il reranking riduce i passaggi
+  delle domande senza risposta (tiramisù 1, sushi 1, carbonara 3) ma non restituisce mai la lista
+  vuota: trova sempre «qualcosa di pertinente» (per il tiramisù 618.1). L'astensione resta quindi al
+  modello dell'agente (come nella traccia del tiramisù dell'es. 2) e alle soglie dell'es. 4.
+- **Ripieghi**: 1 su 42 chiamate all'LLM (id duplicato). Nessun JSON non valido: lo structured
+  output di LM Studio con `json_schema` (e l'`enum` degli id) tiene il modello piccolo dentro lo schema.
+- **Limite della metrica**: la posizione conta la ricetta, non il chunk. Per i cappelletti il
+  reranking tiene solo 7.2, mentre la frase «A un mangiatore discreto bastano due dozzine» è nel
+  chunk 7.1 (lezione 7): conta come trovata ma il passaggio giusto non arriva al modello.
+- **Indicazione pratica**: `MODALITA_RICERCA=reranking` se la latenza è accettabile, altrimenti `base`;
+  la riscrittura solo insieme al reranking, e dopo aver tolto dal prompt di riscrittura il contesto
+  che il modello copia nelle query (non fatto: avrebbe cambiato l'esperimento a metà).
 
 ## Esercizio 4 — soglie di confidenza
 _Da completare dopo la calibrazione e l'approvazione dei valori._

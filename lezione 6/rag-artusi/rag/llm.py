@@ -50,6 +50,35 @@ class LLMLMStudio:
             corpo["reasoning_effort"] = c.llm_reasoning_effort
         return corpo
 
+    def argomenti_strumento(self, sistema: str, utente: str, strumento: dict) -> dict | None:
+        """Tool calling (come l'agente): argomenti della prima chiamata a `strumento`, None se il
+        modello risponde senza chiamarlo. Usato dalla calibrazione per ottenere la query del modello."""
+        c = self.config
+        corpo = {
+            "model": c.modello_chat,
+            "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": utente}],
+            "temperature": c.llm_temperatura,
+            "tools": [{"type": "function", "function": strumento}],
+        }
+        if c.llm_seed is not None:
+            corpo["seed"] = c.llm_seed
+        self.chiamate += 1
+        try:
+            risposta = self._client.post(self.url, json=corpo)
+        except httpx.HTTPError as e:
+            raise ErroreLLM(f"connessione fallita ({type(e).__name__})") from None
+        if risposta.status_code != 200:
+            raise ErroreLLM(f"HTTP {risposta.status_code}: {' '.join(risposta.text.split())[:200]}")
+        try:
+            chiamate = risposta.json()["choices"][0]["message"].get("tool_calls") or []
+            for chiamata in chiamate:
+                if chiamata["function"]["name"] == strumento["name"]:
+                    argomenti = json.loads(chiamata["function"]["arguments"] or "{}")
+                    return argomenti if isinstance(argomenti, dict) else None
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise RispostaNonValida("chiamata allo strumento non valida") from None
+        return None
+
     def json(self, sistema: str, utente: str, schema: dict, nome: str) -> dict:
         self.chiamate += 1
         try:

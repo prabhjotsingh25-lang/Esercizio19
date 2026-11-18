@@ -72,3 +72,26 @@ def test_connessione_rifiutata():
     llm, _ = _llm(rifiuta)
     with pytest.raises(ErroreLLM, match="connessione"):
         llm.json("s", "u", SCHEMA, "x")
+
+
+STRUMENTO = {"name": "search_documents", "description": "Cerca", "parameters": {"type": "object"}}
+
+
+def _tool_call(nome, argomenti):
+    return lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "", "tool_calls": [
+        {"id": "1", "type": "function", "function": {"name": nome, "arguments": argomenti}}]}}]})
+
+
+def test_argomenti_strumento():
+    llm, richieste = _llm(_tool_call("search_documents", '{"query": "tiramisù"}'))
+    assert llm.argomenti_strumento("s", "Qual è la ricetta del tiramisù?", STRUMENTO) == {"query": "tiramisù"}
+    corpo = json.loads(richieste[0].content)
+    assert corpo["tools"] == [{"type": "function", "function": STRUMENTO}] and corpo["temperature"] == 0.0
+
+
+def test_argomenti_strumento_senza_chiamata_o_rotti():
+    llm, _ = _llm(_risposta("Ciao!"))
+    assert llm.argomenti_strumento("s", "u", STRUMENTO) is None
+    llm, _ = _llm(_tool_call("search_documents", "{rotto"))
+    with pytest.raises(RispostaNonValida):
+        llm.argomenti_strumento("s", "u", STRUMENTO)

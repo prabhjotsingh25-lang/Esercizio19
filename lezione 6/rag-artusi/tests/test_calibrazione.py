@@ -1,5 +1,13 @@
+import asyncio
+
+from fastmcp import Client
+
 from rag.avanzata import Candidato
-from rag.calibrazione import confronto_soglie, riepilogo, riga_score, stat, tabella_riepilogo, tabella_score
+from rag.calibrazione import (SCHEMA_RICERCA, confronto_soglie, query_del_modello, riepilogo, riga_score, stat,
+                              strumento_ricerca, tabella_due_riepiloghi, tabella_riepilogo, tabella_score)
+from rag.llm import ErroreLLM
+from rag.server_mcp import Servizi, crea_server
+from tests.conftest import crea_config
 from rag.confronto import DomandaL8, misura
 from rag.pipeline import EsitoPipeline
 from rag.ricerca import Risultato
@@ -56,3 +64,44 @@ def test_confronto_soglie():
     testo = confronto_soglie(per_variante, k=5)
     assert "| base senza soglie | 1/1 | 0/1 | 0 | non_valutata 2 |" in testo
     assert "| base con soglie | 1/1 | 1/1 | 0 | affidabile 1 |" in testo
+
+
+# --- query formulata dal modello ---
+
+class LLMStrumenti:
+    def __init__(self, esito):
+        self.esito, self.ricevuti = esito, []
+
+    def argomenti_strumento(self, sistema, utente, strumento):
+        self.ricevuti.append((sistema, utente, strumento))
+        if isinstance(self.esito, BaseException):
+            raise self.esito
+        return self.esito
+
+
+def test_schema_uguale_a_quello_del_server():
+    async def elenca():
+        async with Client(crea_server(Servizi(None, None, crea_config()))) as c:
+            return await c.list_tools()
+    (t,) = asyncio.run(elenca())
+    pubblicato = {k: v for k, v in t.input_schema.items() if k != "additionalProperties"}
+    assert pubblicato == SCHEMA_RICERCA
+    assert strumento_ricerca()["description"] == t.description
+
+
+def test_query_del_modello():
+    llm = LLMStrumenti({"query": "  tiramisù  "})
+    assert query_del_modello(llm, "Qual è la ricetta del tiramisù?") == ("tiramisù", "")
+    assert llm.ricevuti[0][1] == "Qual è la ricetta del tiramisù?"
+    assert query_del_modello(LLMStrumenti(None), "d") == (None, "il modello non ha chiamato la ricerca")
+    assert query_del_modello(LLMStrumenti(ErroreLLM("HTTP 500")), "d")[0] is None
+
+
+def test_tabelle_con_query_e_due_riepiloghi():
+    riga = riga_score(SENZA, _esito([(3, 0.55)]))
+    riga.update(query="tiramisù", motivo="")
+    assert "| Tiramisù? | tiramisù | senza risposta | 0.550 |" in tabella_score([riga], k=5)
+    intera = riepilogo([riga_score(CON, _esito([(89, 0.77)])), riga_score(SENZA, _esito([(3, 0.70)]))])
+    modello = riepilogo([riga_score(CON, _esito([(89, 0.60)])), riga_score(SENZA, _esito([(3, 0.55)]))])
+    testo = tabella_due_riepiloghi(intera, modello)
+    assert "| Senza risposta: top-1 | 0.700 · 0.700 · 0.700 | 0.550 · 0.550 · 0.550 |" in testo

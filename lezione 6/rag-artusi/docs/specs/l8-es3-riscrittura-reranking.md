@@ -1,6 +1,6 @@
 # Lezione 8 · Esercizio 3 — Riscrittura, scomposizione e reranking a confronto
 
-Stato: **da approvare**.
+Stato: **approvata** dall'utente il 2026-11-18 (le scelte marcate «Raccomandata» sono quelle adottate).
 
 ## Scopo
 Aggiungere al server di ricerca una modalità avanzata, scelta **solo** da configurazione

@@ -1,6 +1,6 @@
 # Lezione 8 · Esercizio 4 — Soglie di confidenza sullo score
 
-Stato: **da approvare**.
+Stato: **approvata** dall'utente il 2026-11-18 (le scelte marcate «Raccomandata» sono quelle adottate).
 
 ## Scopo
 Non mandare al modello passaggi troppo poco simili alla domanda e dire al modello quanto fidarsi di

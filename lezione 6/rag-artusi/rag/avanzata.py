@@ -15,6 +15,16 @@ from rag.ricerca import Risultato
 from rag.risultati import id_passaggio, tronca
 
 log = logging.getLogger("rag.avanzata")
+_segnalati: set[str] = set()  # errori del servizio LLM già scritti come WARNING (es. HTTP 400)
+
+
+def _errore_servizio(compito: str, errore: Exception) -> None:
+    """Un errore del servizio LLM (es. reasoning_effort rifiutato) è un WARNING la prima volta,
+    poi INFO: il ripiego resta contato a ogni chiamata nella riga di log della ricerca."""
+    chiave = str(errore)
+    livello = logging.INFO if chiave in _segnalati else logging.WARNING
+    _segnalati.add(chiave)
+    log.log(livello, "%s: servizio LLM non disponibile (%s)", compito, chiave)
 
 
 @dataclass(frozen=True)
@@ -69,7 +79,7 @@ def riscrivi(domanda: str, llm: LLM, max_query: int) -> tuple[list[str], list[Ri
         dati = llm.json(ISTRUZIONI_RISCRITTURA.format(massimo=max_query), f"Domanda: {originale}",
                         SCHEMA_RISCRITTURA(max_query), "riscrittura")
     except ErroreLLM as e:
-        log.warning("riscrittura: servizio LLM non disponibile (%s)", e)
+        _errore_servizio("riscrittura", e)
         return [originale], [_ripiego_riscrittura("riscrittura_servizio", "LLM non raggiungibile")]
     except RispostaNonValida as e:
         log.warning("riscrittura: risposta non valida (%s)", e)
@@ -157,7 +167,7 @@ def riordina(domanda: str, candidati: list[Candidato], llm: LLM, max_candidati: 
         dati = llm.json(ISTRUZIONI_RERANKING, prompt_reranking(domanda, inviati, max_caratteri),
                         SCHEMA_RERANKING(ids), "reranking")
     except ErroreLLM as e:
-        log.warning("reranking: servizio LLM non disponibile (%s)", e)
+        _errore_servizio("reranking", e)
         return None, [_ripiego_reranking("reranking_servizio", "LLM non raggiungibile")]
     except RispostaNonValida as e:
         log.warning("reranking: risposta non valida (%s)", e)

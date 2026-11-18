@@ -1,6 +1,6 @@
 # Lezione 8 · Esercizio 2 — Aggancio all'agente
 
-Stato: **da approvare**.
+Stato: **approvata** dall'utente il 2026-11-18 (le scelte marcate «Raccomandata» sono quelle adottate).
 
 ## Scopo
 L'agente LangGraph di `lezione 4/assistente-laboratorio` vede `search_documents` accanto agli altri

@@ -1,6 +1,6 @@
 # Lezione 8 · Esercizio 1 — Il retrieval come server MCP
 
-Stato: **da approvare**. Le scelte marcate «Raccomandata» valgono se approvi senza commenti.
+Stato: **approvata** dall'utente il 2026-11-18 (le scelte marcate «Raccomandata» sono quelle adottate).
 
 ## Scopo
 Rendere la ricerca della lezione 7 (`rag.ricerca.cerca`: Qdrant + embedding nomic via LM Studio)

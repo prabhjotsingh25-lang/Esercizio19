@@ -141,3 +141,14 @@ def test_prompt_di_riscrittura_senza_libro_autore_epoca():
     for parola in ("Artusi", "Pellegrino", "Ottocento", "1891"):
         assert parola not in ISTRUZIONI_RISCRITTURA
     assert "Non inserire nelle query titoli di libri, nomi di autori, epoche o secoli" in ISTRUZIONI_RISCRITTURA
+
+
+def test_errore_del_servizio_segnalato_una_volta(caplog):
+    import logging
+    caplog.set_level(logging.INFO)
+    errore = ErroreLLM("HTTP 400: reasoning_effort non supportato (test)")
+    for _ in range(3):
+        _, ripieghi = riscrivi("d", LLMFinto(errore), 3)
+        assert [r.codice for r in ripieghi] == ["riscrittura_servizio"]
+    livelli = [r.levelno for r in caplog.records if "reasoning_effort non supportato (test)" in r.getMessage()]
+    assert livelli == [logging.WARNING, logging.INFO, logging.INFO]

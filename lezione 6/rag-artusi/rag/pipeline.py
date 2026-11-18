@@ -65,7 +65,7 @@ def esegui(domanda: str, top_k: int, capitolo: str | None, *, client: QdrantClie
         if nota:
             note.append(nota)
 
-    if reranking:
+    if reranking and candidati:  # niente candidati (es. tutti sotto la soglia): nessuna chiamata, nessuna nota
         ordinati, nuovi = riordina(originale, candidati, llm, config.rerank_max_candidati,
                                    config.rerank_max_caratteri)
         ripieghi += nuovi

@@ -112,7 +112,7 @@ def test_tutti_sotto_la_soglia_lista_vuota_e_nessun_reranking(monkeypatch):
     llm = LLMFinto()
     e = _esegui_soglie(llm, "reranking")
     assert e.candidati == [] and llm.chiamate == 0
-    assert "nessun passaggio sopra la soglia minima" in e.note[0]
+    assert len(e.note) == 1 and "nessun passaggio sopra la soglia minima" in e.note[0]
 
 
 def test_escluso_non_arriva_al_reranking(monkeypatch):

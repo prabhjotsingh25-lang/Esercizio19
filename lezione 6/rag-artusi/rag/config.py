@@ -51,6 +51,10 @@ class Config:
     rerank_max_candidati: int = 10
     rerank_max_caratteri: int = 400
     rrf_k: int = 60
+    # Lezione 8 es. 4: soglie di confidenza sul coseno
+    soglia_alta: float = 0.6
+    soglia_bassa: float = 0.3
+    soglie_attive: bool = True
 
 
 def _intero(env: Mapping[str, str], nome: str, default: int) -> int:
@@ -86,6 +90,27 @@ def _temperatura(env: Mapping[str, str]) -> float:
     if not 0 <= valore <= 2:
         raise ErroreConfigurazione(f"LLM_TEMPERATURA deve essere tra 0 e 2, trovato {valore}")
     return valore
+
+
+def _soglia(env: Mapping[str, str], nome: str, default: float) -> float:
+    grezzo = env.get(nome, "").strip().replace(",", ".")
+    try:
+        valore = float(grezzo) if grezzo else default
+    except ValueError:
+        raise ErroreConfigurazione(f"{nome} deve essere un numero tra 0 e 1, trovato {grezzo!r}") from None
+    if not 0 <= valore <= 1:
+        raise ErroreConfigurazione(f"{nome} deve essere tra 0 e 1, trovato {valore}")
+    return valore
+
+
+def _soglie(env: Mapping[str, str]) -> dict:
+    alta, bassa = _soglia(env, "SOGLIA_ALTA", 0.6), _soglia(env, "SOGLIA_BASSA", 0.3)
+    if bassa > alta:
+        raise ErroreConfigurazione(f"SOGLIA_BASSA ({bassa}) non può superare SOGLIA_ALTA ({alta})")
+    attive = env.get("SOGLIE_ATTIVE", "").strip().lower() or "true"
+    if attive not in ("true", "false"):
+        raise ErroreConfigurazione(f"SOGLIE_ATTIVE deve essere true o false, trovato {attive!r}")
+    return {"soglia_alta": alta, "soglia_bassa": bassa, "soglie_attive": attive == "true"}
 
 
 def carica_config(env: Mapping[str, str] | None = None) -> Config:
@@ -167,4 +192,5 @@ def carica_config(env: Mapping[str, str] | None = None) -> Config:
         ricerca_max_caratteri=max_caratteri,
         ricerca_log_file=env.get("RICERCA_LOG_FILE", "").strip() or None,
         **avanzate,
+        **_soglie(env),
     )

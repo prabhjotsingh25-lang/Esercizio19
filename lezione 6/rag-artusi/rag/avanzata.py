@@ -29,6 +29,7 @@ class Candidato:
     risultato: Risultato
     score: float  # coseno migliore fra le query
     score_rrf: float = 0.0
+    fascia: str = "non_valutata"  # es. 4: affidabile | media (soglie attive)
 
 
 # --- riscrittura e scomposizione ---

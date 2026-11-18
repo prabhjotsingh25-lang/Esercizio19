@@ -140,3 +140,25 @@ def test_seed_e_reasoning_vuoti_non_inviati():
 def test_valori_avanzati_non_validi(nome, valore):
     with pytest.raises(ErroreConfigurazione, match=nome):
         carica_config({**OBBLIGATORIE, nome: valore})
+
+
+# --- Lezione 8 es. 4: soglie ---
+
+def test_soglie_default():
+    c = carica_config(OBBLIGATORIE)
+    assert (c.soglia_alta, c.soglia_bassa, c.soglie_attive) == (0.6, 0.3, True)
+
+
+def test_soglie_valori_e_disattivate():
+    c = carica_config({**OBBLIGATORIE, "SOGLIA_ALTA": "0,72", "SOGLIA_BASSA": "0.7", "SOGLIE_ATTIVE": "false"})
+    assert (c.soglia_alta, c.soglia_bassa, c.soglie_attive) == (0.72, 0.7, False)
+
+
+@pytest.mark.parametrize("env, nome", [
+    ({"SOGLIA_ALTA": "0.2", "SOGLIA_BASSA": "0.3"}, "SOGLIA_BASSA"), ({"SOGLIA_ALTA": "1.5"}, "SOGLIA_ALTA"),
+    ({"SOGLIA_BASSA": "-0.1"}, "SOGLIA_BASSA"), ({"SOGLIA_ALTA": "alta"}, "SOGLIA_ALTA"),
+    ({"SOGLIE_ATTIVE": "forse"}, "SOGLIE_ATTIVE"),
+])
+def test_soglie_non_valide(env, nome):
+    with pytest.raises(ErroreConfigurazione, match=nome):
+        carica_config({**OBBLIGATORIE, **env})

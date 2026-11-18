@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from rag.ricerca import Risultato
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rag.avanzata import Candidato
 
 ELLISSI = "…"
 SEPARATORE_NOTE = " · "
@@ -30,14 +33,17 @@ def limita_top_k(top_k: int, massimo: int) -> tuple[int, str | None]:
     return top_k, None
 
 
-def passaggio(r: Risultato, max_caratteri: int) -> dict:
+def passaggio(c: "Candidato", max_caratteri: int) -> dict:
+    """Passaggio per il modello: score = coseno migliore (3 decimali), fascia calcolata sul valore pieno."""
+    r = c.risultato
     return {
         "id": id_passaggio(r.numero, r.posizione),
         "ricetta": r.numero,
         "titolo": r.titolo,
         "capitolo": r.capitolo,
         "posizione_chunk": r.posizione,
-        "score": round(float(r.score), 3),
+        "score": round(float(c.score), 3),
+        "fascia": c.fascia,
         "testo": tronca(r.testo, max_caratteri),
     }
 

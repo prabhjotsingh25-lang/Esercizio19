@@ -81,8 +81,24 @@ di `lezione 4/assistente-laboratorio` può decidere di chiamare.
 - Errori previsti (query vuota, filtro inesistente, collezione assente o incompatibile, Qdrant o
   LM Studio spenti) arrivano al modello come errori del tool con un messaggio utile, senza traceback.
 - Log: una riga `ricerca esito=…` per chiamata su stderr e in `RICERCA_LOG_FILE` (`logs/`, fuori da Git).
-- Specifiche e piani: `docs/specs/l8-*.md`, `docs/plans/l8-*.md`; prova reale:
-  `docs/prove/l8-es1-chiamata-reale.md`.
+- **Modalità** (solo da `.env`, mai dal tool): `MODALITA_RICERCA=base | riscrittura | reranking |
+  entrambe`. La riscrittura chiede al modello chat (`MODELLO_CHAT`) 1-3 query brevi (una per parte
+  delle domande composte) e fonde le liste con la Reciprocal Rank Fusion; il reranking chiede al
+  modello, in una sola chiamata, gli id pertinenti fra al più `RERANK_MAX_CANDIDATI` candidati.
+  Output vincolato da JSON schema, temperatura `LLM_TEMPERATURA`, `reasoning_effort`
+  `LLM_REASONING_EFFORT`. Ogni uscita inutilizzabile del modello è un ripiego scritto in `nota` e
+  nel log (`ripieghi=…`), mai un errore del tool.
+- **Soglie** (`SOGLIA_ALTA`, `SOGLIA_BASSA`, `SOGLIE_ATTIVE`) sul coseno: ogni passaggio ha `fascia`
+  `affidabile` o `media`; sotto la soglia bassa il passaggio è escluso e non arriva al modello;
+  nessun passaggio rimasto = lista vuota dichiarata in `nota`.
+- Confronto delle quattro modalità e calibrazione delle soglie:
+
+  ```powershell
+  .\.venv\Scripts\python.exe -m rag.confronto --domande eval/domande_l8.yaml --k 5 --uscita docs/confronto-l8.md
+  .\.venv\Scripts\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --uscita docs/calibrazione-l8.md
+  ```
+- Specifiche e piani: `docs/specs/l8-*.md`, `docs/plans/l8-*.md`; prove reali in `docs/prove/`;
+  resoconto in `docs/rag-agente.md`.
 
 ## Test
 ```powershell

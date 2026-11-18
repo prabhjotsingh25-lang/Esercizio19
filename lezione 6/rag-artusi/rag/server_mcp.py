@@ -27,7 +27,9 @@ from rag.corpus import CAPITOLI
 from rag.embedder import Embedder, EmbedderLMStudio, ErroreEmbedding
 from rag.indice import IN_AGGIORNAMENTO, ErroreCollezione, formato_salvato
 from rag.ingestion import ERRORI_QDRANT
-from rag.ricerca import cerca, normalizza_capitolo
+from rag.llm import LLM, LLMLMStudio
+from rag.pipeline import EsitoPipeline, esegui
+from rag.ricerca import normalizza_capitolo
 from rag.risultati import componi_risultato, limita_top_k, passaggio
 
 log = logging.getLogger("rag.server_mcp")
@@ -60,6 +62,7 @@ class Servizi:
     client: QdrantClient
     embedder: Embedder
     config: Config
+    llm: LLM | None = None  # usato solo dalle modalità riscrittura, reranking, entrambe
 
 
 def servizi_da_config(config: Config) -> Servizi:
@@ -68,6 +71,7 @@ def servizi_da_config(config: Config) -> Servizi:
         client=QdrantClient(url=config.qdrant_url),
         embedder=EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch),
         config=config,
+        llm=LLMLMStudio(config),
     )
 
 
@@ -84,8 +88,10 @@ def _capitolo(filtro: str | None) -> str | None:
         ) from None
 
 
-def esegui_ricerca(servizi: Servizi, query: str, top_k: int, filtro: str | None) -> dict:
-    """Ricerca base: argomenti controllati, errori previsti tradotti in ErroreRicerca."""
+def esegui_ricerca(servizi: Servizi, query: str, top_k: int, filtro: str | None) -> tuple[dict, EsitoPipeline]:
+    """Ricerca nella modalità della configurazione; errori previsti tradotti in ErroreRicerca.
+
+    Un'uscita inutilizzabile dell'LLM non è mai un errore: è un ripiego scritto in `nota`."""
     if not query or not query.strip():
         raise ErroreRicerca("query_vuota", "query è vuota: scrivi in `query` la domanda dell'utente.")
     capitolo = _capitolo(filtro)
@@ -100,8 +106,8 @@ def esegui_ricerca(servizi: Servizi, query: str, top_k: int, filtro: str | None)
                 "collezione_assente",
                 "la collezione dei documenti non esiste: la ricerca non è disponibile. Dillo all'utente.",
             )
-        risultati = cerca(query.strip(), k, capitolo, client=servizi.client, embedder=servizi.embedder,
-                          config=config)
+        esito = esegui(query.strip(), k, capitolo, client=servizi.client, embedder=servizi.embedder,
+                       llm=servizi.llm, config=config)
         if formato_salvato(servizi.client, config.collezione) == IN_AGGIORNAMENTO:
             note.append("indice dei documenti in aggiornamento: i risultati possono essere incompleti")
     except ErroreRicerca:
@@ -124,12 +130,19 @@ def esegui_ricerca(servizi: Servizi, query: str, top_k: int, filtro: str | None)
             "il database dei documenti non risponde: ricerca non disponibile ora. Dillo all'utente, "
             "non riprovare.",
         ) from None
-    passaggi = [passaggio(r, config.ricerca_max_caratteri) for r in risultati]
-    return componi_risultato("base", [query.strip()], passaggi, note)
+    passaggi = [passaggio(c, config.ricerca_max_caratteri) for c in esito.candidati]
+    risultato = componi_risultato(esito.modalita, esito.query_usate, passaggi, [*note, *esito.note])
+    return risultato, esito
+
 
 
 def _breve(testo: str, massimo: int = 120) -> str:
     return " ".join(str(testo).split())[:massimo].replace('"', "'")
+
+
+def _dettagli_pipeline(e) -> str:
+    ripieghi = ",".join(r.codice for r in e.ripieghi) or "-"
+    return f"query_usate={len(e.query_usate)} llm={e.chiamate_llm} ripieghi={ripieghi} esclusi_soglia={e.esclusi_soglia}"
 
 
 def _riga_log(esito: str, query: str, top_k, filtro, risultato: dict | None, inizio: float, extra: str = "") -> str:
@@ -152,7 +165,7 @@ def crea_server(servizi: Servizi | Callable[[], Servizi]) -> FastMCP:
     def search_documents(query: str, top_k: int = 5, filtro: str | None = None) -> dict:
         inizio = time.perf_counter()
         try:
-            risultato = esegui_ricerca(fornitore(), query, top_k, filtro)
+            risultato, esito_pipeline = esegui_ricerca(fornitore(), query, top_k, filtro)
         except ErroreRicerca as e:
             log.info(_riga_log(f"errore:{e.codice}", query, top_k, filtro, None, inizio))
             raise ToolError(str(e)) from None
@@ -160,7 +173,7 @@ def crea_server(servizi: Servizi | Callable[[], Servizi]) -> FastMCP:
             log.error(_riga_log("errore:interno", query, top_k, filtro, None, inizio,
                                 f'tipo={type(e).__name__} dettaglio="{_breve(e, 200)}"'))
             raise ToolError("errore interno della ricerca: ricerca non disponibile. Dillo all'utente.") from None
-        log.info(_riga_log("ok", query, top_k, filtro, risultato, inizio))
+        log.info(_riga_log("ok", query, top_k, filtro, risultato, inizio, _dettagli_pipeline(esito_pipeline)))
         return risultato
 
     @server.resource(URI_FILTRI, name="filtri", mime_type="application/json",
@@ -219,8 +232,10 @@ def main(argv: list[str] | None = None) -> int:
     configura_log(config)
     servizi = servizi_da_config(config)
     server = crea_server(servizi)
-    log.info("server di ricerca avviato (%s) collezione=%s top_k_max=%d", "http" if args.http else "stdio",
-             config.collezione, config.ricerca_top_k_max)
+    soglie = f"{config.soglia_alta}/{config.soglia_bassa}" if config.soglie_attive else "disattivate"
+    log.info("server di ricerca avviato (%s) collezione=%s modalita=%s soglie=%s top_k_max=%d",
+             "http" if args.http else "stdio", config.collezione, config.modalita_ricerca, soglie,
+             config.ricerca_top_k_max)
     if args.http:
         server.run(transport="http", port=args.porta, show_banner=False)
     else:

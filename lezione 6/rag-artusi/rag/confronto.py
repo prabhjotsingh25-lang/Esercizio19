@@ -225,7 +225,7 @@ def intestazione(config: Config, args, n_domande: int) -> str:
             f"- k = {args.k} · candidati per query {config.candidati_per_query} · reranking su al più "
             f"{config.rerank_max_candidati} candidati da {config.rerank_max_caratteri} caratteri · RRF_K {config.rrf_k} · "
             f"{n_domande} domande da `{args.domande.as_posix()}`\n"
-            f"- Un solo fattore cambia fra le configurazioni: la modalità. Latenza = tempo della pipeline "
+            f"- Un solo fattore cambia fra le configurazioni: la modalità (soglie disattivate). Latenza = tempo della pipeline "
             f"(embedding, Qdrant, LLM) per domanda.")
 
 
@@ -264,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
         per_config = esegui_confronto(
             domande, args.configurazioni, args.k,
             lambda testo, k, modalita: esegui(testo, k, None, client=client, embedder=embedder, llm=llm,
-                                              config=config, modalita=modalita))
+                                              config=config, modalita=modalita, soglie=None))
     except (ValueError, OSError, ErroreConfigurazione, ErroreCollezione, ErroreEmbedding) as e:
         print(f"Errore: {e}", file=sys.stderr)
         return 1

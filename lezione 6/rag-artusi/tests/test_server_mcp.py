@@ -72,7 +72,8 @@ def test_formato_risultato(servizi):
     assert dati["modalita"] == "base" and dati["query_usate"] == ["gnocchi di patate"] and dati["nota"] == ""
     assert len(dati["passaggi"]) == 5
     p = dati["passaggi"][0]
-    assert list(p) == ["id", "ricetta", "titolo", "capitolo", "posizione_chunk", "score", "testo"]
+    assert list(p) == ["id", "ricetta", "titolo", "capitolo", "posizione_chunk", "score", "fascia", "testo"]
+    assert p["fascia"] == "non_valutata"  # soglie disattivate nella configurazione dei test
     assert p["id"] == f'{p["ricetta"]}.{p["posizione_chunk"]}'
     assert len(p["testo"]) <= 120
     assert json.loads(_testo(r)) == dati  # stesso JSON anche come testo
@@ -221,3 +222,58 @@ def test_log_configurato_su_stderr_e_file_senza_traceback(indice, capfd, tmp_pat
     for testo in (err, scritto):
         assert "esito=errore:interno" in testo and "esito=errore:query_vuota" in testo
         assert "Traceback" not in testo
+
+
+# --- es. 3: modalità da configurazione ---
+
+from dataclasses import replace  # noqa: E402
+
+from rag.llm import ErroreLLM, RispostaNonValida  # noqa: E402
+from tests.finti import LLMFinto  # noqa: E402
+
+
+@pytest.mark.parametrize("modalita", ["base", "riscrittura", "reranking", "entrambe"])
+def test_schema_identico_in_tutte_le_modalita(servizi, modalita):
+    def schema(config):
+        s = Servizi(servizi.client, EmbedderFinto(), config, LLMFinto())
+        t = _esegui(crea_server(s), lambda c: c.list_tools())[0]
+        return t.name, t.description, t.input_schema
+    assert schema(replace(servizi.config, modalita_ricerca=modalita)) == schema(servizi.config)
+
+
+def test_modalita_entrambe_nel_risultato_e_nel_log(servizi, caplog):
+    caplog.set_level(logging.INFO)
+    config = replace(servizi.config, modalita_ricerca="entrambe")
+    llm = LLMFinto({"query": ["gnocchi", "patate"]}, RispostaNonValida("x"))
+    dati = _chiama(Servizi(servizi.client, EmbedderFinto(), config, llm), query="gnocchi di patate").structured_content
+    assert dati["modalita"] == "entrambe" and dati["query_usate"] == ["gnocchi di patate", "gnocchi", "patate"]
+    assert "reranking non utilizzabile" in dati["nota"] and len(dati["passaggi"]) == 5
+    riga = [r.getMessage() for r in caplog.records if r.getMessage().startswith("ricerca ")][0]
+    assert "esito=ok modalita=entrambe" in riga and "llm=2" in riga and "ripieghi=reranking_json" in riga
+
+
+def test_llm_spento_non_e_un_errore_del_tool(servizi):
+    config = replace(servizi.config, modalita_ricerca="riscrittura")
+    r = _chiama(Servizi(servizi.client, EmbedderFinto(), config, LLMFinto(ErroreLLM("connessione"))), query="brodo")
+    assert not r.is_error
+    assert "solo la domanda originale" in r.structured_content["nota"]
+
+
+# --- es. 4: soglie nel risultato MCP (score preparati) ---
+
+def test_fasce_nel_risultato_mcp(servizi, monkeypatch):
+    import rag.pipeline as modulo_pipeline
+    from rag.ricerca import Risultato
+
+    def cerca_finta(query, k, capitolo, **kw):
+        return [Risultato(score=s, numero=n, titolo="t", capitolo="c", posizione=0, documento_id="d",
+                          testo="x", fonte="f") for n, s in ((1, 0.75), (2, 0.6), (3, 0.3), (4, 0.29))][:k]
+    monkeypatch.setattr(modulo_pipeline, "cerca", cerca_finta)
+    config = replace(servizi.config, soglie_attive=True, soglia_alta=0.6, soglia_bassa=0.3)
+    dati = _chiama(Servizi(servizi.client, EmbedderFinto(), config), query="x").structured_content
+    assert [(p["id"], p["fascia"]) for p in dati["passaggi"]] == [("1.0", "affidabile"), ("2.0", "affidabile"),
+                                                                  ("3.0", "media")]
+    assert "1 passaggio escluso" in dati["nota"]
+    config = replace(config, soglia_bassa=0.8, soglia_alta=0.9)
+    dati = _chiama(Servizi(servizi.client, EmbedderFinto(), config), query="x").structured_content
+    assert dati["passaggi"] == [] and "nessun passaggio sopra la soglia minima" in dati["nota"]

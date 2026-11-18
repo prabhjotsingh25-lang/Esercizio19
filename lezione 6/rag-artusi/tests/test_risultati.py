@@ -1,12 +1,14 @@
 import json
 
+from rag.avanzata import Candidato
 from rag.ricerca import Risultato
 from rag.risultati import componi_risultato, id_passaggio, limita_top_k, passaggio, tronca
 
 
 def _r(testo="Patate grosse e gialle, grammi 400.", score=0.77349):
-    return Risultato(score=score, numero=89, titolo="Gnocchi di patate", capitolo="Minestre asciutte e di magro",
-                     posizione=1, documento_id="artusi-089", testo=testo, fonte="Artusi")
+    r = Risultato(score=score, numero=89, titolo="Gnocchi di patate", capitolo="Minestre asciutte e di magro",
+                  posizione=1, documento_id="artusi-089", testo=testo, fonte="Artusi")
+    return Candidato(id="89.1", risultato=r, score=score, fascia="affidabile")
 
 
 def test_id_passaggio():
@@ -33,9 +35,9 @@ def test_limita_top_k():
 
 def test_passaggio_chiavi_esatte():
     p = passaggio(_r(), 800)
-    assert list(p) == ["id", "ricetta", "titolo", "capitolo", "posizione_chunk", "score", "testo"]
+    assert list(p) == ["id", "ricetta", "titolo", "capitolo", "posizione_chunk", "score", "fascia", "testo"]
     assert p["id"] == "89.1" and p["ricetta"] == 89 and p["posizione_chunk"] == 1
-    assert p["score"] == 0.773
+    assert p["score"] == 0.773 and p["fascia"] == "affidabile"
 
 
 def test_passaggio_troncato_e_accenti():

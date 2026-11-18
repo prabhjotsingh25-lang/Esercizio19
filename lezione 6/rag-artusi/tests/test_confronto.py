@@ -104,3 +104,19 @@ def test_esegui_confronto_con_pipeline_finta():
                         (SEMPLICE.testo, 5, "reranking"), (SENZA.testo, 5, "reranking")]
     assert [m.posizione for m in per_config["reranking"]] == [1, None]
     assert metriche(per_config["reranking"])["chiamate_llm"] == 2
+
+
+def test_base_da_json(tmp_path):
+    import json as _json
+    from dataclasses import asdict as _asdict
+
+    from rag.confronto import base_da_json, crea_parser
+    p = tmp_path / "c.json"
+    p.write_text(_json.dumps({"base": [_asdict(misura(SEMPLICE, _esito([89]), 1))]}), encoding="utf-8")
+    (m,) = base_da_json(p)
+    assert m.posizione == 1 and m.domanda == SEMPLICE.testo
+    p.write_text(_json.dumps({"reranking": []}), encoding="utf-8")
+    with pytest.raises(ValueError, match="base"):
+        base_da_json(p)
+    a = crea_parser().parse_args(["--configurazioni", "riscrittura", "entrambe", "--base-da", "x.json"])
+    assert a.configurazioni == ["riscrittura", "entrambe"] and a.base_da.name == "x.json"

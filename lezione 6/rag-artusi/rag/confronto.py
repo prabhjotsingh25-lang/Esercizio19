@@ -218,7 +218,12 @@ def _commit() -> str:
 def intestazione(config: Config, args, n_domande: int) -> str:
     return (f"- Data: {date.today().isoformat()} · commit `{_commit()}`\n"
             f"- Comando: `.\\.venv\\Scripts\\python.exe -m rag.confronto --domande {args.domande.as_posix()} "
-            f"--k {args.k} --uscita {args.uscita.as_posix()}`\n"
+            f"--k {args.k} --configurazioni {' '.join(args.configurazioni)}"
+            + (f" --base-da {args.base_da.as_posix()}" if args.base_da else "")
+            + f" --uscita {args.uscita.as_posix()}`\n"
+            + (f"- Configurazione base presa da `{args.base_da.as_posix()}` (stesso indice, nessun LLM: "
+               f"deterministica)\n" if args.base_da else "")
+            + f""
             f"- Indice: collezione `{config.collezione}`, embedding `{config.modello_embedding}` · "
             f"LLM `{config.modello_chat}`, temperatura {config.llm_temperatura}, seed {config.llm_seed}, "
             f"reasoning_effort {config.llm_reasoning_effort}\n"
@@ -248,7 +253,17 @@ def crea_parser() -> argparse.ArgumentParser:
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--uscita", type=Path, default=Path("docs/confronto-l8.md"))
     parser.add_argument("--configurazioni", nargs="+", choices=MODALITA, default=list(MODALITA))
+    parser.add_argument("--base-da", type=Path, default=None,
+                        help="JSON di un confronto precedente da cui prendere la configurazione base "
+                             "(per rilanciare solo alcune modalità e confrontarle con la stessa base)")
     return parser
+
+
+def base_da_json(percorso: Path) -> list[Misura]:
+    dati = json.loads(Path(percorso).read_text(encoding="utf-8"))
+    if "base" not in dati:
+        raise ValueError(f"{percorso}: manca la configurazione base")
+    return [Misura(**m) for m in dati["base"]]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -261,8 +276,11 @@ def main(argv: list[str] | None = None) -> int:
         client = QdrantClient(url=config.qdrant_url)
         embedder = EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch)
         llm = LLMLMStudio(config)
-        per_config = esegui_confronto(
-            domande, args.configurazioni, args.k,
+        base_precedente = base_da_json(args.base_da) if args.base_da else None
+        configurazioni = [c for c in args.configurazioni if not (base_precedente and c == "base")]
+        per_config = {"base": base_precedente} if base_precedente else {}
+        per_config |= esegui_confronto(
+            domande, configurazioni, args.k,
             lambda testo, k, modalita: esegui(testo, k, None, client=client, embedder=embedder, llm=llm,
                                               config=config, modalita=modalita, soglie=None))
     except (ValueError, OSError, ErroreConfigurazione, ErroreCollezione, ErroreEmbedding) as e:

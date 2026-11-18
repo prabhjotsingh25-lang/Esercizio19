@@ -33,12 +33,15 @@ class Candidato:
 
 
 # --- riscrittura e scomposizione ---
+# Versione del 2026-11-18 (dopo il confronto): il prompt originale nominava «un ricettario italiano
+# dell'Ottocento (Pellegrino Artusi)» e gemma copiava «Artusi»/«Ottocento» nelle query.
 
 ISTRUZIONI_RISCRITTURA = (
-    "Prepari query per cercare passaggi in un ricettario italiano dell'Ottocento (Pellegrino Artusi). "
-    "Non rispondere alla domanda. Scrivi da 1 a {massimo} query di ricerca brevi (poche parole "
-    "ciascuna), in italiano. Se la domanda chiede più cose diverse, scrivi una query per ciascuna "
-    "parte. Rispondi solo con il JSON richiesto."
+    "Prepari query per cercare passaggi in un ricettario. Non rispondere alla domanda. Scrivi da 1 a "
+    "{massimo} query di ricerca brevi (poche parole ciascuna), in italiano, con le parole della domanda "
+    "(piatti, ingredienti, quantità, tempi). Non inserire nelle query titoli di libri, nomi di autori, "
+    "epoche o secoli. Se la domanda chiede più cose diverse, scrivi una query per ciascuna parte. "
+    "Rispondi solo con il JSON richiesto."
 )
 
 

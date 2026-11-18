@@ -134,3 +134,10 @@ def test_nessun_candidato_nessuna_chiamata():
     llm = LLMFinto()
     assert riordina("d", [], llm, 10, 400) == ([], [])
     assert llm.chiamate == 0
+
+
+def test_prompt_di_riscrittura_senza_libro_autore_epoca():
+    from rag.avanzata import ISTRUZIONI_RISCRITTURA
+    for parola in ("Artusi", "Pellegrino", "Ottocento", "1891"):
+        assert parola not in ISTRUZIONI_RISCRITTURA
+    assert "Non inserire nelle query titoli di libri, nomi di autori, epoche o secoli" in ISTRUZIONI_RISCRITTURA

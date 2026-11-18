@@ -1,0 +1,34 @@
+{
+  "caso": "ora",
+  "domanda": "Che ore sono a Tokyo?",
+  "atteso": "orologio, non ricerca",
+  "esito": "atteso",
+  "scostamenti": [],
+  "durata_s": 109.6,
+  "strumenti": [
+    {
+      "nome": "ora_corrente",
+      "argomenti": {
+        "fuso_orario": "Asia/Tokyo"
+      },
+      "risultato": "2026-11-18T18:11:25+09:00 (Asia/Tokyo)"
+    }
+  ],
+  "risposta": "Attualmente a Tokyo sono le ore 18:11:25 del 18 novembre 2026.",
+  "citazioni": {
+    "verificate": [],
+    "sconosciute": [],
+    "ricerche": 0,
+    "passaggi_ricevuti": 0
+  },
+  "log_agente": [
+    "INFO assistente.grafo riassunto: 1 messaggi, sotto la soglia di 20: nessuna chiamata",
+    "INFO assistente.grafo router categoria=conversazione motivo=La richiesta riguarda la conversione di un orario tra diversi fusi orari, rientrando nell'ambito della gestione dati e del tempo. -> agente",
+    "INFO assistente.grafo agente: chiamata al modello con 2 messaggi",
+    "INFO assistente.grafo strumento passaggio=1 nome=ora_corrente argomenti={'fuso_orario': 'Asia/Tokyo'} risultato=2026-11-18T18:11:25+09:00 (Asia/Tokyo)",
+    "INFO assistente.grafo agente: chiamata al modello con 4 messaggi",
+    "INFO assistente.grafo revisore coerente=sì motivo=L'utente ha chiesto l'ora corrente a Tokyo e lo strumento fornito ha restituito questa informazione. -> fine",
+    "INFO assistente.agente citazioni verificate=- sconosciute=- ricerche=0 passaggi_ricevuti=0"
+  ],
+  "log_server_ricerca": []
+}

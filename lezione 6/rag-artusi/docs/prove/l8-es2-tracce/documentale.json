@@ -1,0 +1,92 @@
+{
+  "caso": "documentale",
+  "domanda": "Quanta farina serve per 400 grammi di patate negli gnocchi?",
+  "atteso": "ricerca chiamata, citazioni tutte verificate",
+  "esito": "atteso",
+  "scostamenti": [],
+  "durata_s": 313.0,
+  "strumenti": [
+    {
+      "nome": "search_documents",
+      "argomenti": {
+        "query": "farina per gnocchi patate"
+      },
+      "risultato": {
+        "modalita": "base",
+        "query_usate": [
+          "farina per gnocchi patate"
+        ],
+        "passaggi": [
+          {
+            "id": "89.0",
+            "ricetta": 89,
+            "titolo": "Gnocchi di patate",
+            "capitolo": "Minestre asciutte e di magro",
+            "posizione_chunk": 0,
+            "score": 0.775,
+            "testo": "La famiglia de' gnocchi è numerosa. Vi ho già descritto gli gnocchi in brodo del N. 14: ora v'indicherò gli gnocchi di patate e di farina gialla per minestra e più avanti quelli di semolino e alla romana per tramesso o per contorno, e quelli di latte per dolce. Patate grosse e gialle, grammi 400. Farina di grano, grammi 150. Vi noto la proporzione della farina per intriderli, onde non avesse ad accadervi come ad una signora che, me presente, appena affondato il mestolo per muoverli nella pentola non trovò più nulla; gli gnocchi erano spariti. — O dov'erano andati? — mi domandò con premurosa curiosità un'altra signora, a cui per ridere raccontai il fatto, credendo forse che il folletto li avesse portati via. — Non inarchi le ciglia, signora — risposi io — chè lo strano fenomeno è naturale:…"
+          },
+          {
+            "id": "89.1",
+            "ricetta": 89,
+            "titolo": "Gnocchi di patate",
+            "capitolo": "Minestre asciutte e di magro",
+            "posizione_chunk": 1,
+            "score": 0.742,
+            "testo": "portati via. — Non inarchi le ciglia, signora — risposi io — chè lo strano fenomeno è naturale: quelli gnocchi erano stati intrisi con poca farina e appena furono nell'acqua bollente si liquefecero. — Cuocete le patate nell'acqua o, meglio, a vapore e, calde bollenti, spellatele e passatele per istaccio. Poi intridetele colla detta farina e lavorate alquanto l'impasto colle mani, tirandolo a cilindro sottile per poterlo tagliare a tocchetti lunghi tre centimetri circa. Spolverizzateli leggermente di farina e, prendendoli uno alla volta, scavateli col pollice sul rovescio di una grattugia. Metteteli a cuocere nell'acqua salata per dieci minuti, levateli asciutti e conditeli con cacio, burro e sugo di pomodoro, piacendovi. Se li volete più delicati cuoceteli nel latte e serviteli senza scol…"
+          },
+          {
+            "id": "90.0",
+            "ricetta": 90,
+            "titolo": "Gnocchi di farina gialla",
+            "capitolo": "Minestre asciutte e di magro",
+            "posizione_chunk": 0,
+            "score": 0.735,
+            "testo": "Quando vi sentite una certa ripienezza prodotta da esuberanza di nutrizione, se ricorrete a una minestra di questi gnocchi potrete, per la loro leggerezza e poca sostanza, neutralizzarla; e più ancora se farete seguire ad essa un piatto di pesce di facile digestione. La farina, per quest'uso, è bene sia macinata grossa; se no è meglio ricorrere al semolino fine di granturco, che ora trovasi in commercio. Salate l'acqua e, quando bolle, versate colla mano sinistra la farina un po' per volta e col mestolo nella destra, mescolate continuamente. È necessario che questa farina bolla molto, e quando essa è ristretta in modo da reggere bene sul mestolo, gettatela, con un coltello da tavola, a tocchetti entro a un vassoio e ad ogni strato conditela con cacio, burro, sugo di pomodoro o conserva sc…"
+          },
+          {
+            "id": "201.0",
+            "ricetta": 201,
+            "titolo": "Pallottole di patate ripiene",
+            "capitolo": "Fritti",
+            "posizione_chunk": 0,
+            "score": 0.721,
+            "testo": "Patate, grammi 300. Parmigiano, due cucchiaiate ben colme. Uova, N. 2. Odore di noce moscata. Farina, quanto basta. Lessate le patate, sbucciatele e passatele calde dallo staccio sopra a un velo di farina. Fate una buca sul monte delle patate, salatele, date loro l'odore della noce moscata e versateci le uova e il parmigiano. Poi, con meno farina che potete, formatene un pastone morbido e lungo che dividerete in 18 parti e ad ognuna di queste, con le dita infarinate, fate una piccola buca per riempirla con un battuto di carne. Tirateci sopra i lembi per coprirlo e, con le mani infarinate, formate palle rotonde che friggerete nello strutto o nell'olio, mandandole in tavola per contorno a un fritto di carne. È un piatto appariscente, buono e di poca spesa perchè il ripieno potete formarlo a…"
+          },
+          {
+            "id": "661.1",
+            "ricetta": 661,
+            "titolo": "Budino di patate",
+            "capitolo": "Torte e dolci al cucchiaio",
+            "posizione_chunk": 1,
+            "score": 0.71,
+            "testo": "ai muscoli. Patate grosse farinacee, grammi 700. Zucchero, grammi 150. Burro, grammi 40. Farina, grammi 20. Latte, decilitri 2. Uova, N. 6. Una presa di sale. Odore di cannella o di scorza di limone. Cuocete le patate nell'acqua o a vapore, sbucciatele e passatele calde dallo staccio. Rimettetele al fuoco col burro, la farina e il latte, versato a poco per volta, lavorandole bene col mestolo; indi aggiungete lo zucchero, il sale e l'odore e lasciatele stare tanto che s'incorporino bene insieme tutte queste cose. Ritirate dal fuoco, quando saranno tiepide o diacce, gettateci i rossi e poi le chiare montate. Cuocetelo come tutti gli altri budini; cioè nel fornello o nel forno e servitelo caldo."
+          }
+        ],
+        "nota": ""
+      }
+    }
+  ],
+  "risposta": "Per 400 grammi di patate, secondo la ricetta trovata, servono 150 grammi di farina di grano per gli gnocchi [89.0].",
+  "citazioni": {
+    "verificate": [
+      "89.0"
+    ],
+    "sconosciute": [],
+    "ricerche": 1,
+    "passaggi_ricevuti": 5
+  },
+  "log_agente": [
+    "INFO assistente.grafo riassunto: 1 messaggi, sotto la soglia di 20: nessuna chiamata",
+    "INFO assistente.grafo router categoria=conversazione motivo=La richiesta riguarda un calcolo di quantità specifico relativo a una ricetta culinaria. -> agente",
+    "INFO assistente.grafo agente: chiamata al modello con 2 messaggi",
+    "INFO assistente.grafo strumento passaggio=1 nome=search_documents argomenti={'query': 'farina per gnocchi patate'} risultato={\"modalita\":\"base\",\"query_usate\":[\"farina per gnocchi patate\"],\"passaggi\":[{\"id\":\"89.0\",\"ricetta\":89,\"titolo\":\"Gnocchi di patate\",\"capitolo\":\"Minestre asciutte e di magro\",\"posizione_chunk\":0,\"score\":0.775,\"testo\":\"La famiglia de' gnocchi è numerosa. Vi ho già descritto gli gnocchi in brodo del N. 14: ora v'indicherò gli gnocchi di patate e di farina gialla per minestra e più avanti quelli di semolino e alla romana per tramesso o per contorno, e quelli di latte per dolce. Patate grosse e gialle, grammi 400. Farina di grano, grammi 150. Vi noto la proporzione della farina per intriderli, onde non avesse ad accadervi come ad una signora che, me presente, appena affondato il mestolo per muoverli nella pentola non trovò più nulla; gli gnocchi erano spariti. — O dov'erano andati? — mi domandò con premurosa curiosità un'altra signora, a cui per ridere raccontai il fatto, credendo forse che il folletto li avesse portati via. — Non inarchi le ciglia, signora — risposi io — chè lo strano fenomeno è naturale:…\"},{\"id\":\"89.1\",\"ricetta\":89,\"titolo\":\"Gnocchi di patate\",\"capitolo\":\"Minestre asciutte e di magro\",\"posizione_chunk\":1,\"score\":0.742,\"testo\":\"portati via. — Non inarchi le ciglia, signora — risposi io — chè lo strano fenomeno è naturale: quelli gnocchi erano stati intrisi con poca farina e appena furono nell'acqua bollente si liquefecero. — Cuocete le patate nell'acqua o, meglio, a vapore e, calde bollenti, spellatele e passatele per istaccio. Poi intridetele colla detta farina e lavorate alquanto l'impasto colle mani, tirandolo a cilindro sottile per poterlo tagliare a tocchetti lunghi tre centimetri circa. Spolverizzateli leggermente di farina e, prendendoli uno alla volta, scavateli col pollice sul rovescio di una grattugia. Metteteli a cuocere nell'acqua salata per dieci minuti, levateli asciutti e conditeli con cacio, burro e sugo di pomodoro, piacendovi. Se li volete più delicati cuoceteli nel latte e serviteli senza scol…\"},{\"id\":\"90.0\",\"ricetta\":90,\"titolo\":\"Gnocchi di farina gialla\",\"capitolo\":\"Minestre asciutte e di magro\",\"posizione_chunk\":0,\"score\":0.735,\"testo\":\"Quando vi sentite una certa ripienezza prodotta da esuberanza di nutrizione, se ricorrete a una minestra di questi gnocchi potrete, per la loro leggerezza e poca sostanza, neutralizzarla; e più ancora se farete seguire ad essa un piatto di pesce di facile digestione. La farina, per quest'uso, è bene sia macinata grossa; se no è meglio ricorrere al semolino fine di granturco, che ora trovasi in commercio. Salate l'acqua e, quando bolle, versate colla mano sinistra la farina un po' per volta e col mestolo nella destra, mescolate continuamente. È necessario che questa farina bolla molto, e quando essa è ristretta in modo da reggere bene sul mestolo, gettatela, con un coltello da tavola, a tocchetti entro a un vassoio e ad ogni strato conditela con cacio, burro, sugo di pomodoro o conserva sc…\"},{\"id\":\"201.0\",\"ricetta\":201,\"titolo\":\"Pallottole di patate ripiene\",\"capitolo\":\"Fritti\",\"posizione_chunk\":0,\"score\":0.721,\"testo\":\"Patate, grammi 300. Parmigiano, due cucchiaiate ben colme. Uova, N. 2. Odore di noce moscata. Farina, quanto basta. Lessate le patate, sbucciatele e passatele calde dallo staccio sopra a un velo di farina. Fate una buca sul monte delle patate, salatele, date loro l'odore della noce moscata e versateci le uova e il parmigiano. Poi, con meno farina che potete, formatene un pastone morbido e lungo che dividerete in 18 parti e ad ognuna di queste, con le dita infarinate, fate una piccola buca per riempirla con un battuto di carne. Tirateci sopra i lembi per coprirlo e, con le mani infarinate, formate palle rotonde che friggerete nello strutto o nell'olio, mandandole in tavola per contorno a un fritto di carne. È un piatto appariscente, buono e di poca spesa perchè il ripieno potete formarlo a…\"},{\"id\":\"661.1\",\"ricetta\":661,\"titolo\":\"Budino di patate\",\"capitolo\":\"Torte e dolci al cucchiaio\",\"posizione_chunk\":1,\"score\":0.71,\"testo\":\"ai muscoli. Patate grosse farinacee, grammi 700. Zucchero, grammi 150. Burro, grammi 40. Farina, grammi 20. Latte, decilitri 2. Uova, N. 6. Una presa di sale. Odore di cannella o di scorza di limone. Cuocete le patate nell'acqua o a vapore, sbucciatele e passatele calde dallo staccio. Rimettetele al fuoco col burro, la farina e il latte, versato a poco per volta, lavorandole bene col mestolo; indi aggiungete lo zucchero, il sale e l'odore e lasciatele stare tanto che s'incorporino bene insieme tutte queste cose. Ritirate dal fuoco, quando saranno tiepide o diacce, gettateci i rossi e poi le chiare montate. Cuocetelo come tutti gli altri budini; cioè nel fornello o nel forno e servitelo caldo.\"}],\"nota\":\"\"}",
+    "INFO assistente.grafo agente: chiamata al modello con 4 messaggi",
+    "INFO assistente.grafo revisore coerente=sì motivo=La risposta è coerente con i dati forniti dallo strumento di ricerca, estraendo la quantità richiesta dalla ricetta trovata. -> fine",
+    "INFO assistente.agente citazioni verificate=89.0 sconosciute=- ricerche=1 passaggi_ricevuti=5"
+  ],
+  "log_server_ricerca": [
+    "2026-11-18 10:07:36,030 INFO rag.server_mcp server di ricerca avviato (stdio) collezione=artusi top_k_max=10",
+    "2026-11-18 10:07:43,129 INFO rag.server_mcp ricerca esito=ok modalita=base query=\"farina per gnocchi patate\" top_k=5 filtro=- passaggi=5 ids=89.0,89.1,90.0,201.0,661.1 nota=\"\" ms=6283"
+  ]
+}

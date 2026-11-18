@@ -182,6 +182,10 @@ class _SenzaTraceback(logging.Filter):
 
 
 def configura_log(config: Config | None) -> None:
+    try:  # la console di Windows non è UTF-8: niente caratteri persi né errori di codifica nel log
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
     gestori: list[logging.Handler] = [logging.StreamHandler(sys.stderr)]
     if config is not None and config.ricerca_log_file:
         percorso = Path(config.ricerca_log_file)

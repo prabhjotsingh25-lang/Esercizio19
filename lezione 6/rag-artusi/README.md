@@ -61,6 +61,29 @@ docker compose down                                    # i dati restano nel volu
   `COLLEZIONE` o cancellare la collezione). Un cambio di chunking invece è ammesso: i chunk non
   più prodotti vengono cancellati.
 
+## Server MCP di ricerca (lezione 8)
+
+La ricerca è anche un tool MCP, `search_documents(query, top_k=5, filtro=None)`, che l'agente
+di `lezione 4/assistente-laboratorio` può decidere di chiamare.
+
+```powershell
+.\.venv\Scripts\python.exe -m rag.server_mcp                  # stdio (lo avvia l'agente)
+.\.venv\Scripts\python.exe -m rag.server_mcp --http --porta 8003   # HTTP per prove, endpoint /mcp
+.\.venv\Scripts\python.exe -m rag.cliente_mcp "Che vino si usa per il pollo alla cacciatora?" --top-k 3
+```
+
+- Risultato: `{modalita, query_usate, passaggi[], nota}`; ogni passaggio ha `id` (`ricetta.chunk`,
+  es. `208.0`, da citare tra parentesi quadre), `ricetta`, `titolo`, `capitolo`, `posizione_chunk`,
+  `score` (coseno) e `testo` troncato a `RICERCA_MAX_CARATTERI`.
+- `top_k` oltre `RICERCA_TOP_K_MAX` (max 20) viene ridotto e la riduzione è scritta in `nota`.
+- `filtro` = nome di un capitolo (maiuscole indifferenti); valori validi nella resource
+  `ricerca://filtri` e nel messaggio d'errore.
+- Errori previsti (query vuota, filtro inesistente, collezione assente o incompatibile, Qdrant o
+  LM Studio spenti) arrivano al modello come errori del tool con un messaggio utile, senza traceback.
+- Log: una riga `ricerca esito=…` per chiamata su stderr e in `RICERCA_LOG_FILE` (`logs/`, fuori da Git).
+- Specifiche e piani: `docs/specs/l8-*.md`, `docs/plans/l8-*.md`; prova reale:
+  `docs/prove/l8-es1-chiamata-reale.md`.
+
 ## Test
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -v

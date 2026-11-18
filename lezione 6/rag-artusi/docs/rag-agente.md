@@ -133,9 +133,47 @@ sotto il secondo.
 - **Limite della metrica**: la posizione conta la ricetta, non il chunk. Per i cappelletti il
   reranking tiene solo 7.2, mentre la frase «A un mangiatore discreto bastano due dozzine» è nel
   chunk 7.1 (lezione 7): conta come trovata ma il passaggio giusto non arriva al modello.
-- **Indicazione pratica**: `MODALITA_RICERCA=reranking` se la latenza è accettabile, altrimenti `base`;
-  la riscrittura solo insieme al reranking, e dopo aver tolto dal prompt di riscrittura il contesto
-  che il modello copia nelle query (non fatto: avrebbe cambiato l'esperimento a metà).
+### Seconda versione: prompt di riscrittura corretto (un solo fattore cambiato)
+Il prompt originale cominciava con «Prepari query per cercare passaggi in un ricettario italiano
+dell'Ottocento (Pellegrino Artusi).» e gemma copiava «Artusi»/«Ottocento» nelle query. Su richiesta
+dell'utente il prompt è stato corretto (commit `c69b4e9`): niente libro, autore ed epoca, e il
+divieto esplicito di inserirli nelle query. **È cambiato solo il prompt di riscrittura**: stesse
+domande, stesso indice, k, temperatura, seed; sono state rilanciate solo `riscrittura` ed
+`entrambe`; `base` è presa dal primo confronto (`--base-da`, deterministica, nessun LLM);
+`reranking` non usa la riscrittura e resta quella sopra.
+
+```
+.\.venv\Scripts\python.exe -m rag.confronto --domande eval/domande_l8.yaml --k 5 --configurazioni base riscrittura entrambe --base-da docs/confronto-l8.json --uscita docs/confronto-l8-prompt-corretto.md
+```
+
+| Configurazione | Prompt di riscrittura | Fonte nei primi 5 | MRR | Copertura composte | Astensioni corrette | Chiamate LLM | Latenza media | Ripieghi |
+|---|---|---|---|---|---|---|---|---|
+| base | — | 11/11 | 0,886 | 5/6 | 0/3 | 0 | 0,6 s | 0 |
+| riscrittura | originale | 11/11 | 0,836 | 6/6 | 0/3 | 14 | 28,0 s | 0 |
+| riscrittura | **corretto** | **10/11** | 0,864 | 6/6 | 0/3 | 14 | 20,9 s | 0 |
+| entrambe | originale | 11/11 | 0,909 | 6/6 | 0/3 | 28 | 44,4 s | 0 |
+| entrambe | **corretto** | 11/11 | 0,894 | **4/6** | 0/3 | 28 | 34,9 s | 2 (id duplicati) |
+| reranking | — | 11/11 | 1,000 | 6/6 | 0/3 | 14 | 36,8 s | 1 (id duplicati) |
+
+Casi rispetto a base con il prompt corretto (`docs/confronto-l8-prompt-corretto.md`):
+- **riscrittura** — migliorato: brodo + baccalà (parti 1/2 → 2/2); peggiorato: «Per quanto tempo si
+  deve cuocere il baccalà?» (510 dalla 4ª posizione a **fuori dai primi 5**). I due peggioramenti
+  del prompt originale (pollo 1 → 5, cappelletti 1 → 2) **non ci sono più**: il pollo torna 1°.
+- **entrambe** — migliorati: baccalà (4 → 3), brodo + baccalà (1/2 → 2/2); peggiorati: le composte
+  gnocchi + pollo e cacciucco + cappelletti (parti 2/2 → 1/2): il reranking ha tenuto un solo lato.
+
+Perché: le parole del contesto sono sparite, ma gemma ora copia **gli esempi del nuovo prompt**
+(«piatti, ingredienti, quantità, tempi») e produce query come «ingredienti tiramisù», «quantità
+sushi», «cuocere baccalà quantità», che allontanano la 510 nel caso del baccalà. Con il prompt
+corretto le query di una domanda composta sono giuste («farina gnocchi quantità», «vino pollo alla
+cacciatora»), ma è il reranking che poi tiene un solo lato. Latenza più bassa (21 s e 35 s): query
+più corte da generare.
+
+### Indicazione pratica
+`MODALITA_RICERCA=reranking` se la latenza è accettabile (è la sola configurazione senza
+peggioramenti in entrambe le prove), altrimenti `base`. La riscrittura, con qualunque dei due prompt,
+sposta i problemi invece di risolverli con un modello da 2B: il prompt va riscritto senza elenchi di
+esempi che il modello possa copiare, e va riprovato con questo stesso comando.
 
 ## Esercizio 4 — soglie di confidenza
 
@@ -184,6 +222,33 @@ Effetto calcolato sugli score registrati (in `base` le soglie sono un filtro su 
   risposte; sopra il top-1 di tutte le domande senza risposta formulate dal modello (max 0,691).
 - **Alta 0,73**: sopra il top-1 più alto delle domande senza risposta in entrambe le formulazioni
   (0,728): un passaggio di una domanda senza risposta non è mai «affidabile».
+
+### Verifica dopo la correzione del prompt di riscrittura: le soglie reggono
+Calibrazione rilanciata con le soglie proposte e il prompt corretto (`docs/calibrazione-l8-verifica.md`):
+
+```
+.\.venv\Scripts\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --alta 0.73 --bassa 0.70 --configurazioni base entrambe --timeout-query 180 --uscita docs/calibrazione-l8-verifica.md
+```
+
+| Variante | Fonte nei primi 5 | Astensioni corrette | Astensioni errate | Fasce restituite |
+|---|---|---|---|---|
+| base senza soglie | 11/11 | 0/3 | 0 | non valutata 70 |
+| base con soglie | 11/11 | 1/3 (sushi) | 0 | affidabile 32, media 24 |
+| entrambe senza soglie | 11/11 | 0/3 | 0 | non valutata 31 |
+| entrambe con soglie (nuove query) | 11/11 | 1/3 (sushi) | 0 | affidabile 16, media 9 |
+| base, query del modello, senza soglie | 11/11 | 0/3 | 0 | non valutata 70 |
+| base, query del modello, con soglie | 11/11 | 2/3 (tiramisù, sushi) | 0 | affidabile 28, media 22 |
+
+Criteri di tenuta, tutti rispettati: **nessuna fonte persa** (11/11 con e senza soglie in ogni
+variante), **nessuna astensione errata**, **nessun passaggio di una domanda senza risposta in fascia
+«affidabile»** (tiramisù 0,704-0,706 e carbonara 0,702-0,728 restano in «media», cioè «da
+verificare»). In `entrambe` le soglie agiscono sul coseno migliore fra le query, e la domanda
+originale è sempre fra le query: per questo i suoi score contano come quelli della domanda intera.
+In questa esecuzione le query del modello per carbonara e sushi sono andate in timeout anche a 180 s
+(LM Studio più carico): in quella variante si è usata la domanda intera, quindi la carbonara (0,728)
+non si astiene; con la sua query misurata nella prima calibrazione («ricetta della carbonara»,
+0,673) sarebbe esclusa. Le soglie 0,73/0,70 sono state fissate come default (`.env.example`,
+`rag/config.py`, commit `70a5276`).
 
 **Limiti (da leggere prima di usarle):** le soglie sono calibrate su **14 domande** (11 con la
 query del modello), con **margine stretto** (0,691 → 0,70: 0,009); valgono **solo con query brevi

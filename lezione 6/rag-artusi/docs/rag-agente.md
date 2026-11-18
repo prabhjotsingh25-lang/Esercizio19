@@ -312,7 +312,7 @@ partenza 0,6/0,3. Le soglie 0,73/0,70 sono state fissate come default (`.env.exa
   chiamata di calibrazione (per cappelletti e composta la prima chiamata era andata in timeout a 60 s;
   rifatte con 180 s non sono andate in timeout, ma gemma non ha chiamato la ricerca). Nella verifica
   anche carbonara e sushi sono andate in timeout a 180 s: i timeout **possono dipendere dal carico di
-  LM Studio** (nelle stesse ore giravano altre prove), la causa non è stata verificata.
+  LM Studio**: la causa non è stata verificata.
 - **Margine stretto**: fra il top-1 più alto delle domande senza risposta formulate dal modello
   (0,691, sushi) e la soglia bassa (0,70) ci sono **0,009**; fra la soglia bassa e la fonte attesa
   più bassa ci sono 0,015 (0,715, domanda intera).

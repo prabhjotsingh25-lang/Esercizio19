@@ -195,6 +195,25 @@ dell'utente): con la **domanda intera** e con la **query che gemma passa a `sear
 | Con risposta: score della fonte attesa | 0,715 · 0,754 · 0,817 | 0,734 · 0,766 · 0,821 |
 | Senza risposta: top-1 | 0,695 · 0,706 · 0,728 | 0,548 · 0,673 · 0,691 |
 
+Per domanda (prima calibrazione, `docs/calibrazione-l8.json`; con le query rifatte a 180 s):
+
+| Domanda | Tipo | Top-1 domanda intera | Fonte attesa (pos) | Query del modello | Top-1 query del modello | Fonte attesa (pos) |
+|---|---|---|---|---|---|---|
+| Quanta farina serve per 400 grammi di patate negli gnocchi? | semplice | 0,773 | 0,773 (1) | «farina per gnocchi patate artusi» | 0,795 | 0,795 (1) |
+| Che vino si usa per il pollo alla cacciatora? | semplice | 0,749 | 0,749 (1) | «vino per pollo alla cacciatora» | 0,764 | 0,764 (1) |
+| Come si chiama il cacciucco sulle coste dell'Adriatico? | semplice | 0,774 | 0,774 (1) | «cacciucco sulle coste dell'Adriatico» | 0,745 | 0,745 (1) |
+| Qual è la ricetta del tiramisù? | senza risposta | 0,706 | — | «tiramisù» | 0,548 | — |
+| Quanti cappelletti bastano a un mangiatore moderato? | semplice | 0,745 | 0,745 (1) | _il modello non ha chiamato la ricerca_ | — | — |
+| Perché gli gnocchi possono sciogliersi nell'acqua? | semplice | 0,720 | 0,720 (1) | _il modello non ha chiamato la ricerca_ | — | — |
+| Per quanto tempo si deve cuocere il baccalà? | semplice | 0,766 | 0,754 (4) | «tempo cottura baccalà» | 0,734 | 0,734 (1) |
+| Con che cosa si insaporisce il brodo? | semplice | 0,768 | 0,768 (1) | «insaporire il brodo» | 0,740 | 0,740 (1) |
+| Come si fa un dolce di mandorle e zucchero? | semplice | 0,821 | 0,817 (2) | «dolce di mandorle e zucchero» | 0,823 | 0,821 (2) |
+| Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora? | composta | 0,737 | 0,737 (1) | «farina per gli gnocchi di patate» | 0,800 | 0,800 (1) |
+| Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà? | composta | 0,766 | 0,766 (1) | «come insaporire il brodo e tempo di cottura del baccalà» | 0,768 | 0,768 (1) |
+| Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto? | composta | 0,715 | 0,715 (1) | _il modello non ha chiamato la ricerca_ | — | — |
+| Qual è la ricetta della carbonara? | senza risposta | 0,728 | — | «ricetta della carbonara» | 0,673 | — |
+| Come si prepara il sushi? | senza risposta | 0,695 | — | «come si prepara il sushi» | 0,691 | — |
+
 - Con la domanda intera gli intervalli **si sovrappongono** (carbonara 0,728 sopra due domande con
   risposta, 0,715 e 0,720): nessuna soglia separa.
 - Con la query del modello sono **separati** (0,691 sushi contro 0,734 baccalà): il modello accorcia
@@ -250,8 +269,92 @@ non si astiene; con la sua query misurata nella prima calibrazione («ricetta de
 0,673) sarebbe esclusa. Le soglie 0,73/0,70 sono state fissate come default (`.env.example`,
 `rag/config.py`, commit `70a5276`).
 
-**Limiti (da leggere prima di usarle):** le soglie sono calibrate su **14 domande** (11 con la
-query del modello), con **margine stretto** (0,691 → 0,70: 0,009); valgono **solo con query brevi
-formulate dal modello** (con la domanda intera non separano: tiramisù 0,706 e carbonara 0,728
-restano sopra la soglia bassa); vanno **ricalibrate se cambia il modello di embedding o il modello
-chat** (lo stesso comando, poi `--alta/--bassa` per provare i valori).
+### Limiti (da leggere prima di usare le soglie)
+- **Pochi dati**: calibrate su **14 domande**, e solo **11 su 14** hanno la query del modello: per
+  «Quanti cappelletti bastano a un mangiatore moderato?», «Perché gli gnocchi possono sciogliersi
+  nell'acqua?» e la composta «cacciucco + cappelletti» gemma **non ha chiamato la ricerca** nella
+  chiamata di calibrazione (anche rifatta con 180 s di timeout per le prime due che erano andate in
+  timeout). Nella verifica anche carbonara e sushi sono andate in timeout a 180 s.
+- **Margine stretto**: fra il top-1 più alto delle domande senza risposta formulate dal modello
+  (0,691, sushi) e la soglia bassa (0,70) ci sono **0,009**; fra la soglia bassa e la fonte attesa
+  più bassa ci sono 0,015 (0,715, domanda intera).
+- **Valide solo con query brevi del modello**: con la domanda intera non separano (tiramisù 0,706 e
+  carbonara 0,728 restano sopra la soglia bassa, in fascia «media»).
+- **Da ricalibrare** se cambia il modello di embedding o il modello chat (stesso comando, poi
+  `--alta/--bassa` per provare valori candidati).
+- **`non_valutata`**: con `SOGLIE_ATTIVE=false` i passaggi hanno `fascia: "non_valutata"`, che la
+  regola 5 del prompt dell'agente non spiega (nomina solo «affidabile» e «media»). Non corretto per
+  non cambiare il prompt durante le tracce; con le soglie attive (default) il caso non si presenta.
+- Le note delle soglie scrivono i valori con il punto («0.70»), non con la virgola.
+
+### Tracce dell'agente con le soglie (3 casi)
+Comando (da `lezione 4/assistente-laboratorio`):
+`$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --serie soglie --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es4-tracce"`.
+Soglie 0,73/0,70, modalità `base`, prompt con la regola 5. Tracce: `docs/prove/l8-es4-tracce/`.
+
+| Caso | Domanda | Query del modello → passaggi (score, fascia) | Risposta | Citazioni verificate / sconosciute | Esito | Durata |
+|---|---|---|---|---|---|---|
+| affidabile | Che vino si usa per il pollo alla cacciatora? | «vino per pollo alla cacciatora» → 208.0 (0,764 affidabile), 539.0, 727.1, 545.0 (0,701-0,704 media); 1 escluso | «Si può usare mezzo bicchiere di San Giovese o altro vino rosso del migliore.» | — / — | **non atteso**: nessuna citazione | 213 s |
+| da verificare | Perché gli gnocchi possono sciogliersi nell'acqua? | «perché gli gnocchi si sciolgono nell'acqua» → 89.1 (0,725), 89.0, 230.0, 470.1, 90.0 (0,704-0,711), tutti media | «… erano stati intrisi con poca farina e appena furono nell'acqua bollente, si liquefecero [89.1].» | 89.1 / — | **non atteso**: manca «da verificare» | 200 s |
+| senza risposta | Qual è la ricetta del tiramisù? | «tiramisù» → nessun passaggio (5 esclusi), nota «nessun passaggio sopra la soglia minima» | «Nel libro non ho trovato la ricetta del tiramisù.» | — / — | atteso | 182 s |
+
+La parte del server ha fatto esattamente ciò che la specifica chiede in tutti e tre i casi (fasce
+giuste, esclusi non inviati, lista vuota dichiarata). I due scostamenti sono del **modello**: la
+risposta del pollo è corretta e viene dal passaggio 208.0, ma non lo cita (regola 2); la risposta
+sugli gnocchi è corretta e citata, ma non segnala la fascia «media» (regola 5).
+
+**Ripetizione dei due casi non attesi** (stesso comando con `--casi affidabile da_verificare`,
+tracce in `docs/prove/l8-es4-tracce-ripetizione/`): il modello dell'agente non gira a temperatura 0,
+quindi un esito isolato va ripetuto prima di trarre conclusioni.
+
+| Caso | Query del modello → passaggi (score, fascia) | Risposta | Citazioni verificate / sconosciute | Esito | Durata |
+|---|---|---|---|---|---|
+| affidabile | «pollo alla cacciatora vino» → 208.0 (0,768 affidabile), 539.0, 258.1, 545.0, 268.0 (0,709-0,717 media) | «… mezzo bicchiere di San Giovese o altro vino rosso del migliore, insieme a sugo di pomodoro [208.0].» | 208.0 / — | **atteso** | 202 s |
+| da verificare | «perché gli gnocchi possono sciogliersi nell'acqua» → 89.1 (0,713), 90.0, 489.0 (0,703-0,711), tutti media; 2 esclusi | «… intrisi con poca farina e appena furono nell'acqua bollente si liquefecero [89.1].» | 89.1 / — | **non atteso**: manca «da verificare» | 169 s |
+
+Conclusioni sulle 3 + 2 esecuzioni:
+- **Citazioni**: 1 risposta su 4 con passaggi (pollo, prima esecuzione) non ha citato; nessuna
+  citazione sconosciuta in nessuna traccia (4 dell'es. 2 + 5 dell'es. 4).
+- **Astensione** con lista vuota: rispettata (tiramisù, nessuna citazione).
+- **Fascia «media» → «da verificare»**: **0 su 2**. gemma-4-e2b non applica la regola 5 del prompt:
+  la fascia arriva nel risultato del tool ma il modello non la riporta. È un limite misurato del
+  modello piccolo con questa formulazione del prompt, non del server; possibili interventi (non
+  fatti, fuori dalla specifica approvata): riformulare la regola 5 con un esempio di frase, oppure
+  un controllo nell'host analogo a quello delle citazioni che registri le risposte basate solo su
+  passaggi «media» senza l'avviso.
+
+## Come si lancia tutto da zero
+Da `lezione 6/rag-artusi` (PowerShell):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt     # una volta
+Copy-Item .env.example .env                                        # poi adattare
+.\.venv\Scripts\python.exe -m pytest -q                            # test offline (nessun servizio)
+docker compose up -d                                               # Qdrant
+.\.venv\Scripts\python.exe -m rag.ingestion                        # se la collezione non c'è (dati/artusi.txt)
+.\.venv\Scripts\python.exe -m rag.cliente_mcp "Che vino si usa per il pollo alla cacciatora?" --top-k 3
+.\.venv\Scripts\python.exe -m rag.confronto --domande eval/domande_l8.yaml --k 5 --uscita docs/confronto-l8.md
+.\.venv\Scripts\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --timeout-query 180 --uscita docs/calibrazione-l8.md
+```
+
+Da `lezione 4/assistente-laboratorio`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q                            # test offline
+Copy-Item server_mcp.example.json server_mcp.json                  # e nel .env: SERVER_MCP_FILE, AMBITO_RICERCA
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente  # CLI con la ricerca
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es2-tracce"
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --serie soglie --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es4-tracce"
+```
+
+## Verifica finale
+- **Test offline**: `rag-artusi` 333 passati, `assistente-laboratorio` 542 passati (31 prove reali
+  e PostgreSQL deselezionate), eseguiti con un plugin pytest che blocca le connessioni alle porte
+  1234 (LM Studio) e 6333 (Qdrant): **0 tentativi di connessione**.
+- **Git**: `.env` (entrambi i progetti), `dati/`, `logs/` e `server_mcp.json` sono ignorati
+  (`git check-ignore`); i commit del branch `feat/rag-agente` sono tutti Conventional Commits.
+- **Revisione indipendente** del branch contro i criteri di accettazione: tutti `ok` tranne le
+  tracce dell'es. 4 (allora non finite) e i difetti poi corretti (`95b78c4`, `a0007bb`, `fa3d2d2`):
+  nota del reranking duplicata quando le soglie escludono tutto, citazione inventata nascosta in una
+  parentesi mista, `args` non lista accettato, ricerca attiva per default in `.env.example`, errore
+  del servizio LLM loggato come warning a ogni chiamata.

@@ -146,7 +146,7 @@ def test_valori_avanzati_non_validi(nome, valore):
 
 def test_soglie_default():
     c = carica_config(OBBLIGATORIE)
-    assert (c.soglia_alta, c.soglia_bassa, c.soglie_attive) == (0.6, 0.3, True)
+    assert (c.soglia_alta, c.soglia_bassa, c.soglie_attive) == (0.73, 0.70, True)
 
 
 def test_soglie_valori_e_disattivate():

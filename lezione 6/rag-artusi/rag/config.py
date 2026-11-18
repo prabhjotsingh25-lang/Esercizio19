@@ -52,8 +52,8 @@ class Config:
     rerank_max_caratteri: int = 400
     rrf_k: int = 60
     # Lezione 8 es. 4: soglie di confidenza sul coseno
-    soglia_alta: float = 0.6
-    soglia_bassa: float = 0.3
+    soglia_alta: float = 0.73  # calibrata il 2026-11-18 (docs/rag-agente.md)
+    soglia_bassa: float = 0.70
     soglie_attive: bool = True
 
 
@@ -104,7 +104,7 @@ def _soglia(env: Mapping[str, str], nome: str, default: float) -> float:
 
 
 def _soglie(env: Mapping[str, str]) -> dict:
-    alta, bassa = _soglia(env, "SOGLIA_ALTA", 0.6), _soglia(env, "SOGLIA_BASSA", 0.3)
+    alta, bassa = _soglia(env, "SOGLIA_ALTA", 0.73), _soglia(env, "SOGLIA_BASSA", 0.70)
     if bassa > alta:
         raise ErroreConfigurazione(f"SOGLIA_BASSA ({bassa}) non può superare SOGLIA_ALTA ({alta})")
     attive = env.get("SOGLIE_ATTIVE", "").strip().lower() or "true"

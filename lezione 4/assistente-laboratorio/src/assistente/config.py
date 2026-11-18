@@ -33,6 +33,8 @@ class Configurazione:
     frontend_host: str = "127.0.0.1"
     frontend_porta: int = 8090
     frontend_origine: str = "http://127.0.0.1:8090"  # unica origine ammessa dal CORS del back-end
+    server_mcp_file: str | None = None  # lezione 8: server MCP esterni (formato mcpServers)
+    ambito_ricerca: str = ""  # aggiunto all'ambito del router solo con server_mcp_file
 
 
 def _obbligatoria(env: Mapping[str, str], nome: str) -> str:
@@ -102,6 +104,8 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
     if recenti >= soglia:
         raise ErroreConfigurazione(
             f"MESSAGGI_RECENTI ({recenti}) deve essere minore di SOGLIA_RIASSUNTO ({soglia})")
+    server_mcp_file = env.get("SERVER_MCP_FILE", "").strip() or None
+    ambito_ricerca = _obbligatoria(env, "AMBITO_RICERCA") if server_mcp_file else ""
     return Configurazione(
         base_url=_obbligatoria(env, "LMSTUDIO_BASE_URL"),
         modello=_obbligatoria(env, "LMSTUDIO_MODEL"),
@@ -127,4 +131,6 @@ def carica_configurazione(env: Mapping[str, str] | None = None) -> Configurazion
         frontend_porta=_porta(env, "FRONTEND_PORTA", 8090),
         frontend_origine=env.get("FRONTEND_ORIGINE", "").strip().rstrip("/")
         or "http://127.0.0.1:8090",
+        server_mcp_file=server_mcp_file,
+        ambito_ricerca=ambito_ricerca,
     )

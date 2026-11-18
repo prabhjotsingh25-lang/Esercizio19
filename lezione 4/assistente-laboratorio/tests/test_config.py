@@ -165,3 +165,20 @@ def test_frontend_default_e_valori():
                                "FRONTEND_ORIGINE": "http://localhost:9000/"})
     assert (c.backend_url, c.frontend_porta, c.frontend_origine) == (
         "http://b:9", 9000, "http://localhost:9000")
+
+
+# --- Lezione 8: server MCP esterni (ricerca) ---
+
+def test_server_mcp_file_facoltativo():
+    c = carica_configurazione(dict(BASE))
+    assert (c.server_mcp_file, c.ambito_ricerca) == (None, "")
+
+
+def test_server_mcp_file_con_ambito_ricerca():
+    c = carica_configurazione({**BASE, "SERVER_MCP_FILE": "server_mcp.json", "AMBITO_RICERCA": "ricette"})
+    assert (c.server_mcp_file, c.ambito_ricerca) == ("server_mcp.json", "ricette")
+
+
+def test_server_mcp_file_richiede_ambito_ricerca():
+    with pytest.raises(ErroreConfigurazione, match="AMBITO_RICERCA"):
+        carica_configurazione({**BASE, "SERVER_MCP_FILE": "server_mcp.json"})

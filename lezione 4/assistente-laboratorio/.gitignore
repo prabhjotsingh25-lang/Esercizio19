@@ -22,3 +22,7 @@ __pycache__/
 
 # Preferenze reali dell'utente (dati personali): nel repository solo preferenze.example.json
 preferenze.json
+
+# Lezione 8: file reale dei server MCP (percorsi locali) e log dei server stdio
+server_mcp.json
+logs/

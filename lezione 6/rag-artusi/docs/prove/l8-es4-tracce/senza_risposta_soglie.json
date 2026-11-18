@@ -1,0 +1,44 @@
+{
+  "caso": "senza_risposta_soglie",
+  "domanda": "Qual è la ricetta del tiramisù?",
+  "atteso": "ricerca con lista vuota (sotto la soglia), astensione, nessuna citazione",
+  "esito": "atteso",
+  "scostamenti": [],
+  "durata_s": 181.9,
+  "strumenti": [
+    {
+      "nome": "search_documents",
+      "argomenti": {
+        "query": "tiramisù"
+      },
+      "risultato": {
+        "modalita": "base",
+        "query_usate": [
+          "tiramisù"
+        ],
+        "passaggi": [],
+        "nota": "nessun passaggio sopra la soglia minima (0.70): il libro non sembra contenere la risposta"
+      }
+    }
+  ],
+  "risposta": "Nel libro non ho trovato la ricetta del tiramisù.",
+  "citazioni": {
+    "verificate": [],
+    "sconosciute": [],
+    "ricerche": 1,
+    "passaggi_ricevuti": 0
+  },
+  "log_agente": [
+    "INFO assistente.grafo riassunto: 1 messaggi, sotto la soglia di 20: nessuna chiamata",
+    "INFO assistente.grafo router categoria=conversazione motivo=La richiesta riguarda una ricetta, rientrando nell'ambito delle richieste culinarie specifiche menzionate. -> agente",
+    "INFO assistente.grafo agente: chiamata al modello con 2 messaggi",
+    "INFO assistente.grafo strumento passaggio=1 nome=search_documents argomenti={'query': 'tiramisù'} risultato={\"modalita\":\"base\",\"query_usate\":[\"tiramisù\"],\"passaggi\":[],\"nota\":\"nessun passaggio sopra la soglia minima (0.70): il libro non sembra contenere la risposta\"}",
+    "INFO assistente.grafo agente: chiamata al modello con 4 messaggi",
+    "INFO assistente.grafo revisore coerente=sì motivo=La ricerca tramite strumento non ha trovato la ricetta del tiramisù nel documento consultato. -> fine",
+    "INFO assistente.agente citazioni verificate=- sconosciute=- ricerche=1 passaggi_ricevuti=0"
+  ],
+  "log_server_ricerca": [
+    "2026-11-18 14:49:48,976 INFO rag.server_mcp server di ricerca avviato (stdio) collezione=artusi modalita=base soglie=0.73/0.7 top_k_max=10",
+    "2026-11-18 14:49:53,635 INFO rag.server_mcp ricerca esito=ok modalita=base query=\"tiramisù\" top_k=5 filtro=- passaggi=0 ids=- nota=\"nessun passaggio sopra la soglia minima (0.70): il libro non sembra contenere la risposta\" ms=4309 query_usate=1 llm=0 ripieghi=- esclusi_soglia=5"
+  ]
+}

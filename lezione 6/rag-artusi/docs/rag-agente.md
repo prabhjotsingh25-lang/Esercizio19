@@ -1,0 +1,431 @@
+# Lezione 8 — il retrieval come tool MCP dell'agente
+
+Resoconto dei quattro esercizi. Tutti i numeri e le tracce vengono da esecuzioni reali con Qdrant
+(Docker, collezione `artusi`, 1106 punti) e LM Studio (`text-embedding-nomic-embed-text-v1.5@q8_0`,
+`google/gemma-4-e2b`) del 2026-11-18; i file grezzi sono indicati sezione per sezione.
+
+- Specifiche: `docs/specs/l8-es1..es4-*.md` · piani: `docs/plans/l8-*.md`
+- Codice: `rag/` (server, pipeline, script) e, per l'agente, `lezione 4/assistente-laboratorio/src/assistente/`
+  (`server_esterni.py`, `citazioni.py`, `prove_rag.py`, regole in `grafo.py`)
+
+## Verifiche dell'utente
+- **2026-11-18 — domande di valutazione:** l'utente ha verificato sul testo di Gutenberg 59047 le
+  fonti attese di `eval/domande_l8.yaml` (3 domande composte, carbonara e sushi senza risposta) e le
+  ha confermate corrette; i marcatori `verificare: true` sono stati tolti (commit `84017bc`). Il
+  confronto dell'esercizio 3 era già stato lanciato sullo stesso contenuto (il file è cambiato solo
+  nei commenti e nei marcatori) e non è stato rilanciato.
+
+## Ambiguità non coperte dalle specifiche (scelta conservativa)
+1. **Conferma delle fonti con il modello di messaggio non compilato** (prima conferma: «[Scegli:]»):
+   il file non era cambiato, quindi è stato trattato come «nessuna modifica»; la conferma esplicita
+   è arrivata subito dopo (sopra).
+2. **Soglie nei test**: `crea_config` dei test ha `soglie_attive=False`, così i test degli esercizi
+   1-3 non dipendono dalle soglie; i test dell'es. 4 le attivano esplicitamente. In produzione il
+   default resta `SOGLIE_ATTIVE=true` come da specifica.
+3. **Confronto dell'es. 3 a soglie disattivate** (la specifica lo dice; il comando non ha un'opzione
+   per attivarle): le soglie si misurano solo con la calibrazione.
+4. **Query «formulata dal modello» nella calibrazione** (richiesta dell'utente del 2026-11-18): è
+   ottenuta con una chiamata di tool calling a gemma con la stessa descrizione e lo stesso schema di
+   `search_documents` e un prompt di sistema breve, non con l'intero grafo dell'agente (router,
+   preferenze e regole RAG non ci sono): approssima la prima mossa dell'agente, in modo ripetibile.
+5. **Reranking che sceglie meno di k passaggi**: il reranking listwise restituisce solo gli id
+   pertinenti, quindi può dare meno di k passaggi; non si completano con altri candidati.
+
+## Scelte e scostamenti dalla consegna
+- **Client MCP dell'agente: adattatore scritto a mano, non `langchain-mcp-adapters`.** La consegna
+  parlava di langchain-mcp-adapters; l'agente delle lezioni 5-6 in realtà usava già un adattatore
+  proprio sopra il client FastMCP (`variante_mcp.py`). Il server di ricerca è agganciato estendendo
+  quello (`server_esterni.py`: discovery con `tools/list`, `StructuredTool` sincroni con lo schema
+  del server). Motivi (specifica es. 2, S2): nessuna dipendenza nuova, stessi messaggi d'errore, e
+  langchain-mcp-adapters produce tool asincroni mentre il grafo dell'agente è sincrono.
+- **Trasporto: stdio per la ricerca, HTTP per il server esistente.** Il server di ricerca è avviato
+  dall'agente via stdio (`StdioTransport`, `keep_alive=False`: un processo per chiamata, che costa
+  qualche secondo per ricerca); il server MCP delle lezioni precedenti resta su HTTP
+  (`STRUMENTI_MCP_URL`) e non è stato toccato. Il server di ricerca si avvia anche in HTTP
+  (`--http --porta`) per le prove manuali.
+- **Configurazione dei server**: un file nel formato standard `mcpServers` (`SERVER_MCP_FILE`), in
+  aggiunta agli strumenti della variante scelta, invece di una «configurazione MCP» unica che
+  l'agente non aveva.
+- **Nomi dei tool**: l'orologio dell'agente si chiama `ora_corrente` (non `get_current_time` come
+  nella consegna): è il nome esistente dalla lezione 5 e non è stato rinominato. Il tool di ricerca
+  si chiama `search_documents` come richiesto; gli argomenti sono in italiano dove la consegna li
+  dava in italiano (`filtro`).
+- **Router**: l'agente ha un router che rifiutava le domande sulle ricette; si aggiunge
+  `AMBITO_RICERCA` all'ambito solo quando la ricerca è configurata (specifica es. 2, S6).
+- **Docker Compose**: la ricerca resta spenta nei container (`SERVER_MCP_FILE: ""`), perché il
+  server stdio usa il venv Windows di `rag-artusi`.
+
+## Esercizio 1 — il server MCP di ricerca
+`python -m rag.server_mcp` (stdio). Tool `search_documents(query, top_k=5, filtro=None)`, risultato
+`{modalita, query_usate, passaggi[], nota}`, resource `ricerca://filtri`, una riga di log per chiamata.
+
+Prova reale: `docs/prove/l8-es1-chiamata-reale.md`, con il comando
+`.\.venv\Scripts\python.exe -m rag.cliente_mcp "domanda" [--top-k N] [--filtro CAPITOLO]`:
+gnocchi (89.0 primo, 0,773), pollo alla cacciatora con filtro `fritti` (208.0 primo, 0,749), tiramisù,
+`top_k=50` ridotto a 10 con nota, filtro `Dolciumi` → errore del tool con i 23 capitoli, query vuota
+→ errore del tool; nessun traceback nel log.
+
+## Esercizio 2 — aggancio all'agente: tracce dei quattro casi
+Comando (da `lezione 4/assistente-laboratorio`, con `SERVER_MCP_FILE=server_mcp.json` e
+`AMBITO_RICERCA` nel `.env`):
+`$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es2-tracce"`.
+Tracce complete: `docs/prove/l8-es2-tracce/` (`tracce.md` + un JSON per caso). Variante strumenti
+`locale`, ricerca via stdio, modalità `base`, prompt con le regole 1-4 (la regola 5 sulle fasce è
+dell'es. 4 ed è stata aggiunta dopo queste tracce).
+
+| Caso | Domanda | Strumenti (argomenti) | Risposta | Citazioni verificate / sconosciute | Esito | Durata |
+|---|---|---|---|---|---|---|
+| documentale | Quanta farina serve per 400 grammi di patate negli gnocchi? | `search_documents` {query: «farina per gnocchi patate»} → 89.0, 89.1, 90.0, 201.0, 661.1 | «… servono 150 grammi di farina di grano per gli gnocchi [89.0].» | 89.0 / — | atteso | 313 s |
+| ora | Che ore sono a Tokyo? | `ora_corrente` {fuso_orario: Asia/Tokyo} | «Attualmente a Tokyo sono le ore 18:11:25 del 18 novembre 2026.» | — / — (ricerche 0) | atteso | 110 s |
+| generica | Ciao! Cosa sai fare? | nessuno | elenco delle capacità (cita anche la ricerca nelle ricette) | — / — (ricerche 0) | atteso | 116 s |
+| senza risposta | Qual è la ricetta del tiramisù? | `search_documents` {query: «tiramisù»} → 575.1 Brioches (0,548), 560.0, 261.0, 182.0, 256.2 | «Non ho trovato la ricetta del tiramisù nei documenti disponibili.» | — / — (ricerche 1, passaggi 5) | atteso | 215 s |
+
+Osservazioni:
+- Il router ha fatto passare le tre domande in ambito grazie ad `AMBITO_RICERCA`; il revisore ha
+  accettato anche l'astensione («La ricerca non ha prodotto risultati pertinenti…»).
+- Il controllo nell'host ha scritto, per ogni turno, la riga
+  `citazioni verificate=… sconosciute=… ricerche=… passaggi_ricevuti=…`: nessuna citazione
+  sconosciuta nei quattro casi.
+- Il modello riformula la domanda in una query breve: «farina per gnocchi patate», «tiramisù». Con
+  la query breve gli score del tiramisù scendono a 0,52–0,55 (con la domanda intera il primo era
+  0,706, lezione 7): da qui la calibrazione su entrambe le formulazioni (es. 4).
+- Durate di 2-5 minuti a turno: gemma su LM Studio (router + agente + revisore) più l'avvio del
+  server stdio a ogni ricerca (log del server: 9 s per la ricerca del tiramisù, embedding compreso).
+
+## Esercizio 3 — riscrittura, scomposizione e reranking a confronto
+Comando unico (da `lezione 6/rag-artusi`), riproducibile: stesse 14 domande, stesso indice, k = 5,
+temperatura 0, seed 42, `reasoning_effort=none`, soglie disattivate; cambia solo la modalità.
+
+```
+.\.venv\Scripts\python.exe -m rag.confronto --domande eval/domande_l8.yaml --k 5 --uscita docs/confronto-l8.md
+```
+
+Rapporto completo: `docs/confronto-l8.md`; righe grezze (query usate, id, score, ripieghi, latenze):
+`docs/confronto-l8.json`. Il codice della pipeline usato è quello del commit `33c8766` (l'intestazione
+del rapporto riporta `4807d6e`, il commit corrente alla fine dell'esecuzione: in mezzo sono cambiati
+solo calibrazione e documentazione).
+
+| Configurazione | Fonte nei primi 5 | MRR | Copertura composte | Astensioni corrette | Astensioni errate | Chiamate LLM | Latenza media | Latenza max | Ripieghi |
+|---|---|---|---|---|---|---|---|---|---|
+| base | 11/11 | 0,886 | 5/6 | 0/3 | 0 | 0 | 0,6 s | 5,9 s¹ | 0 |
+| riscrittura | 11/11 | 0,836 | 6/6 | 0/3 | 0 | 14 | 28,0 s | 30,4 s | 0 |
+| reranking | 11/11 | **1,000** | 6/6 | 0/3 | 0 | 14 | 36,8 s | 41,3 s | 1 (id duplicati) |
+| entrambe | 11/11 | 0,909 | 6/6 | 0/3 | 0 | 28 | 44,4 s | 49,0 s | 0 |
+
+¹ prima domanda della serie (caricamento del modello di embedding in LM Studio); le altre sono
+sotto il secondo.
+
+### Casi migliorati e peggiorati rispetto a base
+**riscrittura** — migliorati 2, peggiorati 2
+- ↑ «Per quanto tempo si deve cuocere il baccalà?»: 510 dalla 4ª alla 1ª posizione (la query
+  «baccalà Artusi» porta in cima il Baccalà fritto).
+- ↑ «Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?»: parti coperte 1/2 → 2/2:
+  è il caso per cui serve la scomposizione (in base i 5 posti vanno tutti al brodo).
+- ↓ «Che vino si usa per il pollo alla cacciatora?»: 208 dalla 1ª alla 5ª. Le query generate
+  («Artusi vino», «ricette carne Ottocento», «vino per pollo») sono generiche: le altre ricette di
+  pollo compaiono in più liste e l'RRF, che premia il consenso, le mette davanti alla 208 (che ha
+  ancora il coseno più alto, 0,749).
+- ↓ «Quanti cappelletti bastano a un mangiatore moderato?»: 7 dalla 1ª alla 2ª, sopravanzata da
+  579.1 per lo stesso motivo («porzioni ricette», «ricettario artusi»).
+
+**reranking** — migliorati 3, peggiorati 0
+- ↑ baccalà (4 → 1), ↑ mandorle e zucchero (2 → 1: il reranker scarta la 613 «Dolce di mandorle», il
+  falso positivo da titolo della lezione 7), ↑ brodo + baccalà (parti 1/2 → 2/2).
+- Un ripiego: per il baccalà il modello ha ripetuto un id; il duplicato è stato scartato e segnato.
+
+**entrambe** — migliorati 2, peggiorati 0
+- ↑ baccalà (4 → 2), ↑ brodo + baccalà (1/2 → 2/2). Il reranking recupera i due peggioramenti della
+  sola riscrittura (pollo e cappelletti tornano 1°).
+
+### Commento
+- **Chi funziona meglio e su quali domande.** Il **reranking** è il migliore su queste domande:
+  MRR 1,000 (fonte sempre al 1° posto), tutte le composte coperte, nessun peggioramento. La
+  **riscrittura** serve soprattutto alle **domande composte** (brodo + baccalà), ma da sola peggiora
+  due domande semplici: con gemma-4-e2b le query generate contengono spesso parole del contesto
+  del prompt («Artusi», «Ottocento») invece delle parole della domanda, e l'RRF premia le ricette che
+  queste query generiche trovano tutte. `entrambe` corregge quei peggioramenti ma costa il doppio.
+- **A quale costo.** base: 0 chiamate e meno di un secondo; ogni chiamata a gemma aggiunge circa
+  25-35 s su questo computer (riscrittura 28 s, reranking 37 s, entrambe 44 s per domanda). Nel
+  turno dell'agente (110-313 s nelle tracce dell'es. 2) il reranking aggiunge circa 35 s per ogni
+  ricerca.
+- **Astensioni: nessuna configurazione si astiene davvero** (0/3). Il reranking riduce i passaggi
+  delle domande senza risposta (tiramisù 1, sushi 1, carbonara 3) ma non restituisce mai la lista
+  vuota: trova sempre «qualcosa di pertinente» (per il tiramisù 618.1). L'astensione resta quindi al
+  modello dell'agente (come nella traccia del tiramisù dell'es. 2) e alle soglie dell'es. 4.
+- **Ripieghi**: 1 su 42 chiamate all'LLM (id duplicato). Nessun JSON non valido: lo structured
+  output di LM Studio con `json_schema` (e l'`enum` degli id) tiene il modello piccolo dentro lo schema.
+- **Limite della metrica**: la posizione conta la ricetta, non il chunk. Per i cappelletti il
+  reranking tiene solo 7.2, mentre la frase «A un mangiatore discreto bastano due dozzine» è nel
+  chunk 7.1 (lezione 7): conta come trovata ma il passaggio giusto non arriva al modello.
+### Seconda versione: prompt di riscrittura corretto (un solo fattore cambiato)
+Il prompt originale cominciava con «Prepari query per cercare passaggi in un ricettario italiano
+dell'Ottocento (Pellegrino Artusi).» e gemma copiava «Artusi»/«Ottocento» nelle query. Su richiesta
+dell'utente il prompt è stato corretto (commit `c69b4e9`): niente libro, autore ed epoca, e il
+divieto esplicito di inserirli nelle query. **È cambiato solo il prompt di riscrittura**: stesse
+domande, stesso indice, k, temperatura, seed; sono state rilanciate solo `riscrittura` ed
+`entrambe`; `base` è presa dal primo confronto (`--base-da`, deterministica, nessun LLM);
+`reranking` non usa la riscrittura e resta quella sopra.
+
+```
+.\.venv\Scripts\python.exe -m rag.confronto --domande eval/domande_l8.yaml --k 5 --configurazioni base riscrittura entrambe --base-da docs/confronto-l8.json --uscita docs/confronto-l8-prompt-corretto.md
+```
+
+| Configurazione | Prompt di riscrittura | Fonte nei primi 5 | MRR | Copertura composte | Astensioni corrette | Chiamate LLM | Latenza media | Ripieghi |
+|---|---|---|---|---|---|---|---|---|
+| base | — | 11/11 | 0,886 | 5/6 | 0/3 | 0 | 0,6 s | 0 |
+| riscrittura | originale | 11/11 | 0,836 | 6/6 | 0/3 | 14 | 28,0 s | 0 |
+| riscrittura | **corretto** | **10/11** | 0,864 | 6/6 | 0/3 | 14 | 20,9 s | 0 |
+| entrambe | originale | 11/11 | 0,909 | 6/6 | 0/3 | 28 | 44,4 s | 0 |
+| entrambe | **corretto** | 11/11 | 0,894 | **4/6** | 0/3 | 28 | 34,9 s | 2 (id duplicati) |
+| reranking | — | 11/11 | 1,000 | 6/6 | 0/3 | 14 | 36,8 s | 1 (id duplicati) |
+
+Casi rispetto a base con il prompt corretto (`docs/confronto-l8-prompt-corretto.md`):
+- **riscrittura** — migliorato: brodo + baccalà (parti 1/2 → 2/2); peggiorato: «Per quanto tempo si
+  deve cuocere il baccalà?» (510 dalla 4ª posizione a **fuori dai primi 5**). I due peggioramenti
+  del prompt originale (pollo 1 → 5, cappelletti 1 → 2) **non ci sono più**: il pollo torna 1°.
+- **entrambe** — migliorati: baccalà (4 → 3), brodo + baccalà (1/2 → 2/2); peggiorati: le composte
+  gnocchi + pollo e cacciucco + cappelletti (parti 2/2 → 1/2): il reranking ha tenuto un solo lato.
+
+Domande che peggiorano rispetto a base con il prompt corretto, con ciò che è **osservato** nei file
+(`docs/confronto-l8-prompt-corretto.json`) e ciò che **non è verificato**:
+
+| Configurazione | Domanda | Variazione | Osservato | Causa |
+|---|---|---|---|---|
+| riscrittura | Per quanto tempo si deve cuocere il baccalà? | 510 dalla 4ª posizione a fuori dai primi 5 | query usate: originale + «baccalà tempo cottura», «cuocere baccalà quantità», «tempo cottura pesce salato»; primi 5: 118.1, 511.0, 506.2, 118.0, 512.0 | **non verificata**: si vede che la fusione premia altre ricette di baccalà, non perché la 510 scenda (non sono registrati i ranghi della 510 nelle singole liste) |
+| entrambe | Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora? | parti 2/2 → 1/2 | query giuste per le due parti («farina gnocchi quantità», «vino pollo alla cacciatora»); con la sola riscrittura, stesse query, la 208.0 è **1ª** nella lista fusa; il reranking restituisce 89.0, 14.0, 231.1 (più un id duplicato scartato) | il **reranking scarta la 208.0**: osservato (dedotto dalle stesse query, perché la lista mandata al reranking non è salvata); **perché** la scarti non è verificato |
+| entrambe | Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto? | parti 2/2 → 1/2 | con la sola riscrittura (stesse query) la 455.0 è 1ª nella lista fusa; il reranking restituisce 7.2, 349.1 | come sopra: il reranking scarta la 455.0, motivo non verificato |
+
+Si osserva anche che gemma ora copia **gli esempi del nuovo prompt** («piatti, ingredienti,
+quantità, tempi») nelle query («ingredienti tiramisù», «quantità sushi», «cuocere baccalà quantità»):
+è un fatto (sono nelle query usate); che sia la causa del peggioramento del baccalà è un'ipotesi non
+verificata. Latenza più bassa (21 s e 35 s per domanda contro 28 s e 44 s).
+
+### Indicazione pratica
+- **Configurazione attiva: `base`** (nessuna `MODALITA_RICERCA` nel `.env` = `base`, come in
+  `.env.example`): nessuna chiamata all'LLM, 0,6 s medi per ricerca.
+- **Scelta consigliata: `reranking`**, da attivare con `MODALITA_RICERCA=reranking`: MRR 1,000 contro
+  0,886, tutte le composte coperte (6/6 contro 5/6), nessun peggioramento rispetto a base, 1 ripiego
+  su 14 chiamate. **Costo misurato**: 1 chiamata a gemma per ricerca, latenza media **36,8 s** (max
+  41,3 s) contro **0,6 s** di base, cioè circa 36 s in più per ogni ricerca dell'agente, i cui turni
+  durano già 2-5 minuti su questo computer. Non si astiene da solo (0/3): le astensioni restano alle
+  soglie e al modello. La riscrittura, con qualunque dei due prompt,
+sposta i problemi invece di risolverli con un modello da 2B: il prompt va riscritto senza elenchi di
+esempi che il modello possa copiare, e va riprovato con questo stesso comando.
+
+## Esercizio 4 — soglie di confidenza
+
+### Dove si applicano
+Sul **coseno migliore** del passaggio fra le query usate, **dopo la fusione RRF e prima del
+reranking** (specifica es. 4): lo score RRF dipende solo dai ranghi (1/(60+r)), non dalla
+somiglianza, e il reranking non deve vedere passaggi esclusi. In `base` le soglie filtrano i k
+risultati di Qdrant.
+
+### Calibrazione (score reali)
+Comando: `.\.venv\Scripts\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --timeout-query 180 --uscita docs/calibrazione-l8.md`.
+Rapporto: `docs/calibrazione-l8.md` (+ `.json`). Gli score sono misurati in due modi (richiesta
+dell'utente): con la **domanda intera** e con la **query che gemma passa a `search_documents`**
+(tool calling con descrizione e schema del tool).
+
+| Gruppo | Domanda intera (min · mediana · max) | Query del modello (min · mediana · max) |
+|---|---|---|
+| Con risposta: top-1 | 0,715 · 0,766 · 0,821 | 0,734 · 0,766 · 0,823 |
+| Con risposta: score della fonte attesa | 0,715 · 0,754 · 0,817 | 0,734 · 0,766 · 0,821 |
+| Senza risposta: top-1 | 0,695 · 0,706 · 0,728 | 0,548 · 0,673 · 0,691 |
+
+Per domanda (prima calibrazione, `docs/calibrazione-l8.json`; con le query rifatte a 180 s):
+
+| Domanda | Tipo | Top-1 domanda intera | Fonte attesa (pos) | Query del modello | Top-1 query del modello | Fonte attesa (pos) |
+|---|---|---|---|---|---|---|
+| Quanta farina serve per 400 grammi di patate negli gnocchi? | semplice | 0,773 | 0,773 (1) | «farina per gnocchi patate artusi» | 0,795 | 0,795 (1) |
+| Che vino si usa per il pollo alla cacciatora? | semplice | 0,749 | 0,749 (1) | «vino per pollo alla cacciatora» | 0,764 | 0,764 (1) |
+| Come si chiama il cacciucco sulle coste dell'Adriatico? | semplice | 0,774 | 0,774 (1) | «cacciucco sulle coste dell'Adriatico» | 0,745 | 0,745 (1) |
+| Qual è la ricetta del tiramisù? | senza risposta | 0,706 | — | «tiramisù» | 0,548 | — |
+| Quanti cappelletti bastano a un mangiatore moderato? | semplice | 0,745 | 0,745 (1) | _il modello non ha chiamato la ricerca_ | — | — |
+| Perché gli gnocchi possono sciogliersi nell'acqua? | semplice | 0,720 | 0,720 (1) | _il modello non ha chiamato la ricerca_ | — | — |
+| Per quanto tempo si deve cuocere il baccalà? | semplice | 0,766 | 0,754 (4) | «tempo cottura baccalà» | 0,734 | 0,734 (1) |
+| Con che cosa si insaporisce il brodo? | semplice | 0,768 | 0,768 (1) | «insaporire il brodo» | 0,740 | 0,740 (1) |
+| Come si fa un dolce di mandorle e zucchero? | semplice | 0,821 | 0,817 (2) | «dolce di mandorle e zucchero» | 0,823 | 0,821 (2) |
+| Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora? | composta | 0,737 | 0,737 (1) | «farina per gli gnocchi di patate» | 0,800 | 0,800 (1) |
+| Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà? | composta | 0,766 | 0,766 (1) | «come insaporire il brodo e tempo di cottura del baccalà» | 0,768 | 0,768 (1) |
+| Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto? | composta | 0,715 | 0,715 (1) | _il modello non ha chiamato la ricerca_ | — | — |
+| Qual è la ricetta della carbonara? | senza risposta | 0,728 | — | «ricetta della carbonara» | 0,673 | — |
+| Come si prepara il sushi? | senza risposta | 0,695 | — | «come si prepara il sushi» | 0,691 | — |
+
+- Con la domanda intera gli intervalli **si sovrappongono** (carbonara 0,728 sopra due domande con
+  risposta, 0,715 e 0,720): nessuna soglia separa.
+- Con la query del modello sono **separati** (0,691 sushi contro 0,734 baccalà): il modello accorcia
+  le domande senza risposta a poche parole («tiramisù» 0,548; «ricetta della carbonara» 0,673).
+- La query del modello c'è per **11 domande su 14**: per tre domande gemma ha risposto senza
+  chiamare la ricerca (gnocchi che si sciolgono; cappelletti; cacciucco + cappelletti). Le ultime
+  due erano andate in timeout a 60 s; rifatte con `--aggiorna-query … --timeout-query 180` non sono
+  andate in timeout ma il modello non ha chiamato la ricerca.
+- Con le soglie di partenza 0,6/0,3 nessun effetto: 70 passaggi su 70 «affidabile» con la domanda
+  intera, 0 astensioni.
+
+### Valori proposti: `SOGLIA_ALTA=0.73`, `SOGLIA_BASSA=0.70`
+Approvati dall'utente il 2026-11-18 a condizione che reggano anche dopo la correzione del prompt di
+riscrittura (verifica più sotto).
+Effetto calcolato sugli score registrati (in `base` le soglie sono un filtro su quegli score):
+
+| Soglie (alta/bassa) | Formulazione | Astensioni corrette | Astensioni errate | Fonti perse | Fonte in fascia «media» |
+|---|---|---|---|---|---|
+| **0,73 / 0,70** | domanda intera | 1/3 (sushi) | 0 | 0 | 2 |
+| **0,73 / 0,70** | query del modello | **3/3** | 0 | 0 | 0 |
+| 0,73 / 0,68 | query del modello | 2/3 | 0 | 0 | 0 |
+| 0,75 / 0,72 | domanda intera | 2/3 | **1** | **1** | 4 |
+
+- **Bassa 0,70**: sotto la fonte attesa più bassa misurata (0,715 / 0,734), quindi non perde
+  risposte; sopra il top-1 di tutte le domande senza risposta formulate dal modello (max 0,691).
+- **Alta 0,73**: sopra il top-1 più alto delle domande senza risposta in entrambe le formulazioni
+  (0,728): un passaggio di una domanda senza risposta non è mai «affidabile».
+
+### Verifica dopo la correzione del prompt di riscrittura: le soglie reggono
+Calibrazione rilanciata con le soglie proposte e il prompt corretto (`docs/calibrazione-l8-verifica.md`):
+
+```
+.\.venv\Scripts\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --alta 0.73 --bassa 0.70 --configurazioni base entrambe --timeout-query 180 --uscita docs/calibrazione-l8-verifica.md
+```
+
+| Variante | Fonte nei primi 5 | Astensioni corrette | Astensioni errate | Fasce restituite |
+|---|---|---|---|---|
+| base senza soglie | 11/11 | 0/3 | 0 | non valutata 70 |
+| base con soglie | 11/11 | 1/3 (sushi) | 0 | affidabile 32, media 24 |
+| entrambe senza soglie | 11/11 | 0/3 | 0 | non valutata 31 |
+| entrambe con soglie (nuove query) | 11/11 | 1/3 (sushi) | 0 | affidabile 16, media 9 |
+| base, query del modello, senza soglie | 11/11 | 0/3 | 0 | non valutata 70 |
+| base, query del modello, con soglie | 11/11 | 2/3 (tiramisù, sushi)² | 0 | affidabile 28, media 22 |
+
+Criteri di tenuta, tutti rispettati: **nessuna fonte persa** (11/11 con e senza soglie in ogni
+variante), **nessuna astensione errata**, **nessun passaggio di una domanda senza risposta in fascia
+«affidabile»** (tiramisù 0,704-0,706 e carbonara 0,702-0,728 restano in «media», cioè «da
+verificare»). In `entrambe` le soglie agiscono sul coseno migliore fra le query, e la domanda
+originale è sempre fra le query: per questo i suoi score contano come quelli della domanda intera.
+² **Il 2/3 è su 3 domande senza risposta, ma solo una ha davvero la query del modello.** In questa
+esecuzione le chiamate di tool calling per carbonara e sushi sono andate in timeout anche a 180 s
+(la causa può essere il carico di LM Studio, non è stata verificata); per loro la variante usa la
+domanda intera:
+
+| Domanda senza risposta | Query usata in questa variante | Top-1 | Astenuta |
+|---|---|---|---|
+| Qual è la ricetta del tiramisù? | «tiramisù» (query del modello) | 0,548 | sì |
+| Qual è la ricetta della carbonara? | domanda intera (timeout) | 0,728 | no |
+| Come si prepara il sushi? | domanda intera (timeout) | 0,695 | sì |
+
+Nella prima calibrazione tutte e tre avevano la query del modello («tiramisù» 0,548, «ricetta della
+carbonara» 0,673, «come si prepara il sushi» 0,691): con 0,73/0,70 si asterrebbero tutte e tre
+(3/3). Quel 3/3 è **calcolato** applicando le soglie agli score registrati (in `base` le soglie sono
+un filtro su quegli score), non eseguito con le soglie attive; quella esecuzione aveva le soglie di
+partenza 0,6/0,3. Le soglie 0,73/0,70 sono state fissate come default (`.env.example`,
+`rag/config.py`, commit `70a5276`).
+
+### Limiti (da leggere prima di usare le soglie)
+- **Pochi dati**: calibrate su **14 domande**, e solo **11 su 14** hanno la query del modello: per
+  «Quanti cappelletti bastano a un mangiatore moderato?», «Perché gli gnocchi possono sciogliersi
+  nell'acqua?» e la composta «cacciucco + cappelletti» gemma **non ha chiamato la ricerca** nella
+  chiamata di calibrazione (per cappelletti e composta la prima chiamata era andata in timeout a 60 s;
+  rifatte con 180 s non sono andate in timeout, ma gemma non ha chiamato la ricerca). Nella verifica
+  anche carbonara e sushi sono andate in timeout a 180 s: i timeout **possono dipendere dal carico di
+  LM Studio**: la causa non è stata verificata.
+- **Margine stretto**: fra il top-1 più alto delle domande senza risposta formulate dal modello
+  (0,691, sushi) e la soglia bassa (0,70) ci sono **0,009**; fra la soglia bassa e la fonte attesa
+  più bassa ci sono 0,015 (0,715, domanda intera).
+- **Valide solo con query brevi del modello**: con la domanda intera non separano (tiramisù 0,706 e
+  carbonara 0,728 restano sopra la soglia bassa, in fascia «media»).
+- **Fascia «media» non riportata dall'agente**: nelle tracce, 0 risposte su 2 basate su passaggi
+  «media» hanno scritto «da verificare» (gnocchi che si sciolgono, due esecuzioni). Il **campione è
+  minimo** (2 esecuzioni di una sola domanda): basta per dire che la regola non è affidabile con
+  gemma-4-e2b, non per misurarne la frequenza.
+- **Da ricalibrare** se cambia il modello di embedding o il modello chat (stesso comando, poi
+  `--alta/--bassa` per provare valori candidati).
+- **`non_valutata`**: con `SOGLIE_ATTIVE=false` i passaggi hanno `fascia: "non_valutata"`, che la
+  regola 5 del prompt dell'agente non spiega (nomina solo «affidabile» e «media»). Non corretto per
+  non cambiare il prompt durante le tracce; con le soglie attive (default) il caso non si presenta.
+- Le note delle soglie scrivono i valori con il punto («0.70»), non con la virgola.
+
+### Tracce dell'agente con le soglie (3 casi)
+Comando (da `lezione 4/assistente-laboratorio`):
+`$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --serie soglie --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es4-tracce"`.
+Soglie 0,73/0,70, modalità `base`, prompt con la regola 5. Tracce: `docs/prove/l8-es4-tracce/`.
+
+| Caso | Domanda | Query del modello → passaggi (score, fascia) | Risposta | Citazioni verificate / sconosciute | Esito | Durata |
+|---|---|---|---|---|---|---|
+| affidabile | Che vino si usa per il pollo alla cacciatora? | «vino per pollo alla cacciatora» → 208.0 (0,764 affidabile), 539.0, 727.1, 545.0 (0,701-0,704 media); 1 escluso | «Si può usare mezzo bicchiere di San Giovese o altro vino rosso del migliore.» | — / — | **non atteso**: nessuna citazione | 213 s |
+| da verificare | Perché gli gnocchi possono sciogliersi nell'acqua? | «perché gli gnocchi si sciolgono nell'acqua» → 89.1 (0,725), 89.0, 230.0, 470.1, 90.0 (0,704-0,711), tutti media | «… erano stati intrisi con poca farina e appena furono nell'acqua bollente, si liquefecero [89.1].» | 89.1 / — | **non atteso**: manca «da verificare» | 200 s |
+| senza risposta | Qual è la ricetta del tiramisù? | «tiramisù» → nessun passaggio (5 esclusi), nota «nessun passaggio sopra la soglia minima» | «Nel libro non ho trovato la ricetta del tiramisù.» | — / — | atteso | 182 s |
+
+La parte del server ha fatto esattamente ciò che la specifica chiede in tutti e tre i casi (fasce
+giuste, esclusi non inviati, lista vuota dichiarata). I due scostamenti sono del **modello**: la
+risposta del pollo è corretta e viene dal passaggio 208.0, ma non lo cita (regola 2); la risposta
+sugli gnocchi è corretta e citata, ma non segnala la fascia «media» (regola 5).
+
+**Ripetizione dei due casi non attesi** (stesso comando con `--casi affidabile da_verificare`,
+tracce in `docs/prove/l8-es4-tracce-ripetizione/`): il modello dell'agente non gira a temperatura 0,
+quindi un esito isolato va ripetuto prima di trarre conclusioni.
+
+| Caso | Query del modello → passaggi (score, fascia) | Risposta | Citazioni verificate / sconosciute | Esito | Durata |
+|---|---|---|---|---|---|
+| affidabile | «pollo alla cacciatora vino» → 208.0 (0,768 affidabile), 539.0, 258.1, 545.0, 268.0 (0,709-0,717 media) | «… mezzo bicchiere di San Giovese o altro vino rosso del migliore, insieme a sugo di pomodoro [208.0].» | 208.0 / — | **atteso** | 202 s |
+| da verificare | «perché gli gnocchi possono sciogliersi nell'acqua» → 89.1 (0,713), 90.0, 489.0 (0,703-0,711), tutti media; 2 esclusi | «… intrisi con poca farina e appena furono nell'acqua bollente si liquefecero [89.1].» | 89.1 / — | **non atteso**: manca «da verificare» | 169 s |
+
+Conclusioni sulle 3 + 2 esecuzioni:
+- **Citazioni**: 1 risposta su 4 con passaggi (pollo, prima esecuzione) non ha citato; nessuna
+  citazione sconosciuta in nessuna traccia (4 dell'es. 2 + 5 dell'es. 4).
+- **Astensione** con lista vuota: rispettata (tiramisù, nessuna citazione).
+- **Fascia «media» → «da verificare»**: **0 su 2**. gemma-4-e2b non applica la regola 5 del prompt:
+  la fascia arriva nel risultato del tool ma il modello non la riporta. È un limite misurato del
+  modello piccolo con questa formulazione del prompt, non del server; possibili interventi (non
+  fatti, fuori dalla specifica approvata): riformulare la regola 5 con un esempio di frase, oppure
+  un controllo nell'host analogo a quello delle citazioni che registri le risposte basate solo su
+  passaggi «media» senza l'avviso.
+
+## Come si lancia tutto da zero
+Da `lezione 6/rag-artusi` (PowerShell):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt     # una volta
+Copy-Item .env.example .env                                        # poi adattare
+.\.venv\Scripts\python.exe -m pytest -q                            # test offline (nessun servizio)
+docker compose up -d                                               # Qdrant
+.\.venv\Scripts\python.exe -m rag.ingestion                        # se la collezione non c'è (dati/artusi.txt)
+.\.venv\Scripts\python.exe -m rag.cliente_mcp "Che vino si usa per il pollo alla cacciatora?" --top-k 3
+.\.venv\Scripts\python.exe -m rag.confronto --domande eval/domande_l8.yaml --k 5 --uscita docs/confronto-l8.md
+.\.venv\Scripts\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --timeout-query 180 --uscita docs/calibrazione-l8.md
+```
+
+Da `lezione 4/assistente-laboratorio`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q                            # test offline
+Copy-Item server_mcp.example.json server_mcp.json                  # e nel .env: SERVER_MCP_FILE, AMBITO_RICERCA
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente  # CLI con la ricerca
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es2-tracce"
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --serie soglie --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es4-tracce"
+```
+
+## Criterio di completamento: cosa è provato
+- **Ogni citazione si ricollega a un passaggio ricevuto nel turno**: nelle 9 tracce reali (4
+  dell'es. 2, 3 + 2 ripetizioni dell'es. 4) il controllo nell'host non ha trovato **nessuna citazione
+  sconosciuta**; in 1 risposta su 4 basate su passaggi il modello non ha citato affatto (pollo, prima
+  esecuzione dell'es. 4).
+- **Una domanda senza risposta non produce informazioni inventate**: **provato a livello di agente
+  solo sul tiramisù**, in 2 tracce (es. 2 senza soglie: «Non ho trovato la ricetta del tiramisù nei
+  documenti disponibili.»; es. 4 con soglie, lista vuota: «Nel libro non ho trovato la ricetta del
+  tiramisù.»), entrambe senza citazioni. **Carbonara e sushi sono verificati solo a livello di
+  retrieval** (confronto e calibrazione: quali passaggi tornano, con quali score, se la lista è
+  vuota con le soglie), non con l'agente: non ci sono tracce dell'agente su queste due domande.
+- **Quale configurazione funziona meglio, a quale costo**: reranking (sopra, «Indicazione pratica»).
+- **Perché le soglie hanno quei valori**: sezione «Valori proposti» e «Limiti» dell'es. 4.
+
+## Verifica finale
+- **Test offline**: `rag-artusi` 333 passati, `assistente-laboratorio` 542 passati (31 prove reali
+  e PostgreSQL deselezionate), eseguiti con un plugin pytest che blocca le connessioni alle porte
+  1234 (LM Studio) e 6333 (Qdrant): **0 tentativi di connessione**.
+- **Git**: `.env` (entrambi i progetti), `dati/`, `logs/` e `server_mcp.json` sono ignorati
+  (`git check-ignore`); i commit del branch `feat/rag-agente` sono tutti Conventional Commits.
+- **Revisione indipendente** del branch contro i criteri di accettazione, fatta da un **sub-agente
+  automatico** (un'altra istanza di Claude, senza il contesto della conversazione, in sola lettura;
+  non una revisione umana): tutti `ok` tranne le
+  tracce dell'es. 4 (allora non finite) e i difetti poi corretti (`95b78c4`, `a0007bb`, `fa3d2d2`):
+  nota del reranking duplicata quando le soglie escludono tutto, citazione inventata nascosta in una
+  parentesi mista, `args` non lista accettato, ricerca attiva per default in `.env.example`, errore
+  del servizio LLM loggato come warning a ogni chiamata.

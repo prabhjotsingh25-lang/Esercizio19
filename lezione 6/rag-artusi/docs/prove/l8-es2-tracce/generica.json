@@ -1,0 +1,24 @@
+{
+  "caso": "generica",
+  "domanda": "Ciao! Cosa sai fare?",
+  "atteso": "nessuno strumento",
+  "esito": "atteso",
+  "scostamenti": [],
+  "durata_s": 116.1,
+  "strumenti": [],
+  "risposta": "Sono un assistente di laboratorio. Posso aiutarti con diverse attività basate sulle mie capacità e strumenti, come ad esempio:\n\n*   Cercare informazioni in documenti specifici (come ricette).\n*   Eseguire calcoli matematici.\n*   Convertire unità di misura.\n*   Verificare la data e l'ora corrente o calcolare giorni.\n*   Consultare un inventario di materiali del laboratorio.\n*   Gestire note personali.\n\nCome posso esserti utile oggi?",
+  "citazioni": {
+    "verificate": [],
+    "sconosciute": [],
+    "ricerche": 0,
+    "passaggi_ricevuti": 0
+  },
+  "log_agente": [
+    "INFO assistente.grafo riassunto: 1 messaggi, sotto la soglia di 20: nessuna chiamata",
+    "INFO assistente.grafo router categoria=conversazione motivo=La domanda è un saluto e una richiesta di informazioni sulle capacità dell'assistente, rientrando nell'ambito delle domande che proseguono la conversazione. -> agente",
+    "INFO assistente.grafo agente: chiamata al modello con 2 messaggi",
+    "INFO assistente.grafo revisore coerente=sì motivo=La risposta proposta risponde direttamente alla domanda dell'utente elencando le capacità dell'assistente in modo chiaro e strutturato. -> fine",
+    "INFO assistente.agente citazioni verificate=- sconosciute=- ricerche=0 passaggi_ricevuti=0"
+  ],
+  "log_server_ricerca": []
+}

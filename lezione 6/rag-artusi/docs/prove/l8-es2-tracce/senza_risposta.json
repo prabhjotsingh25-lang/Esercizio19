@@ -1,0 +1,90 @@
+{
+  "caso": "senza_risposta",
+  "domanda": "Qual è la ricetta del tiramisù?",
+  "atteso": "ricerca chiamata, astensione, nessuna citazione",
+  "esito": "atteso",
+  "scostamenti": [],
+  "durata_s": 215.0,
+  "strumenti": [
+    {
+      "nome": "search_documents",
+      "argomenti": {
+        "query": "tiramisù"
+      },
+      "risultato": {
+        "modalita": "base",
+        "query_usate": [
+          "tiramisù"
+        ],
+        "passaggi": [
+          {
+            "id": "575.1",
+            "ricetta": 575,
+            "titolo": "Brioches",
+            "capitolo": "Pasticceria",
+            "posizione_chunk": 1,
+            "score": 0.548,
+            "testo": "lievitato disfatelo alquanto e con esso riempite a metà una ventina di stampini di latta rigati, che avanti avrete unti con burro liquido o lardo e spolverizzati con farina mista a zucchero a velo. Rimetteteli a lievitare, poi dorateli e cuoceteli al forno o al forno da campagna."
+          },
+          {
+            "id": "560.0",
+            "ricetta": 560,
+            "titolo": "Presnitz",
+            "capitolo": "Pasticceria",
+            "posizione_chunk": 0,
+            "score": 0.528,
+            "testo": "Eccovi un altro dolce di tedescheria e come buono! Ne vidi uno che era fattura della prima pasticceria di Trieste, lo assaggiai e mi piacque. Chiestane la ricetta la misi alla prova e riuscì perfettamente; quindi, mentre ve lo descrivo, mi dichiaro gratissimo alla gentilezza di chi mi fece questo favore. Uva sultanina, grammi 160. Zucchero, grammi 130. Noci sgusciate, grammi 130. Focaccia rafferma, grammi 110. Mandorle dolci sbucciate, grammi 60. Pinoli, grammi 60. Cedro candito, grammi 35. Arancio candito, grammi 35. Spezie composte di cannella, garofani e macis, grammi 5. Sale, grammi 2. Cipro, decilitri 1. Rhum, decilitri 1. L'uva sultanina, dopo averla nettata, mettetela in infusione nel cipro e nel rum mescolati insieme; lasciatela così diverse ore e levatela quando comincia a gonfia…"
+          },
+          {
+            "id": "261.0",
+            "ricetta": 261,
+            "titolo": "Braciuola di manzo ripiena in umido",
+            "capitolo": "Umidi",
+            "posizione_chunk": 0,
+            "score": 0.526,
+            "testo": "La braciuola di manzo ripiena arrosto del N. 537 potete cuocerla anche in umido col burro tirandola a cottura con acqua e sugo di pomodoro e servirla con un contorno qualunque."
+          },
+          {
+            "id": "182.0",
+            "ricetta": 182,
+            "titolo": "Krapfen I",
+            "capitolo": "Fritti",
+            "posizione_chunk": 0,
+            "score": 0.525,
+            "testo": "Proviamoci di descrivere il piatto che porta questo nome di tedescheria ed andiamo pure in cerca del buono e del bello in qualunque luogo si trovino; ma per decoro di noi stessi e della patria nostra non imitiamo mai ciecamente le altre nazioni per solo spirito di stranieromania. Farina d'Ungheria, grammi 150. Burro, grammi 40. Lievito di birra, quanto una grossa noce. Uova, uno intero e un rosso. Zucchero, un cucchiaino. Sale, una buona presa."
+          },
+          {
+            "id": "256.2",
+            "ricetta": 256,
+            "titolo": "Fricassea",
+            "capitolo": "Umidi",
+            "posizione_chunk": 2,
+            "score": 0.523,
+            "testo": "se no, un pizzico di funghi secchi. Quando siete per mandarla in tavola ritirate la cazzaruola dal fuoco e versateci a poco per volta, mescolando, i rossi d'uovo frullati coll'agro di limone. Se la fricassea fosse di pollo, tagliatelo a pezzi nelle giunture, escludendo la testa, il collo e le zampe; pel resto regolatevi nello stesso modo. La fricassea fatta in questa maniera è un piatto sano e delicato che piace specialmente a chi non ha il gusto viziato a sapori forti e piccanti."
+          }
+        ],
+        "nota": ""
+      }
+    }
+  ],
+  "risposta": "Non ho trovato la ricetta del tiramisù nei documenti disponibili.",
+  "citazioni": {
+    "verificate": [],
+    "sconosciute": [],
+    "ricerche": 1,
+    "passaggi_ricevuti": 5
+  },
+  "log_agente": [
+    "INFO assistente.grafo riassunto: 1 messaggi, sotto la soglia di 20: nessuna chiamata",
+    "INFO assistente.grafo router categoria=conversazione motivo=La richiesta riguarda una ricetta culinaria, rientrando nell'ambito delle conoscenze specifiche del libro di Pellegrino Artusi. -> agente",
+    "INFO assistente.grafo agente: chiamata al modello con 2 messaggi",
+    "INFO assistente.grafo strumento passaggio=1 nome=search_documents argomenti={'query': 'tiramisù'} risultato={\"modalita\":\"base\",\"query_usate\":[\"tiramisù\"],\"passaggi\":[{\"id\":\"575.1\",\"ricetta\":575,\"titolo\":\"Brioches\",\"capitolo\":\"Pasticceria\",\"posizione_chunk\":1,\"score\":0.548,\"testo\":\"lievitato disfatelo alquanto e con esso riempite a metà una ventina di stampini di latta rigati, che avanti avrete unti con burro liquido o lardo e spolverizzati con farina mista a zucchero a velo. Rimetteteli a lievitare, poi dorateli e cuoceteli al forno o al forno da campagna.\"},{\"id\":\"560.0\",\"ricetta\":560,\"titolo\":\"Presnitz\",\"capitolo\":\"Pasticceria\",\"posizione_chunk\":0,\"score\":0.528,\"testo\":\"Eccovi un altro dolce di tedescheria e come buono! Ne vidi uno che era fattura della prima pasticceria di Trieste, lo assaggiai e mi piacque. Chiestane la ricetta la misi alla prova e riuscì perfettamente; quindi, mentre ve lo descrivo, mi dichiaro gratissimo alla gentilezza di chi mi fece questo favore. Uva sultanina, grammi 160. Zucchero, grammi 130. Noci sgusciate, grammi 130. Focaccia rafferma, grammi 110. Mandorle dolci sbucciate, grammi 60. Pinoli, grammi 60. Cedro candito, grammi 35. Arancio candito, grammi 35. Spezie composte di cannella, garofani e macis, grammi 5. Sale, grammi 2. Cipro, decilitri 1. Rhum, decilitri 1. L'uva sultanina, dopo averla nettata, mettetela in infusione nel cipro e nel rum mescolati insieme; lasciatela così diverse ore e levatela quando comincia a gonfia…\"},{\"id\":\"261.0\",\"ricetta\":261,\"titolo\":\"Braciuola di manzo ripiena in umido\",\"capitolo\":\"Umidi\",\"posizione_chunk\":0,\"score\":0.526,\"testo\":\"La braciuola di manzo ripiena arrosto del N. 537 potete cuocerla anche in umido col burro tirandola a cottura con acqua e sugo di pomodoro e servirla con un contorno qualunque.\"},{\"id\":\"182.0\",\"ricetta\":182,\"titolo\":\"Krapfen I\",\"capitolo\":\"Fritti\",\"posizione_chunk\":0,\"score\":0.525,\"testo\":\"Proviamoci di descrivere il piatto che porta questo nome di tedescheria ed andiamo pure in cerca del buono e del bello in qualunque luogo si trovino; ma per decoro di noi stessi e della patria nostra non imitiamo mai ciecamente le altre nazioni per solo spirito di stranieromania. Farina d'Ungheria, grammi 150. Burro, grammi 40. Lievito di birra, quanto una grossa noce. Uova, uno intero e un rosso. Zucchero, un cucchiaino. Sale, una buona presa.\"},{\"id\":\"256.2\",\"ricetta\":256,\"titolo\":\"Fricassea\",\"capitolo\":\"Umidi\",\"posizione_chunk\":2,\"score\":0.523,\"testo\":\"se no, un pizzico di funghi secchi. Quando siete per mandarla in tavola ritirate la cazzaruola dal fuoco e versateci a poco per volta, mescolando, i rossi d'uovo frullati coll'agro di limone. Se la fricassea fosse di pollo, tagliatelo a pezzi nelle giunture, escludendo la testa, il collo e le zampe; pel resto regolatevi nello stesso modo. La fricassea fatta in questa maniera è un piatto sano e delicato che piace specialmente a chi non ha il gusto viziato a sapori forti e piccanti.\"}],\"nota\":\"\"}",
+    "INFO assistente.grafo agente: chiamata al modello con 4 messaggi",
+    "INFO assistente.grafo revisore coerente=sì motivo=La ricerca non ha prodotto risultati pertinenti per la ricetta del tiramisù nei documenti forniti. -> fine",
+    "INFO assistente.agente citazioni verificate=- sconosciute=- ricerche=1 passaggi_ricevuti=5"
+  ],
+  "log_server_ricerca": [
+    "2026-11-18 10:15:53,590 INFO rag.server_mcp server di ricerca avviato (stdio) collezione=artusi top_k_max=10",
+    "2026-11-18 10:16:05,613 INFO rag.server_mcp ricerca esito=ok modalita=base query=\"tiramisù\" top_k=5 filtro=- passaggi=5 ids=575.1,560.0,261.0,182.0,256.2 nota=\"\" ms=9166"
+  ]
+}

@@ -3,6 +3,7 @@
 Il modulo non tiene stato: cronologia, riassunto e preferenze arrivano dal chiamante a ogni
 turno (la `Sessione` in-process li conserva, il servizio HTTP li riceve nella richiesta).
 """
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Literal
@@ -11,10 +12,14 @@ from uuid import uuid4
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from pydantic import BaseModel, ConfigDict
 
+from assistente.citazioni import ControlloCitazioni, controlla, riga_log
 from assistente.contesto import e_indicazione
 from assistente.grafo import limite_ricorsione
 from assistente.preferenze import Preferenze
-from assistente.prompt import FontePrompt, InfoPrompt, controlla
+from assistente.prompt import FontePrompt, InfoPrompt
+from assistente.prompt import controlla as controlla_prompt
+
+log = logging.getLogger("assistente.agente")
 
 
 @dataclass(frozen=True)
@@ -31,6 +36,7 @@ class EsitoTurno:
     messaggi: list[BaseMessage]  # cronologia completa dopo il turno (strumenti compresi)
     riassunto: str
     prompt: list[str] = field(default_factory=list)  # testi composti da un prompt, se usato
+    citazioni: ControlloCitazioni | None = None  # lezione 8: controllo a fine turno (solo osserva)
 
 
 class VoceCronologia(BaseModel):
@@ -90,9 +96,13 @@ class Agente:
              "riassunto": riassunto, "preferenze": preferenze}, config=self._config)
         messaggi = list(uscita["messages"])
         inizio = next(i + 1 for i, m in enumerate(messaggi) if m.id == nuovi[-1].id)
-        return EsitoTurno(risposta=str(messaggi[-1].content),
-                          strumenti=strumenti_usati(messaggi[inizio:]), messaggi=messaggi,
-                          riassunto=uscita.get("riassunto", ""))
+        risposta, strumenti = str(messaggi[-1].content), strumenti_usati(messaggi[inizio:])
+        # Controllo nell'host: ogni id citato deve venire da un passaggio ricevuto in questo turno.
+        # Osserva e registra, non corregge la risposta.
+        controllo = controlla(risposta, [s.risultato for s in strumenti])
+        (log.warning if controllo.sconosciute else log.info)(riga_log(controllo))
+        return EsitoTurno(risposta=risposta, strumenti=strumenti, messaggi=messaggi,
+                          riassunto=uscita.get("riassunto", ""), citazioni=controllo)
 
     def messaggio(self, testo: str, cronologia: list[BaseMessage], riassunto: str,
                   preferenze: Preferenze | None) -> EsitoTurno:
@@ -111,7 +121,7 @@ class Agente:
         Il contrassegno lo mettono solo le fonti dei prompt, dopo il controllo: chi chiama
         l'agente passa nome e argomenti, mai messaggi già composti.
         """
-        controlla(self.elenco_prompt(), nome, argomenti)
+        controlla_prompt(self.elenco_prompt(), nome, argomenti)
         nuovi = self._fonte.ottieni(nome, argomenti)
         esito = self.turno(nuovi, cronologia, riassunto, preferenze)
         esito.prompt = [str(m.content) for m in nuovi]
@@ -123,9 +133,7 @@ def grafo_da_configurazione(config):
 
     Usato dalla CLI in-process e dal servizio HTTP: stesso agente nei due modi.
     """
-    import logging
-
-    from assistente.grafo import costruisci_grafo
+    from assistente.grafo import REGOLE_PASSAGGI, costruisci_grafo
     from assistente.modello import crea_modello
     from assistente.revisore import crea_revisore
     from assistente.riassunto import crea_riassuntore
@@ -135,11 +143,16 @@ def grafo_da_configurazione(config):
     strumenti = strumenti_per_variante(config)
     logging.getLogger("assistente").info("variante strumenti: %s (%s)", config.variante,
                                          ", ".join(s.name for s in strumenti))
+    ambito, regole = config.ambito, ""
+    if config.server_mcp_file:  # lezione 8: ricerca come strumento MCP accanto agli altri
+        from assistente.server_esterni import strumenti_esterni
+        strumenti = [*strumenti, *strumenti_esterni(config.server_mcp_file, [s.name for s in strumenti])]
+        ambito, regole = f"{config.ambito} {config.ambito_ricerca}", REGOLE_PASSAGGI
     modello = crea_modello(config)
     return costruisci_grafo(modello, strumenti, config.max_passaggi,
-                            router=crea_router(modello, config.ambito),
+                            router=crea_router(modello, ambito),
                             revisore=crea_revisore(modello),
                             max_revisioni=config.max_revisioni,
                             riassuntore=crea_riassuntore(modello),
                             soglia_riassunto=config.soglia_riassunto,
-                            messaggi_recenti=config.messaggi_recenti)
+                            messaggi_recenti=config.messaggi_recenti, regole=regole)

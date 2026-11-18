@@ -1,0 +1,58 @@
+# Domande della lezione 8 (confronto delle modalità e calibrazione delle soglie).
+# Campi: domanda; tipo = semplice | composta | senza_risposta; attese = numeri delle ricette che
+# contengono la risposta (unione delle parti per le composte; [] = nessuna fonte);
+# parti (solo composte) = una lista di fonti per ogni parte della domanda;
+# Fonti delle domande nuove verificate dall'utente sul testo (Gutenberg 59047) il 2026-11-18.
+# Le prime 9 sono quelle della lezione 7 (eval/domande.yaml), fonti verificate il 2026-11-17.
+
+- domanda: Quanta farina serve per 400 grammi di patate negli gnocchi?
+  tipo: semplice
+  attese: [89]
+- domanda: Che vino si usa per il pollo alla cacciatora?
+  tipo: semplice
+  attese: [208]
+- domanda: Come si chiama il cacciucco sulle coste dell'Adriatico?
+  tipo: semplice
+  attese: [455, 456]
+- domanda: Qual è la ricetta del tiramisù?
+  tipo: senza_risposta
+  attese: []
+- domanda: Quanti cappelletti bastano a un mangiatore moderato?
+  tipo: semplice
+  attese: [7]
+- domanda: Perché gli gnocchi possono sciogliersi nell'acqua?
+  tipo: semplice
+  attese: [89]
+- domanda: Per quanto tempo si deve cuocere il baccalà?
+  tipo: semplice
+  attese: [510]
+- domanda: Con che cosa si insaporisce il brodo?
+  tipo: semplice
+  attese: [1]
+- domanda: Come si fa un dolce di mandorle e zucchero?
+  tipo: semplice
+  attese: [617, 785, 626, 620, 687]
+
+# --- nuove (lezione 8): composte ---
+- domanda: Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?
+  tipo: composta
+  parti: [[89], [208]]          # 89 «Farina di grano, grammi 150»; 208 «San Giovese od altro vino rosso»
+  attese: [89, 208]
+- domanda: Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?
+  tipo: composta
+  parti: [[1], [510]]           # 1 erbe aromatiche, sedano, carota; 510 «al primo bollore … già è cotto»
+  attese: [1, 510]
+- domanda: Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?
+  tipo: composta
+  parti: [[455, 456], [7]]      # 455 «brodetto»; 7 «due dozzine»
+  attese: [455, 456, 7]
+
+# --- nuove (lezione 8): senza risposta ---
+# «carbonara» e «sushi» non compaiono nel corpus (ricerca testuale del 2026-11-17);
+# Assenza di ricette equivalenti verificata dall'utente il 2026-11-18.
+- domanda: Qual è la ricetta della carbonara?
+  tipo: senza_risposta
+  attese: []
+- domanda: Come si prepara il sushi?
+  tipo: senza_risposta
+  attese: []

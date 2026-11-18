@@ -1,0 +1,99 @@
+{
+  "caso": "da_verificare",
+  "domanda": "Perché gli gnocchi possono sciogliersi nell'acqua?",
+  "atteso": "ricerca, passaggi di fascia media, risposta segnata «da verificare sulla fonte»",
+  "esito": "non atteso",
+  "scostamenti": [
+    "la risposta non dice «da verificare»"
+  ],
+  "durata_s": 200.4,
+  "strumenti": [
+    {
+      "nome": "search_documents",
+      "argomenti": {
+        "query": "perché gli gnocchi si sciolgono nell'acqua"
+      },
+      "risultato": {
+        "modalita": "base",
+        "query_usate": [
+          "perché gli gnocchi si sciolgono nell'acqua"
+        ],
+        "passaggi": [
+          {
+            "id": "89.1",
+            "ricetta": 89,
+            "titolo": "Gnocchi di patate",
+            "capitolo": "Minestre asciutte e di magro",
+            "posizione_chunk": 1,
+            "score": 0.725,
+            "fascia": "media",
+            "testo": "portati via. — Non inarchi le ciglia, signora — risposi io — chè lo strano fenomeno è naturale: quelli gnocchi erano stati intrisi con poca farina e appena furono nell'acqua bollente si liquefecero. — Cuocete le patate nell'acqua o, meglio, a vapore e, calde bollenti, spellatele e passatele per istaccio. Poi intridetele colla detta farina e lavorate alquanto l'impasto colle mani, tirandolo a cilindro sottile per poterlo tagliare a tocchetti lunghi tre centimetri circa. Spolverizzateli leggermente di farina e, prendendoli uno alla volta, scavateli col pollice sul rovescio di una grattugia. Metteteli a cuocere nell'acqua salata per dieci minuti, levateli asciutti e conditeli con cacio, burro e sugo di pomodoro, piacendovi. Se li volete più delicati cuoceteli nel latte e serviteli senza scol…"
+          },
+          {
+            "id": "89.0",
+            "ricetta": 89,
+            "titolo": "Gnocchi di patate",
+            "capitolo": "Minestre asciutte e di magro",
+            "posizione_chunk": 0,
+            "score": 0.711,
+            "fascia": "media",
+            "testo": "La famiglia de' gnocchi è numerosa. Vi ho già descritto gli gnocchi in brodo del N. 14: ora v'indicherò gli gnocchi di patate e di farina gialla per minestra e più avanti quelli di semolino e alla romana per tramesso o per contorno, e quelli di latte per dolce. Patate grosse e gialle, grammi 400. Farina di grano, grammi 150. Vi noto la proporzione della farina per intriderli, onde non avesse ad accadervi come ad una signora che, me presente, appena affondato il mestolo per muoverli nella pentola non trovò più nulla; gli gnocchi erano spariti. — O dov'erano andati? — mi domandò con premurosa curiosità un'altra signora, a cui per ridere raccontai il fatto, credendo forse che il folletto li avesse portati via. — Non inarchi le ciglia, signora — risposi io — chè lo strano fenomeno è naturale:…"
+          },
+          {
+            "id": "230.0",
+            "ricetta": 230,
+            "titolo": "Gnocchi di semolino",
+            "capitolo": "Tramessi",
+            "posizione_chunk": 0,
+            "score": 0.706,
+            "fascia": "media",
+            "testo": "Latte, decilitri 4. Semolino, grammi 120. Burro, grammi 50. Parmigiano grattato, grammi 40. Uova, N. 2. Sale, quanto basta. Cuocete il semolino nel latte e quando siete per ritirarlo dal fuoco salatelo e versatevi metà del burro e metà del parmigiano. Poi, quando è ancora ben caldo, aggiungete le uova e mescolate, indi versatelo sulla spianatoia, o sopra un vassoio, distendetelo alla grossezza di un dito e mezzo e lasciate che diacci per tagliarlo a mandorle. Eccovi gli gnocchi che collocherete uno sopra l'altro in bella mostra entro un vassoio proporzionato, intramezzandoli col resto del burro a pezzetti e spolverizzandoli, suolo per suolo, ma non alla superficie, col resto del parmigiano. Per ultimo, rosolateli al forno da campagna e serviteli caldi o soli o per contorno ad un piatto di…"
+          },
+          {
+            "id": "470.1",
+            "ricetta": 470,
+            "titolo": "Triglie di scoglio in gratella",
+            "capitolo": "Piatti di pesce",
+            "posizione_chunk": 1,
+            "score": 0.705,
+            "fascia": "media",
+            "testo": "servo che aveva rotto disavvedutamente un bicchiere di cristallo. Augusto, ai cui piedi cadde lo schiavo, invocando la sua intercessione, potè salvarlo a stento con un ingegnoso suo strattagemma. Le triglie grosse di scoglio, che raggiungevano il peso non mica di soli grammi 500 a 600, come dico più sopra, ma perfino di 4 a 6 libbre, erano stimate assai e pagate a prezzi altissimi, favolosi. La mollezza dei costumi e la golosità avendo nei Romani raffinato il senso del gusto, studiavansi di appagarlo con le vivande più delicate e perciò avevano inventata una certa salsa chiamata gareleo nella quale disfacevano e stemperavano la coratella di questo grosso pesce per intingervi la carne del medesimo."
+          },
+          {
+            "id": "90.0",
+            "ricetta": 90,
+            "titolo": "Gnocchi di farina gialla",
+            "capitolo": "Minestre asciutte e di magro",
+            "posizione_chunk": 0,
+            "score": 0.704,
+            "fascia": "media",
+            "testo": "Quando vi sentite una certa ripienezza prodotta da esuberanza di nutrizione, se ricorrete a una minestra di questi gnocchi potrete, per la loro leggerezza e poca sostanza, neutralizzarla; e più ancora se farete seguire ad essa un piatto di pesce di facile digestione. La farina, per quest'uso, è bene sia macinata grossa; se no è meglio ricorrere al semolino fine di granturco, che ora trovasi in commercio. Salate l'acqua e, quando bolle, versate colla mano sinistra la farina un po' per volta e col mestolo nella destra, mescolate continuamente. È necessario che questa farina bolla molto, e quando essa è ristretta in modo da reggere bene sul mestolo, gettatela, con un coltello da tavola, a tocchetti entro a un vassoio e ad ogni strato conditela con cacio, burro, sugo di pomodoro o conserva sc…"
+          }
+        ],
+        "nota": ""
+      }
+    }
+  ],
+  "risposta": "Gli gnocchi si liquefanno nell'acqua perché erano stati intrisi con poca farina e appena furono nell'acqua bollente, si liquefecero [89.1].",
+  "citazioni": {
+    "verificate": [
+      "89.1"
+    ],
+    "sconosciute": [],
+    "ricerche": 1,
+    "passaggi_ricevuti": 5
+  },
+  "log_agente": [
+    "INFO assistente.grafo riassunto: 1 messaggi, sotto la soglia di 20: nessuna chiamata",
+    "INFO assistente.grafo router categoria=conversazione motivo=La domanda riguarda la preparazione e le proprietà degli ingredienti culinari. -> agente",
+    "INFO assistente.grafo agente: chiamata al modello con 2 messaggi",
+    "INFO assistente.grafo strumento passaggio=1 nome=search_documents argomenti={'query': \"perché gli gnocchi si sciolgono nell'acqua\"} risultato={\"modalita\":\"base\",\"query_usate\":[\"perché gli gnocchi si sciolgono nell'acqua\"],\"passaggi\":[{\"id\":\"89.1\",\"ricetta\":89,\"titolo\":\"Gnocchi di patate\",\"capitolo\":\"Minestre asciutte e di magro\",\"posizione_chunk\":1,\"score\":0.725,\"fascia\":\"media\",\"testo\":\"portati via. — Non inarchi le ciglia, signora — risposi io — chè lo strano fenomeno è naturale: quelli gnocchi erano stati intrisi con poca farina e appena furono nell'acqua bollente si liquefecero. — Cuocete le patate nell'acqua o, meglio, a vapore e, calde bollenti, spellatele e passatele per istaccio. Poi intridetele colla detta farina e lavorate alquanto l'impasto colle mani, tirandolo a cilindro sottile per poterlo tagliare a tocchetti lunghi tre centimetri circa. Spolverizzateli leggermente di farina e, prendendoli uno alla volta, scavateli col pollice sul rovescio di una grattugia. Metteteli a cuocere nell'acqua salata per dieci minuti, levateli asciutti e conditeli con cacio, burro e sugo di pomodoro, piacendovi. Se li volete più delicati cuoceteli nel latte e serviteli senza scol…\"},{\"id\":\"89.0\",\"ricetta\":89,\"titolo\":\"Gnocchi di patate\",\"capitolo\":\"Minestre asciutte e di magro\",\"posizione_chunk\":0,\"score\":0.711,\"fascia\":\"media\",\"testo\":\"La famiglia de' gnocchi è numerosa. Vi ho già descritto gli gnocchi in brodo del N. 14: ora v'indicherò gli gnocchi di patate e di farina gialla per minestra e più avanti quelli di semolino e alla romana per tramesso o per contorno, e quelli di latte per dolce. Patate grosse e gialle, grammi 400. Farina di grano, grammi 150. Vi noto la proporzione della farina per intriderli, onde non avesse ad accadervi come ad una signora che, me presente, appena affondato il mestolo per muoverli nella pentola non trovò più nulla; gli gnocchi erano spariti. — O dov'erano andati? — mi domandò con premurosa curiosità un'altra signora, a cui per ridere raccontai il fatto, credendo forse che il folletto li avesse portati via. — Non inarchi le ciglia, signora — risposi io — chè lo strano fenomeno è naturale:…\"},{\"id\":\"230.0\",\"ricetta\":230,\"titolo\":\"Gnocchi di semolino\",\"capitolo\":\"Tramessi\",\"posizione_chunk\":0,\"score\":0.706,\"fascia\":\"media\",\"testo\":\"Latte, decilitri 4. Semolino, grammi 120. Burro, grammi 50. Parmigiano grattato, grammi 40. Uova, N. 2. Sale, quanto basta. Cuocete il semolino nel latte e quando siete per ritirarlo dal fuoco salatelo e versatevi metà del burro e metà del parmigiano. Poi, quando è ancora ben caldo, aggiungete le uova e mescolate, indi versatelo sulla spianatoia, o sopra un vassoio, distendetelo alla grossezza di un dito e mezzo e lasciate che diacci per tagliarlo a mandorle. Eccovi gli gnocchi che collocherete uno sopra l'altro in bella mostra entro un vassoio proporzionato, intramezzandoli col resto del burro a pezzetti e spolverizzandoli, suolo per suolo, ma non alla superficie, col resto del parmigiano. Per ultimo, rosolateli al forno da campagna e serviteli caldi o soli o per contorno ad un piatto di…\"},{\"id\":\"470.1\",\"ricetta\":470,\"titolo\":\"Triglie di scoglio in gratella\",\"capitolo\":\"Piatti di pesce\",\"posizione_chunk\":1,\"score\":0.705,\"fascia\":\"media\",\"testo\":\"servo che aveva rotto disavvedutamente un bicchiere di cristallo. Augusto, ai cui piedi cadde lo schiavo, invocando la sua intercessione, potè salvarlo a stento con un ingegnoso suo strattagemma. Le triglie grosse di scoglio, che raggiungevano il peso non mica di soli grammi 500 a 600, come dico più sopra, ma perfino di 4 a 6 libbre, erano stimate assai e pagate a prezzi altissimi, favolosi. La mollezza dei costumi e la golosità avendo nei Romani raffinato il senso del gusto, studiavansi di appagarlo con le vivande più delicate e perciò avevano inventata una certa salsa chiamata gareleo nella quale disfacevano e stemperavano la coratella di questo grosso pesce per intingervi la carne del medesimo.\"},{\"id\":\"90.0\",\"ricetta\":90,\"titolo\":\"Gnocchi di farina gialla\",\"capitolo\":\"Minestre asciutte e di magro\",\"posizione_chunk\":0,\"score\":0.704,\"fascia\":\"media\",\"testo\":\"Quando vi sentite una certa ripienezza prodotta da esuberanza di nutrizione, se ricorrete a una minestra di questi gnocchi potrete, per la loro leggerezza e poca sostanza, neutralizzarla; e più ancora se farete seguire ad essa un piatto di pesce di facile digestione. La farina, per quest'uso, è bene sia macinata grossa; se no è meglio ricorrere al semolino fine di granturco, che ora trovasi in commercio. Salate l'acqua e, quando bolle, versate colla mano sinistra la farina un po' per volta e col mestolo nella destra, mescolate continuamente. È necessario che questa farina bolla molto, e quando essa è ristretta in modo da reggere bene sul mestolo, gettatela, con un coltello da tavola, a tocchetti entro a un vassoio e ad ogni strato conditela con cacio, burro, sugo di pomodoro o conserva sc…\"}],\"nota\":\"\"}",
+    "INFO assistente.grafo agente: chiamata al modello con 4 messaggi",
+    "INFO assistente.grafo revisore coerente=sì motivo=La risposta proposta è coerente con il testo recuperato e risponde alla domanda in modo sintetico. -> fine",
+    "INFO assistente.agente citazioni verificate=89.1 sconosciute=- ricerche=1 passaggi_ricevuti=5"
+  ],
+  "log_server_ricerca": [
+    "2026-11-18 14:46:37,734 INFO rag.server_mcp server di ricerca avviato (stdio) collezione=artusi modalita=base soglie=0.73/0.7 top_k_max=10",
+    "2026-11-18 14:46:42,886 INFO rag.server_mcp ricerca esito=ok modalita=base query=\"perché gli gnocchi si sciolgono nell'acqua\" top_k=5 filtro=- passaggi=5 ids=89.1,89.0,230.0,470.1,90.0 nota=\"\" ms=4687 query_usate=1 llm=0 ripieghi=- esclusi_soglia=0"
+  ]
+}

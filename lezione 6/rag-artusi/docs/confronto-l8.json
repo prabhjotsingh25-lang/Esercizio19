@@ -1,0 +1,2300 @@
+{
+  "base": [
+    {
+      "domanda": "Quanta farina serve per 400 grammi di patate negli gnocchi?",
+      "tipo": "semplice",
+      "attese": [
+        89
+      ],
+      "ricette": [
+        89,
+        90,
+        14,
+        366,
+        344
+      ],
+      "ids": [
+        "89.0",
+        "90.0",
+        "14.0",
+        "366.0",
+        "344.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 5894.2,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanta farina serve per 400 grammi di patate negli gnocchi?"
+      ],
+      "scores": [
+        0.773,
+        0.748,
+        0.745,
+        0.742,
+        0.719
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Che vino si usa per il pollo alla cacciatora?",
+      "tipo": "semplice",
+      "attese": [
+        208
+      ],
+      "ricette": [
+        208,
+        539,
+        545,
+        258,
+        209
+      ],
+      "ids": [
+        "208.0",
+        "539.0",
+        "545.0",
+        "258.1",
+        "209.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 202.0,
+      "ripieghi": [],
+      "query_usate": [
+        "Che vino si usa per il pollo alla cacciatora?"
+      ],
+      "scores": [
+        0.749,
+        0.706,
+        0.706,
+        0.703,
+        0.701
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si chiama il cacciucco sulle coste dell'Adriatico?",
+      "tipo": "semplice",
+      "attese": [
+        455,
+        456
+      ],
+      "ricette": [
+        455,
+        479,
+        455,
+        688,
+        456
+      ],
+      "ids": [
+        "455.0",
+        "479.1",
+        "455.1",
+        "688.1",
+        "456.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 156.4,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si chiama il cacciucco sulle coste dell'Adriatico?"
+      ],
+      "scores": [
+        0.774,
+        0.72,
+        0.719,
+        0.701,
+        0.697
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Qual è la ricetta del tiramisù?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        372,
+        609,
+        326,
+        372,
+        560
+      ],
+      "ids": [
+        "372.3",
+        "609.0",
+        "326.2",
+        "372.2",
+        "560.1"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 116.0,
+      "ripieghi": [],
+      "query_usate": [
+        "Qual è la ricetta del tiramisù?"
+      ],
+      "scores": [
+        0.706,
+        0.704,
+        0.699,
+        0.699,
+        0.698
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Quanti cappelletti bastano a un mangiatore moderato?",
+      "tipo": "semplice",
+      "attese": [
+        7
+      ],
+      "ricette": [
+        7,
+        7,
+        55,
+        7,
+        118
+      ],
+      "ids": [
+        "7.1",
+        "7.0",
+        "55.0",
+        "7.2",
+        "118.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 288.8,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanti cappelletti bastano a un mangiatore moderato?"
+      ],
+      "scores": [
+        0.745,
+        0.742,
+        0.734,
+        0.729,
+        0.726
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Perché gli gnocchi possono sciogliersi nell'acqua?",
+      "tipo": "semplice",
+      "attese": [
+        89
+      ],
+      "ricette": [
+        89,
+        90,
+        489,
+        427,
+        231
+      ],
+      "ids": [
+        "89.1",
+        "90.0",
+        "489.0",
+        "427.0",
+        "231.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 139.4,
+      "ripieghi": [],
+      "query_usate": [
+        "Perché gli gnocchi possono sciogliersi nell'acqua?"
+      ],
+      "scores": [
+        0.72,
+        0.715,
+        0.706,
+        0.701,
+        0.699
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Per quanto tempo si deve cuocere il baccalà?",
+      "tipo": "semplice",
+      "attese": [
+        510
+      ],
+      "ricette": [
+        506,
+        118,
+        506,
+        510,
+        118
+      ],
+      "ids": [
+        "506.2",
+        "118.1",
+        "506.1",
+        "510.0",
+        "118.0"
+      ],
+      "posizione": 4,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 161.0,
+      "ripieghi": [],
+      "query_usate": [
+        "Per quanto tempo si deve cuocere il baccalà?"
+      ],
+      "scores": [
+        0.766,
+        0.758,
+        0.754,
+        0.754,
+        0.753
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Con che cosa si insaporisce il brodo?",
+      "tipo": "semplice",
+      "attese": [
+        1
+      ],
+      "ricette": [
+        1,
+        1,
+        43,
+        42,
+        11
+      ],
+      "ids": [
+        "1.0",
+        "1.1",
+        "43.1",
+        "42.0",
+        "11.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 125.6,
+      "ripieghi": [],
+      "query_usate": [
+        "Con che cosa si insaporisce il brodo?"
+      ],
+      "scores": [
+        0.768,
+        0.763,
+        0.756,
+        0.75,
+        0.749
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si fa un dolce di mandorle e zucchero?",
+      "tipo": "semplice",
+      "attese": [
+        617,
+        785,
+        626,
+        620,
+        687
+      ],
+      "ricette": [
+        613,
+        785,
+        626,
+        617,
+        585
+      ],
+      "ids": [
+        "613.0",
+        "785.0",
+        "626.0",
+        "617.0",
+        "585.0"
+      ],
+      "posizione": 2,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 136.3,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si fa un dolce di mandorle e zucchero?"
+      ],
+      "scores": [
+        0.821,
+        0.817,
+        0.807,
+        0.78,
+        0.775
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?",
+      "tipo": "composta",
+      "attese": [
+        89,
+        208
+      ],
+      "ricette": [
+        208,
+        90,
+        661,
+        14,
+        89
+      ],
+      "ids": [
+        "208.0",
+        "90.0",
+        "661.0",
+        "14.0",
+        "89.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 135.7,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?"
+      ],
+      "scores": [
+        0.737,
+        0.732,
+        0.731,
+        0.725,
+        0.724
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?",
+      "tipo": "composta",
+      "attese": [
+        1,
+        510
+      ],
+      "ricette": [
+        1,
+        1,
+        11,
+        5,
+        46
+      ],
+      "ids": [
+        "1.1",
+        "1.0",
+        "11.1",
+        "5.1",
+        "46.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 1,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 127.4,
+      "ripieghi": [],
+      "query_usate": [
+        "Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?"
+      ],
+      "scores": [
+        0.766,
+        0.76,
+        0.746,
+        0.743,
+        0.738
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?",
+      "tipo": "composta",
+      "attese": [
+        455,
+        456,
+        7
+      ],
+      "ricette": [
+        455,
+        681,
+        7,
+        349,
+        455
+      ],
+      "ids": [
+        "455.0",
+        "681.0",
+        "7.1",
+        "349.1",
+        "455.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 125.6,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?"
+      ],
+      "scores": [
+        0.715,
+        0.71,
+        0.705,
+        0.699,
+        0.694
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Qual è la ricetta della carbonara?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        372,
+        199,
+        624,
+        609,
+        644
+      ],
+      "ids": [
+        "372.2",
+        "199.0",
+        "624.1",
+        "609.0",
+        "644.0"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 140.1,
+      "ripieghi": [],
+      "query_usate": [
+        "Qual è la ricetta della carbonara?"
+      ],
+      "scores": [
+        0.728,
+        0.711,
+        0.702,
+        0.697,
+        0.696
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si prepara il sushi?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        5,
+        751,
+        450,
+        377,
+        161
+      ],
+      "ids": [
+        "5.0",
+        "751.0",
+        "450.1",
+        "377.1",
+        "161.1"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 0,
+      "latenza_ms": 127.3,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si prepara il sushi?"
+      ],
+      "scores": [
+        0.695,
+        0.69,
+        0.689,
+        0.689,
+        0.686
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    }
+  ],
+  "riscrittura": [
+    {
+      "domanda": "Quanta farina serve per 400 grammi di patate negli gnocchi?",
+      "tipo": "semplice",
+      "attese": [
+        89
+      ],
+      "ricette": [
+        89,
+        90,
+        89,
+        14,
+        771
+      ],
+      "ids": [
+        "89.0",
+        "90.0",
+        "89.1",
+        "14.0",
+        "771.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 29482.7,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanta farina serve per 400 grammi di patate negli gnocchi?",
+        "ricetta gnocchi Artusi",
+        "farina per gnocchi Ottocento",
+        "proporzioni ingredienti gnocchi"
+      ],
+      "scores": [
+        0.773,
+        0.748,
+        0.718,
+        0.745,
+        0.715
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Che vino si usa per il pollo alla cacciatora?",
+      "tipo": "semplice",
+      "attese": [
+        208
+      ],
+      "ricette": [
+        258,
+        539,
+        545,
+        544,
+        208
+      ],
+      "ids": [
+        "258.1",
+        "539.0",
+        "545.0",
+        "544.0",
+        "208.0"
+      ],
+      "posizione": 5,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 28806.9,
+      "ripieghi": [],
+      "query_usate": [
+        "Che vino si usa per il pollo alla cacciatora?",
+        "Artusi vino",
+        "ricette carne Ottocento",
+        "vino per pollo"
+      ],
+      "scores": [
+        0.723,
+        0.714,
+        0.716,
+        0.706,
+        0.749
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si chiama il cacciucco sulle coste dell'Adriatico?",
+      "tipo": "semplice",
+      "attese": [
+        455,
+        456
+      ],
+      "ricette": [
+        455,
+        455,
+        456,
+        370,
+        481
+      ],
+      "ids": [
+        "455.0",
+        "455.1",
+        "456.0",
+        "370.2",
+        "481.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 27941.3,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si chiama il cacciucco sulle coste dell'Adriatico?",
+        "cacciucco artusi",
+        "ricette pesce ottocento adriatico"
+      ],
+      "scores": [
+        0.774,
+        0.719,
+        0.697,
+        0.683,
+        0.695
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Qual è la ricetta del tiramisù?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        609,
+        648,
+        645,
+        618,
+        372
+      ],
+      "ids": [
+        "609.0",
+        "648.0",
+        "645.1",
+        "618.1",
+        "372.3"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 30395.8,
+      "ripieghi": [],
+      "query_usate": [
+        "Qual è la ricetta del tiramisù?",
+        "Artusi tiramisù",
+        "ricette ottocento dolci",
+        "dolci Artusi"
+      ],
+      "scores": [
+        0.704,
+        0.665,
+        0.623,
+        0.696,
+        0.706
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Quanti cappelletti bastano a un mangiatore moderato?",
+      "tipo": "semplice",
+      "attese": [
+        7
+      ],
+      "ricette": [
+        579,
+        7,
+        7,
+        641,
+        55
+      ],
+      "ids": [
+        "579.1",
+        "7.0",
+        "7.1",
+        "641.3",
+        "55.0"
+      ],
+      "posizione": 2,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 29724.1,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanti cappelletti bastano a un mangiatore moderato?",
+        "ricettario artusi",
+        "cappelletti ottocento",
+        "porzioni ricette"
+      ],
+      "scores": [
+        0.665,
+        0.742,
+        0.745,
+        0.675,
+        0.734
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Perché gli gnocchi possono sciogliersi nell'acqua?",
+      "tipo": "semplice",
+      "attese": [
+        89
+      ],
+      "ricette": [
+        89,
+        89,
+        230,
+        90,
+        14
+      ],
+      "ids": [
+        "89.0",
+        "89.1",
+        "230.0",
+        "90.0",
+        "14.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 28549.3,
+      "ripieghi": [],
+      "query_usate": [
+        "Perché gli gnocchi possono sciogliersi nell'acqua?",
+        "ricetta gnocchi Artusi",
+        "cottura gnocchi ottocento",
+        "problemi gnocchi acqua"
+      ],
+      "scores": [
+        0.698,
+        0.72,
+        0.692,
+        0.715,
+        0.686
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Per quanto tempo si deve cuocere il baccalà?",
+      "tipo": "semplice",
+      "attese": [
+        510
+      ],
+      "ricette": [
+        510,
+        506,
+        512,
+        506,
+        506
+      ],
+      "ids": [
+        "510.0",
+        "506.2",
+        "512.0",
+        "506.1",
+        "506.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 28726.6,
+      "ripieghi": [],
+      "query_usate": [
+        "Per quanto tempo si deve cuocere il baccalà?",
+        "baccalà Artusi",
+        "cottura pesce Ottocento",
+        "ricette baccalà Antico"
+      ],
+      "scores": [
+        0.754,
+        0.766,
+        0.746,
+        0.754,
+        0.728
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Con che cosa si insaporisce il brodo?",
+      "tipo": "semplice",
+      "attese": [
+        1
+      ],
+      "ricette": [
+        1,
+        1,
+        5,
+        11,
+        2
+      ],
+      "ids": [
+        "1.0",
+        "1.1",
+        "5.1",
+        "11.1",
+        "2.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 26877.9,
+      "ripieghi": [],
+      "query_usate": [
+        "Con che cosa si insaporisce il brodo?",
+        "brodo Artusi",
+        "ingredienti brodo ottocento",
+        "condimenti brodo antico"
+      ],
+      "scores": [
+        0.768,
+        0.763,
+        0.738,
+        0.749,
+        0.683
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si fa un dolce di mandorle e zucchero?",
+      "tipo": "semplice",
+      "attese": [
+        617,
+        785,
+        626,
+        620,
+        687
+      ],
+      "ricette": [
+        613,
+        785,
+        669,
+        687,
+        617
+      ],
+      "ids": [
+        "613.0",
+        "785.0",
+        "669.0",
+        "687.0",
+        "617.0"
+      ],
+      "posizione": 2,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 28396.1,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si fa un dolce di mandorle e zucchero?",
+        "dolce mandorle Artusi",
+        "ricette Ottocento dolci",
+        "dolci con mandorle Antico"
+      ],
+      "scores": [
+        0.821,
+        0.817,
+        0.765,
+        0.768,
+        0.78
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?",
+      "tipo": "composta",
+      "attese": [
+        89,
+        208
+      ],
+      "ricette": [
+        208,
+        89,
+        90,
+        14,
+        619
+      ],
+      "ids": [
+        "208.0",
+        "89.0",
+        "90.0",
+        "14.0",
+        "619.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 27617.9,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?",
+        "gnocchi Artusi",
+        "pollo cacciatora Artusi"
+      ],
+      "scores": [
+        0.737,
+        0.724,
+        0.732,
+        0.725,
+        0.71
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?",
+      "tipo": "composta",
+      "attese": [
+        1,
+        510
+      ],
+      "ricette": [
+        1,
+        1,
+        510,
+        42,
+        5
+      ],
+      "ids": [
+        "1.1",
+        "1.0",
+        "510.0",
+        "42.0",
+        "5.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 27361.5,
+      "ripieghi": [],
+      "query_usate": [
+        "Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?",
+        "brodo Artusi",
+        "baccalà cottura Ottocento"
+      ],
+      "scores": [
+        0.766,
+        0.76,
+        0.733,
+        0.734,
+        0.743
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?",
+      "tipo": "composta",
+      "attese": [
+        455,
+        456,
+        7
+      ],
+      "ricette": [
+        455,
+        455,
+        7,
+        7,
+        681
+      ],
+      "ids": [
+        "455.0",
+        "455.1",
+        "7.1",
+        "7.0",
+        "681.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 27851.7,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?",
+        "cacciucco Artusi",
+        "ricetta cappelletti Ottocento"
+      ],
+      "scores": [
+        0.715,
+        0.694,
+        0.705,
+        0.698,
+        0.71
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Qual è la ricetta della carbonara?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        609,
+        676,
+        372,
+        379,
+        729
+      ],
+      "ids": [
+        "609.0",
+        "676.0",
+        "372.2",
+        "379.0",
+        "729.0"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 21790.1,
+      "ripieghi": [],
+      "query_usate": [
+        "Qual è la ricetta della carbonara?",
+        "Artusi pasta ottocento",
+        "ricette carne ottocento",
+        "ingredienti cucina ottocento"
+      ],
+      "scores": [
+        0.697,
+        0.693,
+        0.728,
+        0.69,
+        0.666
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si prepara il sushi?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        751,
+        5,
+        377,
+        378,
+        450
+      ],
+      "ids": [
+        "751.0",
+        "5.0",
+        "377.1",
+        "378.0",
+        "450.1"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 28597.1,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si prepara il sushi?",
+        "ricettario artusi sushi",
+        "cucina ottocento pesce",
+        "preparazione sushi antico"
+      ],
+      "scores": [
+        0.69,
+        0.695,
+        0.689,
+        0.684,
+        0.689
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    }
+  ],
+  "reranking": [
+    {
+      "domanda": "Quanta farina serve per 400 grammi di patate negli gnocchi?",
+      "tipo": "semplice",
+      "attese": [
+        89
+      ],
+      "ricette": [
+        89,
+        89
+      ],
+      "ids": [
+        "89.0",
+        "89.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 34485.5,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanta farina serve per 400 grammi di patate negli gnocchi?"
+      ],
+      "scores": [
+        0.773,
+        0.718
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Che vino si usa per il pollo alla cacciatora?",
+      "tipo": "semplice",
+      "attese": [
+        208
+      ],
+      "ricette": [
+        208,
+        264
+      ],
+      "ids": [
+        "208.0",
+        "264.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 34884.7,
+      "ripieghi": [],
+      "query_usate": [
+        "Che vino si usa per il pollo alla cacciatora?"
+      ],
+      "scores": [
+        0.749,
+        0.684
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si chiama il cacciucco sulle coste dell'Adriatico?",
+      "tipo": "semplice",
+      "attese": [
+        455,
+        456
+      ],
+      "ricette": [
+        455
+      ],
+      "ids": [
+        "455.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 37846.6,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si chiama il cacciucco sulle coste dell'Adriatico?"
+      ],
+      "scores": [
+        0.774
+      ],
+      "fasce": [
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Qual è la ricetta del tiramisù?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        618
+      ],
+      "ids": [
+        "618.1"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 38014.4,
+      "ripieghi": [],
+      "query_usate": [
+        "Qual è la ricetta del tiramisù?"
+      ],
+      "scores": [
+        0.696
+      ],
+      "fasce": [
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Quanti cappelletti bastano a un mangiatore moderato?",
+      "tipo": "semplice",
+      "attese": [
+        7
+      ],
+      "ricette": [
+        7
+      ],
+      "ids": [
+        "7.2"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 34547.7,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanti cappelletti bastano a un mangiatore moderato?"
+      ],
+      "scores": [
+        0.729
+      ],
+      "fasce": [
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Perché gli gnocchi possono sciogliersi nell'acqua?",
+      "tipo": "semplice",
+      "attese": [
+        89
+      ],
+      "ricette": [
+        89
+      ],
+      "ids": [
+        "89.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 36853.6,
+      "ripieghi": [],
+      "query_usate": [
+        "Perché gli gnocchi possono sciogliersi nell'acqua?"
+      ],
+      "scores": [
+        0.72
+      ],
+      "fasce": [
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Per quanto tempo si deve cuocere il baccalà?",
+      "tipo": "semplice",
+      "attese": [
+        510
+      ],
+      "ricette": [
+        510,
+        512
+      ],
+      "ids": [
+        "510.0",
+        "512.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 37812.2,
+      "ripieghi": [
+        "reranking_id_duplicati"
+      ],
+      "query_usate": [
+        "Per quanto tempo si deve cuocere il baccalà?"
+      ],
+      "scores": [
+        0.754,
+        0.746
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Con che cosa si insaporisce il brodo?",
+      "tipo": "semplice",
+      "attese": [
+        1
+      ],
+      "ricette": [
+        1,
+        42,
+        5,
+        39
+      ],
+      "ids": [
+        "1.0",
+        "42.0",
+        "5.1",
+        "39.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 37031.3,
+      "ripieghi": [],
+      "query_usate": [
+        "Con che cosa si insaporisce il brodo?"
+      ],
+      "scores": [
+        0.768,
+        0.75,
+        0.738,
+        0.729
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si fa un dolce di mandorle e zucchero?",
+      "tipo": "semplice",
+      "attese": [
+        617,
+        785,
+        626,
+        620,
+        687
+      ],
+      "ricette": [
+        785,
+        620,
+        585,
+        626
+      ],
+      "ids": [
+        "785.0",
+        "620.0",
+        "585.0",
+        "626.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 41326.5,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si fa un dolce di mandorle e zucchero?"
+      ],
+      "scores": [
+        0.817,
+        0.769,
+        0.775,
+        0.807
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?",
+      "tipo": "composta",
+      "attese": [
+        89,
+        208
+      ],
+      "ricette": [
+        89,
+        208
+      ],
+      "ids": [
+        "89.0",
+        "208.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 35688.9,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?"
+      ],
+      "scores": [
+        0.724,
+        0.737
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?",
+      "tipo": "composta",
+      "attese": [
+        1,
+        510
+      ],
+      "ricette": [
+        510,
+        1
+      ],
+      "ids": [
+        "510.0",
+        "1.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 35401.5,
+      "ripieghi": [],
+      "query_usate": [
+        "Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?"
+      ],
+      "scores": [
+        0.733,
+        0.76
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?",
+      "tipo": "composta",
+      "attese": [
+        455,
+        456,
+        7
+      ],
+      "ricette": [
+        455,
+        7,
+        349
+      ],
+      "ids": [
+        "455.1",
+        "7.2",
+        "349.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 38234.0,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?"
+      ],
+      "scores": [
+        0.694,
+        0.691,
+        0.699
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Qual è la ricetta della carbonara?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        372,
+        372,
+        326
+      ],
+      "ids": [
+        "372.2",
+        "372.3",
+        "326.2"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 36261.1,
+      "ripieghi": [],
+      "query_usate": [
+        "Qual è la ricetta della carbonara?"
+      ],
+      "scores": [
+        0.728,
+        0.69,
+        0.689
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si prepara il sushi?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        4
+      ],
+      "ids": [
+        "4.1"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 1,
+      "latenza_ms": 36458.3,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si prepara il sushi?"
+      ],
+      "scores": [
+        0.683
+      ],
+      "fasce": [
+        "non_valutata"
+      ]
+    }
+  ],
+  "entrambe": [
+    {
+      "domanda": "Quanta farina serve per 400 grammi di patate negli gnocchi?",
+      "tipo": "semplice",
+      "attese": [
+        89
+      ],
+      "ricette": [
+        89,
+        89
+      ],
+      "ids": [
+        "89.0",
+        "89.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 45516.0,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanta farina serve per 400 grammi di patate negli gnocchi?",
+        "ricetta gnocchi Artusi",
+        "farina per gnocchi Ottocento",
+        "proporzioni ingredienti gnocchi"
+      ],
+      "scores": [
+        0.773,
+        0.718
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Che vino si usa per il pollo alla cacciatora?",
+      "tipo": "semplice",
+      "attese": [
+        208
+      ],
+      "ricette": [
+        208
+      ],
+      "ids": [
+        "208.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 43820.5,
+      "ripieghi": [],
+      "query_usate": [
+        "Che vino si usa per il pollo alla cacciatora?",
+        "Artusi vino",
+        "ricette carne Ottocento",
+        "vino per pollo"
+      ],
+      "scores": [
+        0.749
+      ],
+      "fasce": [
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si chiama il cacciucco sulle coste dell'Adriatico?",
+      "tipo": "semplice",
+      "attese": [
+        455,
+        456
+      ],
+      "ricette": [
+        455,
+        481,
+        461
+      ],
+      "ids": [
+        "455.0",
+        "481.0",
+        "461.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 43296.0,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si chiama il cacciucco sulle coste dell'Adriatico?",
+        "cacciucco artusi",
+        "ricette pesce ottocento adriatico"
+      ],
+      "scores": [
+        0.774,
+        0.695,
+        0.692
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Qual è la ricetta del tiramisù?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        639,
+        648
+      ],
+      "ids": [
+        "639.0",
+        "648.1"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 44684.1,
+      "ripieghi": [],
+      "query_usate": [
+        "Qual è la ricetta del tiramisù?",
+        "Artusi tiramisù",
+        "ricette ottocento dolci",
+        "dolci Artusi"
+      ],
+      "scores": [
+        0.672,
+        0.677
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Quanti cappelletti bastano a un mangiatore moderato?",
+      "tipo": "semplice",
+      "attese": [
+        7
+      ],
+      "ricette": [
+        7
+      ],
+      "ids": [
+        "7.2"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 44397.5,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanti cappelletti bastano a un mangiatore moderato?",
+        "ricettario artusi",
+        "cappelletti ottocento",
+        "porzioni ricette"
+      ],
+      "scores": [
+        0.729
+      ],
+      "fasce": [
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Perché gli gnocchi possono sciogliersi nell'acqua?",
+      "tipo": "semplice",
+      "attese": [
+        89
+      ],
+      "ricette": [
+        89
+      ],
+      "ids": [
+        "89.1"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 44502.9,
+      "ripieghi": [],
+      "query_usate": [
+        "Perché gli gnocchi possono sciogliersi nell'acqua?",
+        "ricetta gnocchi Artusi",
+        "cottura gnocchi ottocento",
+        "problemi gnocchi acqua"
+      ],
+      "scores": [
+        0.72
+      ],
+      "fasce": [
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Per quanto tempo si deve cuocere il baccalà?",
+      "tipo": "semplice",
+      "attese": [
+        510
+      ],
+      "ricette": [
+        459,
+        510
+      ],
+      "ids": [
+        "459.1",
+        "510.0"
+      ],
+      "posizione": 2,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 42744.3,
+      "ripieghi": [],
+      "query_usate": [
+        "Per quanto tempo si deve cuocere il baccalà?",
+        "baccalà Artusi",
+        "cottura pesce Ottocento",
+        "ricette baccalà Antico"
+      ],
+      "scores": [
+        0.709,
+        0.754
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Con che cosa si insaporisce il brodo?",
+      "tipo": "semplice",
+      "attese": [
+        1
+      ],
+      "ricette": [
+        1,
+        5
+      ],
+      "ids": [
+        "1.0",
+        "5.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 43705.2,
+      "ripieghi": [],
+      "query_usate": [
+        "Con che cosa si insaporisce il brodo?",
+        "brodo Artusi",
+        "ingredienti brodo ottocento",
+        "condimenti brodo antico"
+      ],
+      "scores": [
+        0.768,
+        0.683
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si fa un dolce di mandorle e zucchero?",
+      "tipo": "semplice",
+      "attese": [
+        617,
+        785,
+        626,
+        620,
+        687
+      ],
+      "ricette": [
+        613,
+        785,
+        669,
+        687,
+        612
+      ],
+      "ids": [
+        "613.0",
+        "785.0",
+        "669.0",
+        "687.0",
+        "612.0"
+      ],
+      "posizione": 2,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 49033.9,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si fa un dolce di mandorle e zucchero?",
+        "dolce mandorle Artusi",
+        "ricette Ottocento dolci",
+        "dolci con mandorle Antico"
+      ],
+      "scores": [
+        0.821,
+        0.817,
+        0.765,
+        0.768,
+        0.707
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?",
+      "tipo": "composta",
+      "attese": [
+        89,
+        208
+      ],
+      "ricette": [
+        89,
+        231,
+        208
+      ],
+      "ids": [
+        "89.0",
+        "231.1",
+        "208.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 44301.5,
+      "ripieghi": [],
+      "query_usate": [
+        "Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora?",
+        "gnocchi Artusi",
+        "pollo cacciatora Artusi"
+      ],
+      "scores": [
+        0.724,
+        0.629,
+        0.737
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?",
+      "tipo": "composta",
+      "attese": [
+        1,
+        510
+      ],
+      "ricette": [
+        1,
+        510,
+        512
+      ],
+      "ids": [
+        "1.0",
+        "510.0",
+        "512.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 43304.4,
+      "ripieghi": [],
+      "query_usate": [
+        "Con che cosa si insaporisce il brodo e quanto si cuoce il baccalà?",
+        "brodo Artusi",
+        "baccalà cottura Ottocento"
+      ],
+      "scores": [
+        0.76,
+        0.733,
+        0.693
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?",
+      "tipo": "composta",
+      "attese": [
+        455,
+        456,
+        7
+      ],
+      "ricette": [
+        455,
+        7
+      ],
+      "ids": [
+        "455.1",
+        "7.0"
+      ],
+      "posizione": 1,
+      "parti_coperte": 2,
+      "parti_totali": 2,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 43369.1,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?",
+        "cacciucco Artusi",
+        "ricetta cappelletti Ottocento"
+      ],
+      "scores": [
+        0.694,
+        0.698
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Qual è la ricetta della carbonara?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        609,
+        676
+      ],
+      "ids": [
+        "609.0",
+        "676.0"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 45265.8,
+      "ripieghi": [],
+      "query_usate": [
+        "Qual è la ricetta della carbonara?",
+        "Artusi pasta ottocento",
+        "ricette carne ottocento",
+        "ingredienti cucina ottocento"
+      ],
+      "scores": [
+        0.697,
+        0.693
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    },
+    {
+      "domanda": "Come si prepara il sushi?",
+      "tipo": "senza_risposta",
+      "attese": [],
+      "ricette": [
+        5,
+        378
+      ],
+      "ids": [
+        "5.0",
+        "378.0"
+      ],
+      "posizione": null,
+      "parti_coperte": 0,
+      "parti_totali": 0,
+      "astenuta": false,
+      "chiamate_llm": 2,
+      "latenza_ms": 44041.8,
+      "ripieghi": [],
+      "query_usate": [
+        "Come si prepara il sushi?",
+        "ricettario artusi sushi",
+        "cucina ottocento pesce",
+        "preparazione sushi antico"
+      ],
+      "scores": [
+        0.695,
+        0.684
+      ],
+      "fasce": [
+        "non_valutata",
+        "non_valutata"
+      ]
+    }
+  ]
+}

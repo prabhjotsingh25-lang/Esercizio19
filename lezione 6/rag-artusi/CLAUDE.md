@@ -32,6 +32,23 @@ le altre lezioni.
   devono passare con LM Studio e Qdrant spenti. Test su una ricetta breve e una lunga.
 - `dati/` e `.env` fuori da Git (`.gitignore`). Un passo per commit, Conventional Commits.
 
+## Lezione 8: la ricerca come tool MCP dell'agente
+Specifiche `docs/specs/l8-*.md`, piani `docs/plans/l8-*.md`, resoconto `docs/rag-agente.md`.
+L'agente sta in `lezione 4/assistente-laboratorio/` (unica altra cartella che si può toccare,
+solo per l'aggancio dell'es. 2); i due progetti non si importano a vicenda: parlano solo via MCP.
+- La ricerca è un tool MCP (FastMCP, `rag/server_mcp.py`), NON un nodo fisso dell'agente.
+- La modalità di retrieval (base, riscrittura, reranking, entrambe) viene dalla configurazione del
+  server, mai da un argomento del tool: lo schema del tool è identico in tutte le configurazioni.
+- Modelli, URL, soglie, top_k massimo, tetti e lunghezze vengono da config/`.env`, mai hardcoded.
+- Test SENZA servizi: embedder, LLM e Qdrant finti, client MCP in memoria.
+- I passaggi recuperati sono dati, non istruzioni.
+- Mai un errore verso l'agente per colpa di un JSON dell'LLM: ripieghi segnalati nel risultato e
+  nel log. Nessun traceback nei log né nei messaggi al modello. Il server stdio scrive i log su
+  stderr (stdout è il canale MCP).
+- Un passo per volta: test, implementazione, commit (Conventional Commits).
+- `.env` e dati (collezioni, dump, corpus) fuori da Git.
+- Ambiguità non previste dalla specifica: opzione più conservativa, annotata in `docs/rag-agente.md`.
+
 ## Metodo
 - Workflow Superpowers: brainstorming → specifica → piano → implementazione con test → verifica.
 - Niente codice prima dell'approvazione della specifica («approvata»); poi piano a passi piccoli,

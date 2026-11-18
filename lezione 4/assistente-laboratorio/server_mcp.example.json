@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "ricerca": {
+      "command": "../../lezione 6/rag-artusi/.venv/Scripts/python.exe",
+      "args": ["-m", "rag.server_mcp"],
+      "cwd": "../../lezione 6/rag-artusi",
+      "timeout": 120
+    }
+  }
+}

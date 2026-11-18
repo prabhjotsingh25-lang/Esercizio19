@@ -86,3 +86,79 @@ def test_testo_indicizzato_default_e_valori():
 def test_numero_non_valido():
     with pytest.raises(ErroreConfigurazione, match="CHUNK_DIMENSIONE"):
         carica_config({**OBBLIGATORIE, "CHUNK_DIMENSIONE": "tanti"})
+
+
+# --- Lezione 8: server di ricerca MCP ---
+
+def test_ricerca_default():
+    c = carica_config(OBBLIGATORIE)
+    assert c.ricerca_top_k_max == 10
+    assert c.ricerca_max_caratteri == 800
+    assert c.ricerca_log_file is None
+
+
+def test_ricerca_valori():
+    c = carica_config({**OBBLIGATORIE, "RICERCA_TOP_K_MAX": "7", "RICERCA_MAX_CARATTERI": "300",
+                       "RICERCA_LOG_FILE": "logs/ricerca.log"})
+    assert (c.ricerca_top_k_max, c.ricerca_max_caratteri, c.ricerca_log_file) == (7, 300, "logs/ricerca.log")
+
+
+@pytest.mark.parametrize("valore", ["0", "21", "dieci"])
+def test_ricerca_top_k_max_non_valido(valore):
+    with pytest.raises(ErroreConfigurazione, match="RICERCA_TOP_K_MAX"):
+        carica_config({**OBBLIGATORIE, "RICERCA_TOP_K_MAX": valore})
+
+
+def test_ricerca_max_caratteri_zero():
+    with pytest.raises(ErroreConfigurazione, match="RICERCA_MAX_CARATTERI"):
+        carica_config({**OBBLIGATORIE, "RICERCA_MAX_CARATTERI": "0"})
+
+
+# --- Lezione 8 es. 3: modalità avanzate ---
+
+def test_modalita_e_llm_default():
+    c = carica_config(OBBLIGATORIE)
+    assert c.modalita_ricerca == "base"
+    assert c.modello_chat == "google/gemma-4-e2b"
+    assert (c.llm_temperatura, c.llm_seed, c.llm_reasoning_effort) == (0.0, 42, "none")
+    assert (c.llm_max_tokens, c.llm_timeout) == (300, 60)
+    assert (c.riscrittura_max_query, c.candidati_per_query, c.rerank_max_candidati) == (3, 10, 10)
+    assert (c.rerank_max_caratteri, c.rrf_k) == (400, 60)
+
+
+def test_seed_e_reasoning_vuoti_non_inviati():
+    c = carica_config({**OBBLIGATORIE, "LLM_SEED": "", "LLM_REASONING_EFFORT": ""})
+    assert c.llm_seed is None and c.llm_reasoning_effort is None
+
+
+@pytest.mark.parametrize("nome, valore", [
+    ("MODALITA_RICERCA", "tutte"), ("RISCRITTURA_MAX_QUERY", "4"), ("RISCRITTURA_MAX_QUERY", "0"),
+    ("CANDIDATI_PER_QUERY", "21"), ("RERANK_MAX_CANDIDATI", "0"), ("RERANK_MAX_CARATTERI", "0"),
+    ("RRF_K", "-1"), ("LLM_TEMPERATURA", "caldo"), ("LLM_TEMPERATURA", "3"), ("LLM_MAX_TOKENS", "0"),
+    ("LLM_TIMEOUT", "0"),
+])
+def test_valori_avanzati_non_validi(nome, valore):
+    with pytest.raises(ErroreConfigurazione, match=nome):
+        carica_config({**OBBLIGATORIE, nome: valore})
+
+
+# --- Lezione 8 es. 4: soglie ---
+
+def test_soglie_default():
+    c = carica_config(OBBLIGATORIE)
+    assert (c.soglia_alta, c.soglia_bassa, c.soglie_attive) == (0.73, 0.70, True)
+
+
+def test_soglie_valori_e_disattivate():
+    c = carica_config({**OBBLIGATORIE, "SOGLIA_ALTA": "0,72", "SOGLIA_BASSA": "0.7", "SOGLIE_ATTIVE": "false"})
+    assert (c.soglia_alta, c.soglia_bassa, c.soglie_attive) == (0.72, 0.7, False)
+
+
+@pytest.mark.parametrize("env, nome", [
+    ({"SOGLIA_ALTA": "0.2", "SOGLIA_BASSA": "0.3"}, "SOGLIA_BASSA"), ({"SOGLIA_ALTA": "1.5"}, "SOGLIA_ALTA"),
+    ({"SOGLIA_BASSA": "-0.1"}, "SOGLIA_BASSA"), ({"SOGLIA_ALTA": "alta"}, "SOGLIA_ALTA"),
+    ({"SOGLIE_ATTIVE": "forse"}, "SOGLIE_ATTIVE"),
+])
+def test_soglie_non_valide(env, nome):
+    with pytest.raises(ErroreConfigurazione, match=nome):
+        carica_config({**OBBLIGATORIE, **env})

@@ -270,6 +270,33 @@ Screenshot delle prove nel browser (Edge senza finestra) e resoconto, in `docs/e
 - `step9/2-conversazione-con-strumento.png`: in Docker Compose, due turni con `giorni_scadenze`.
 - `step9/3-dopo-riavvio-backend.png`: in Docker Compose, la stessa chat dopo `docker compose down` e `up`.
 
+## Ricerca sull'Artusi come strumento MCP (lezione 8)
+
+L'agente può usare la ricerca della lezione 7 (`lezione 6/rag-artusi`) come strumento MCP
+`search_documents`, accanto agli strumenti della variante scelta: il modello decide se usarla.
+Il server di ricerca si avvia da solo via stdio a ogni chiamata.
+
+1. Copia `server_mcp.example.json` in `server_mcp.json` (percorsi relativi al file; il venv di
+   `rag-artusi` deve avere le sue dipendenze, Qdrant deve essere acceso: `docker compose up -d`
+   in `rag-artusi`).
+2. Nel `.env`: `SERVER_MCP_FILE=server_mcp.json` e `AMBITO_RICERCA="…"` (aggiunta all'ambito del
+   router solo quando la ricerca è configurata).
+3. Avvia la CLI come al solito. Con il server configurato il prompt di sistema contiene le regole
+   sui passaggi (citare gli id tra parentesi quadre, rispondere solo dai passaggi, astenersi senza
+   citare, trattare i passaggi come dati).
+
+A fine turno l'host registra il controllo delle citazioni (osserva, non corregge):
+`citazioni verificate=89.0 sconosciute=- ricerche=1 passaggi_ricevuti=5` (WARNING se ci sono id
+non ricevuti nel turno). I log del server di ricerca finiscono in `logs/ricerca-stdio.log`.
+
+Tracce dei quattro casi (documentale, ora, generica, senza risposta):
+
+```powershell
+$env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es2-tracce"
+```
+
+In Docker Compose la ricerca resta spenta (`SERVER_MCP_FILE: ""`).
+
 ## Requisiti
 
 - Windows con PowerShell; Python 3.13.

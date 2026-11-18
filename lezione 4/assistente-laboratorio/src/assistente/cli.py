@@ -109,7 +109,13 @@ def main() -> int:
     from assistente.agente import grafo_da_configurazione
     from assistente.sessione import Sessione
     from assistente.varianti import fonte_prompt
-    sessione = Sessione(grafo_da_configurazione(config), config.max_passaggi,
+    from assistente.server_esterni import ErroreServerMCP
+    try:
+        grafo = grafo_da_configurazione(config)
+    except ErroreServerMCP as errore:
+        print(f"Server MCP non disponibili: {errore}", file=sys.stderr)
+        return 2
+    sessione = Sessione(grafo, config.max_passaggi,
                         config.max_revisioni, leggi_preferenze=lettore_preferenze(config),
                         fonte_prompt=fonte_prompt(config))
     esegui(sessione, config.base_url)

@@ -61,6 +61,45 @@ docker compose down                                    # i dati restano nel volu
   `COLLEZIONE` o cancellare la collezione). Un cambio di chunking invece è ammesso: i chunk non
   più prodotti vengono cancellati.
 
+## Server MCP di ricerca (lezione 8)
+
+La ricerca è anche un tool MCP, `search_documents(query, top_k=5, filtro=None)`, che l'agente
+di `lezione 4/assistente-laboratorio` può decidere di chiamare.
+
+```powershell
+.\.venv\Scripts\python.exe -m rag.server_mcp                  # stdio (lo avvia l'agente)
+.\.venv\Scripts\python.exe -m rag.server_mcp --http --porta 8003   # HTTP per prove, endpoint /mcp
+.\.venv\Scripts\python.exe -m rag.cliente_mcp "Che vino si usa per il pollo alla cacciatora?" --top-k 3
+```
+
+- Risultato: `{modalita, query_usate, passaggi[], nota}`; ogni passaggio ha `id` (`ricetta.chunk`,
+  es. `208.0`, da citare tra parentesi quadre), `ricetta`, `titolo`, `capitolo`, `posizione_chunk`,
+  `score` (coseno) e `testo` troncato a `RICERCA_MAX_CARATTERI`.
+- `top_k` oltre `RICERCA_TOP_K_MAX` (max 20) viene ridotto e la riduzione è scritta in `nota`.
+- `filtro` = nome di un capitolo (maiuscole indifferenti); valori validi nella resource
+  `ricerca://filtri` e nel messaggio d'errore.
+- Errori previsti (query vuota, filtro inesistente, collezione assente o incompatibile, Qdrant o
+  LM Studio spenti) arrivano al modello come errori del tool con un messaggio utile, senza traceback.
+- Log: una riga `ricerca esito=…` per chiamata su stderr e in `RICERCA_LOG_FILE` (`logs/`, fuori da Git).
+- **Modalità** (solo da `.env`, mai dal tool): `MODALITA_RICERCA=base | riscrittura | reranking |
+  entrambe`. La riscrittura chiede al modello chat (`MODELLO_CHAT`) 1-3 query brevi (una per parte
+  delle domande composte) e fonde le liste con la Reciprocal Rank Fusion; il reranking chiede al
+  modello, in una sola chiamata, gli id pertinenti fra al più `RERANK_MAX_CANDIDATI` candidati.
+  Output vincolato da JSON schema, temperatura `LLM_TEMPERATURA`, `reasoning_effort`
+  `LLM_REASONING_EFFORT`. Ogni uscita inutilizzabile del modello è un ripiego scritto in `nota` e
+  nel log (`ripieghi=…`), mai un errore del tool.
+- **Soglie** (`SOGLIA_ALTA`, `SOGLIA_BASSA`, `SOGLIE_ATTIVE`) sul coseno: ogni passaggio ha `fascia`
+  `affidabile` o `media`; sotto la soglia bassa il passaggio è escluso e non arriva al modello;
+  nessun passaggio rimasto = lista vuota dichiarata in `nota`.
+- Confronto delle quattro modalità e calibrazione delle soglie:
+
+  ```powershell
+  .\.venv\Scripts\python.exe -m rag.confronto --domande eval/domande_l8.yaml --k 5 --uscita docs/confronto-l8.md
+  .\.venv\Scripts\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --uscita docs/calibrazione-l8.md
+  ```
+- Specifiche e piani: `docs/specs/l8-*.md`, `docs/plans/l8-*.md`; prove reali in `docs/prove/`;
+  resoconto in `docs/rag-agente.md`.
+
 ## Test
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -v

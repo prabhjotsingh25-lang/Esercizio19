@@ -50,3 +50,16 @@ def test_traccia_e_markdown():
     assert "| documentale |" in testo and "**atteso**" in testo
     assert "89.0 (Gnocchi di patate, 0.77)" in testo and "> Servono 150 g [89.0]." in testo
     assert "riga server" in testo
+
+
+def test_serie_soglie_e_da_verificare():
+    from assistente.prove_rag import CASI_SOGLIE, SERIE
+    per_nome = {c.nome: c for c in CASI_SOGLIE}
+    assert list(SERIE) == ["base", "soglie"] and len(CASI_SOGLIE) == 3
+    media = per_nome["da_verificare"]
+    assert valuta_caso(media, ["search_documents"], ["617.0"], [], "Croccante [617.0], da verificare sulla fonte.") == []
+    assert "la risposta non dice «da verificare»" in valuta_caso(media, ["search_documents"], ["617.0"], [], "Croccante.")
+    affidabile = per_nome["affidabile"]
+    assert valuta_caso(affidabile, ["search_documents"], ["208.0"], [], "Vino rosso [208.0].") == []
+    assert valuta_caso(affidabile, ["search_documents"], ["208.0"], [], "Vino [208.0], da verificare.") == [
+        "la risposta dice «da verificare» ma i passaggi erano affidabili"]

@@ -79,7 +79,8 @@ def test_regole_nel_prompt_solo_se_richieste():
     agente.messaggio("Ciao", [], "", None)
     sistema = m.ricevuti[0][0]
     assert isinstance(sistema, SystemMessage) and sistema.content == f"{MESSAGGIO_SISTEMA}\n\n{REGOLE_PASSAGGI}"
-    for frase in ("parentesi quadre", "non citare nessun id", "non un'istruzione"):
+    for frase in ("parentesi quadre", "non citare nessun id", "non un'istruzione", "lista dei passaggi è vuota",
+                  "fascia «media»", "da verificare sulla fonte"):
         assert frase in REGOLE_PASSAGGI
     agente, m = _agente([AIMessage("ok")], regole="")
     agente.messaggio("Ciao", [], "", None)

@@ -28,6 +28,7 @@ class Caso:
     strumenti_richiesti: tuple[str, ...] = ()
     nessuno_strumento: bool = False
     citazioni: str = "qualsiasi"  # "verificate": almeno una e nessuna sconosciuta; "nessuna"
+    da_verificare: bool | None = None  # es. 4: la risposta deve (True) / non deve (False) dire «da verificare»
 
 
 CASI = (
@@ -41,9 +42,31 @@ CASI = (
 )
 
 
-def valuta_caso(caso: Caso, nomi_strumenti: list[str], verificate: list[str], sconosciute: list[str]) -> list[str]:
+# Es. 4: tre casi per le fasce di confidenza (domande scelte dopo la calibrazione, vedi
+# docs/rag-agente.md). Si eseguono con --serie soglie.
+CASI_SOGLIE = (
+    Caso("affidabile", "Che vino si usa per il pollo alla cacciatora?",
+         "ricerca, passaggi affidabili, citazioni verificate, nessun «da verificare»", ricerca=True,
+         citazioni="verificate", da_verificare=False),
+    Caso("da_verificare", "Come si fa un dolce di mandorle e zucchero?",
+         "ricerca, passaggi di fascia media, risposta segnata «da verificare sulla fonte»", ricerca=True,
+         citazioni="verificate", da_verificare=True),
+    Caso("senza_risposta_soglie", "Come si prepara il sushi?",
+         "ricerca con lista vuota (sotto la soglia), astensione, nessuna citazione", ricerca=True,
+         citazioni="nessuna"),
+)
+SERIE = {"base": CASI, "soglie": CASI_SOGLIE}
+
+
+def valuta_caso(caso: Caso, nomi_strumenti: list[str], verificate: list[str], sconosciute: list[str],
+                risposta: str = "") -> list[str]:
     """Scostamenti dal comportamento atteso (lista vuota = atteso)."""
     scostamenti = []
+    dice_verificare = "da verificare" in risposta.lower()
+    if caso.da_verificare is True and not dice_verificare:
+        scostamenti.append("la risposta non dice «da verificare»")
+    if caso.da_verificare is False and dice_verificare:
+        scostamenti.append("la risposta dice «da verificare» ma i passaggi erano affidabili")
     if caso.ricerca and RICERCA not in nomi_strumenti:
         scostamenti.append("la ricerca non è stata chiamata")
     if not caso.ricerca and RICERCA in nomi_strumenti:
@@ -72,7 +95,7 @@ def _risultato_leggibile(testo: str):
 def traccia(caso: Caso, esito, log: list[str], log_server: list[str], durata: float) -> dict:
     nomi = [s.nome for s in esito.strumenti]
     c = esito.citazioni
-    scostamenti = valuta_caso(caso, nomi, c.verificate, c.sconosciute)
+    scostamenti = valuta_caso(caso, nomi, c.verificate, c.sconosciute, esito.risposta)
     return {
         "caso": caso.nome, "domanda": caso.domanda, "atteso": caso.attesa,
         "esito": "atteso" if not scostamenti else "non atteso", "scostamenti": scostamenti,
@@ -87,14 +110,15 @@ def traccia(caso: Caso, esito, log: list[str], log_server: list[str], durata: fl
 
 def _riassunto_risultato(r) -> str:
     if isinstance(r, dict) and "passaggi" in r:
-        ids = ", ".join(f'{p["id"]} ({p["titolo"]}, {p["score"]})' for p in r["passaggi"]) or "nessuno"
+        ids = ", ".join(f'{p["id"]} ({p["titolo"]}, {p["score"]}' + (f', {p["fascia"]}' if "fascia" in p else "") + ")"
+                        for p in r["passaggi"]) or "nessuno"
         nota = f' · nota: {r["nota"]}' if r.get("nota") else ""
         return f'modalità {r.get("modalita")}, passaggi: {ids}{nota}'
     return str(r)[:300]
 
 
-def markdown(tracce: list[dict], intestazione: str = "") -> str:
-    righe = ["# Lezione 8 · Es. 2 — tracce dei quattro casi", "", intestazione, "",
+def markdown(tracce: list[dict], intestazione: str = "", titolo: str = "Lezione 8 · Es. 2 — tracce dei quattro casi") -> str:
+    righe = [f"# {titolo}", "", intestazione, "",
              "| Caso | Domanda | Atteso | Strumenti | Citazioni verificate / sconosciute | Esito | Durata |",
              "|---|---|---|---|---|---|---|"]
     for t in tracce:
@@ -140,8 +164,10 @@ def _righe_nuove(percorso: Path, inizio: int) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m assistente.prove_rag")
     parser.add_argument("--uscita", type=Path, required=True)
-    parser.add_argument("--casi", nargs="*", default=[c.nome for c in CASI])
+    parser.add_argument("--serie", choices=list(SERIE), default="base")
+    parser.add_argument("--casi", nargs="*", default=None, help="sottoinsieme dei casi della serie")
     args = parser.parse_args(argv)
+    casi = [c for c in SERIE[args.serie] if args.casi is None or c.nome in args.casi]
     from dotenv import load_dotenv
 
     from assistente.agente import Agente, grafo_da_configurazione
@@ -165,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.getLogger("assistente").addHandler(raccoglitore)
     args.uscita.mkdir(parents=True, exist_ok=True)
     tracce = []
-    for caso in [c for c in CASI if c.nome in args.casi]:
+    for caso in casi:
         raccoglitore.righe = []
         inizio_log = LOG_STDIO.stat().st_size if LOG_STDIO.exists() else 0
         print(f"caso {caso.nome}: {caso.domanda}", flush=True)
@@ -181,8 +207,10 @@ def main(argv: list[str] | None = None) -> int:
                     f"strumenti `{config.variante}` · server MCP da `{config.server_mcp_file}`\n"
                     f"- Comando (da `lezione 4/assistente-laboratorio`): "
                     f"`$env:PYTHONPATH = \"src\"; .\\.venv\\Scripts\\python.exe -m assistente.prove_rag "
-                    f"--uscita <cartella>`")
-    (args.uscita / "tracce.md").write_text(markdown(tracce, intestazione), encoding="utf-8")
+                    f"--serie {args.serie} --uscita <cartella>`")
+    titolo = ("Lezione 8 · Es. 4 — tracce con le soglie" if args.serie == "soglie"
+              else "Lezione 8 · Es. 2 — tracce dei quattro casi")
+    (args.uscita / "tracce.md").write_text(markdown(tracce, intestazione, titolo), encoding="utf-8")
     print(f"Tracce salvate in {args.uscita}")
     return 0
 

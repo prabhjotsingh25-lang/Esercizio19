@@ -1,5 +1,5 @@
 {
-  "intestazione": "- Data: 2026-11-18 · commit `83373fd`\n- Comando: `.\\.venv\\Scripts\\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --alta 0.6 --bassa 0.3 --configurazioni base entrambe --uscita docs/calibrazione-l8.md`\n- Score = similarità coseno (`text-embedding-nomic-embed-text-v1.5@q8_0`, collezione `artusi`), modalità base, soglie disattivate, k = 5\n- Query del modello: `google/gemma-4-e2b` con tool calling (descrizione e schema di search_documents, temperatura 0.0, seed 42); domande in cui non ha chiamato la ricerca: 3",
+  "intestazione": "- Data: 2026-11-18 · commit `83373fd`\n- Comando: `.\\.venv\\Scripts\\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --alta 0.6 --bassa 0.3 --configurazioni base entrambe --uscita docs/calibrazione-l8.md`\n- Score = similarità coseno (`text-embedding-nomic-embed-text-v1.5@q8_0`, collezione `artusi`), modalità base, soglie disattivate, k = 5\n- Query del modello: `google/gemma-4-e2b` con tool calling (descrizione e schema di search_documents, temperatura 0.0, seed 42); domande in cui non ha chiamato la ricerca: 3\n- Aggiornamento del 2026-11-18 (commit `8344da6`): rifatta solo la query del modello per 2 domande con timeout 180 s (`--aggiorna-query … --timeout-query 180`); domande senza query del modello ora: 3 (Quanti cappelletti bastano a un mangiatore moderato?; Perché gli gnocchi possono sciogliersi nell'acqua?; Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?)",
   "soglie": {
     "alta": 0.6,
     "bassa": 0.3
@@ -461,7 +461,7 @@
       "posizione_fonte": null,
       "score_fonte": null,
       "query": null,
-      "motivo": "errore: connessione fallita (ReadTimeout)"
+      "motivo": "il modello non ha chiamato la ricerca"
     },
     {
       "domanda": "Perché gli gnocchi possono sciogliersi nell'acqua?",
@@ -627,7 +627,7 @@
       "posizione_fonte": null,
       "score_fonte": null,
       "query": null,
-      "motivo": "errore: connessione fallita (ReadTimeout)"
+      "motivo": "il modello non ha chiamato la ricerca"
     },
     {
       "domanda": "Qual è la ricetta della carbonara?",
@@ -3226,7 +3226,7 @@
         "parti_totali": 0,
         "astenuta": false,
         "chiamate_llm": 0,
-        "latenza_ms": 151.2,
+        "latenza_ms": 7360.4,
         "ripieghi": [],
         "query_usate": [
           "Quanti cappelletti bastano a un mangiatore moderato?"
@@ -3549,7 +3549,7 @@
         "parti_totali": 2,
         "astenuta": false,
         "chiamate_llm": 0,
-        "latenza_ms": 187.3,
+        "latenza_ms": 4621.3,
         "ripieghi": [],
         "query_usate": [
           "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?"
@@ -3861,7 +3861,7 @@
         "parti_totali": 0,
         "astenuta": false,
         "chiamate_llm": 0,
-        "latenza_ms": 185.6,
+        "latenza_ms": 134.2,
         "ripieghi": [],
         "query_usate": [
           "Quanti cappelletti bastano a un mangiatore moderato?"
@@ -4184,7 +4184,7 @@
         "parti_totali": 2,
         "astenuta": false,
         "chiamate_llm": 0,
-        "latenza_ms": 168.1,
+        "latenza_ms": 118.7,
         "ripieghi": [],
         "query_usate": [
           "Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto?"

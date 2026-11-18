@@ -105,3 +105,25 @@ def test_tabelle_con_query_e_due_riepiloghi():
     modello = riepilogo([riga_score(CON, _esito([(89, 0.60)])), riga_score(SENZA, _esito([(3, 0.55)]))])
     testo = tabella_due_riepiloghi(intera, modello)
     assert "| Senza risposta: top-1 | 0.700 · 0.700 · 0.700 | 0.550 · 0.550 · 0.550 |" in testo
+
+
+def test_rapporto_rigenerato_dal_json():
+    from dataclasses import asdict
+
+    from rag.calibrazione import rapporto
+    righe = [riga_score(CON, _esito([(89, 0.77)])), riga_score(SENZA, _esito([(3, 0.71)]))]
+    modello = [dict(r, query="q", motivo="") for r in righe]
+    dati = {"intestazione": "- Data: oggi", "soglie": {"alta": 0.73, "bassa": 0.7},
+            "score_domanda_intera": righe, "score_query_modello": modello,
+            "riepilogo_domanda_intera": riepilogo(righe), "riepilogo_query_modello": riepilogo(modello),
+            "confronto": {"base con soglie": [asdict(misura(SENZA, _esito([]), 1))]}}
+    testo = rapporto(dati, k=5)
+    assert testo.startswith("# Calibrazione delle soglie (lezione 8)\n\n- Data: oggi")
+    assert "## Confronto con/senza soglie (alta 0.73, bassa 0.7)" in testo
+    assert "| base con soglie | 0/0 | 1/1 | 0 | nessun passaggio |" in testo
+
+
+def test_parser_aggiorna_query():
+    from rag.calibrazione import crea_parser
+    a = crea_parser().parse_args(["--aggiorna-query", "D1", "D2", "--timeout-query", "180"])
+    assert a.aggiorna_query == ["D1", "D2"] and a.timeout_query == 180

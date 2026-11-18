@@ -152,6 +152,26 @@ def confronto_soglie(per_variante: dict[str, list[Misura]], k: int) -> str:
     return "\n".join(linee) + "\n"
 
 
+def rapporto(dati: dict, k: int) -> str:
+    """Markdown dal dizionario salvato in JSON (così un aggiornamento parziale lo rigenera)."""
+    alta, bassa = dati["soglie"]["alta"], dati["soglie"]["bassa"]
+    per_variante = {n: [Misura(**m) for m in ms] for n, ms in dati["confronto"].items()}
+    return (f"# Calibrazione delle soglie (lezione 8)\n\n{dati['intestazione']}\n\n"
+            f"## Riepilogo: domanda intera e query del modello\n\n"
+            f"{tabella_due_riepiloghi(dati['riepilogo_domanda_intera'], dati['riepilogo_query_modello'])}\n"
+            f"## Score con la domanda intera\n\n{tabella_score(dati['score_domanda_intera'], k)}\n"
+            f"## Score con la query formulata dal modello\n\n{tabella_score(dati['score_query_modello'], k)}\n"
+            f"## Confronto con/senza soglie (alta {alta}, bassa {bassa})\n\n{confronto_soglie(per_variante, k)}")
+
+
+def _salva(dati: dict, uscita: Path, k: int) -> str:
+    testo = rapporto(dati, k)
+    uscita.parent.mkdir(parents=True, exist_ok=True)
+    uscita.write_text(testo, encoding="utf-8")
+    uscita.with_suffix(".json").write_text(json.dumps(dati, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return testo
+
+
 def crea_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m rag.calibrazione")
     parser.add_argument("--domande", type=Path, default=Path("eval/domande_l8.yaml"))
@@ -160,23 +180,37 @@ def crea_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bassa", type=float, default=None, help="soglia bassa da provare (default: .env)")
     parser.add_argument("--configurazioni", nargs="+", choices=MODALITA, default=["base", "entrambe"])
     parser.add_argument("--uscita", type=Path, default=Path("docs/calibrazione-l8.md"))
+    parser.add_argument("--timeout-query", type=int, default=None,
+                        help="secondi per la chiamata di tool calling che produce la query del modello "
+                             "(default: LLM_TIMEOUT)")
+    parser.add_argument("--aggiorna-query", nargs="+", default=None, metavar="DOMANDA",
+                        help="rifà solo la query del modello per queste domande e aggiorna il rapporto "
+                             "esistente (JSON accanto a --uscita)")
     return parser
+
+
+def _riga_modello(d: DomandaL8, llm_query, base) -> tuple[dict, str | None]:
+    query, motivo = query_del_modello(llm_query, d.testo)
+    print(f"  query del modello: {d.testo[:50]} → {query or motivo}", file=sys.stderr, flush=True)
+    riga = riga_score(d, base(query)) if query else riga_score(d, EsitoPipeline("base", [], []))
+    riga.update(query=query, motivo=motivo)
+    return riga, query
 
 
 def main(argv: list[str] | None = None) -> int:
     args = crea_parser().parse_args(argv)
+    from dataclasses import replace
+
     from qdrant_client import QdrantClient
     config = None
     try:
         config = carica_config()
-        alta = config.soglia_alta if args.alta is None else args.alta
-        bassa = config.soglia_bassa if args.bassa is None else args.bassa
-        if not 0 <= bassa <= alta <= 1:
-            raise ValueError(f"soglie non valide: bassa {bassa}, alta {alta} (serve 0 <= bassa <= alta <= 1)")
         domande = carica_domande_l8(args.domande)
         client = QdrantClient(url=config.qdrant_url)
         embedder = EmbedderLMStudio(config.lmstudio_url, config.modello_embedding, config.embedding_batch)
         llm = LLMLMStudio(config)
+        timeout_query = args.timeout_query or config.llm_timeout
+        llm_query = LLMLMStudio(replace(config, llm_timeout=timeout_query))
 
         def base(testo, soglie=None):
             return esegui(testo, args.k, None, client=client, embedder=embedder, llm=llm, config=config,
@@ -186,59 +220,79 @@ def main(argv: list[str] | None = None) -> int:
             return lambda testo, k, modalita: esegui(traduci(testo), k, None, client=client, embedder=embedder,
                                                      llm=llm, config=config, modalita=modalita, soglie=soglie)
 
-        # 1. score con la domanda intera
-        righe = [riga_score(d, base(d.testo)) for d in domande]
-        # 2. score con la query che il modello passa a search_documents (tool calling)
-        query_modello: dict[str, str | None] = {}
-        righe_modello = []
-        for d in domande:
-            query, motivo = query_del_modello(llm, d.testo)
-            query_modello[d.testo] = query
-            print(f"  query del modello: {d.testo[:50]} → {query or motivo}", file=sys.stderr, flush=True)
-            riga = riga_score(d, base(query)) if query else riga_score(d, EsitoPipeline("base", [], []))
-            riga.update(query=query, motivo=motivo)
-            righe_modello.append(riga)
-        # 3. confronto con/senza soglie
-        per_variante: dict[str, list[Misura]] = {}
-        for nome in args.configurazioni:
-            per_variante[f"{nome} senza soglie"] = esegui_confronto(domande, [nome], args.k, esegui_con(None))[nome]
-            per_variante[f"{nome} con soglie"] = esegui_confronto(domande, [nome], args.k,
-                                                                   esegui_con((alta, bassa)))[nome]
-        # la query del modello sostituisce la domanda (se non ha chiamato la ricerca: domanda intera)
-        traduci = lambda testo: query_modello.get(testo) or testo  # noqa: E731
-        per_variante["base, query del modello, senza soglie"] = esegui_confronto(
-            domande, ["base"], args.k, esegui_con(None, traduci))["base"]
-        per_variante["base, query del modello, con soglie"] = esegui_confronto(
-            domande, ["base"], args.k, esegui_con((alta, bassa), traduci))["base"]
+        if args.aggiorna_query:
+            dati = json.loads(args.uscita.with_suffix(".json").read_text(encoding="utf-8"))
+            soglie = (dati["soglie"]["alta"], dati["soglie"]["bassa"])
+            per_testo = {d.testo: d for d in domande}
+            mancanti = [t for t in args.aggiorna_query if t not in per_testo]
+            if mancanti:
+                raise ValueError(f"domande non presenti in {args.domande}: {mancanti}")
+            for testo in args.aggiorna_query:
+                d = per_testo[testo]
+                riga, query = _riga_modello(d, llm_query, base)
+                righe = dati["score_query_modello"]
+                righe[[r["domanda"] for r in righe].index(testo)] = riga
+                for nome, s in (("base, query del modello, senza soglie", None),
+                                ("base, query del modello, con soglie", soglie)):
+                    nuova = esegui_confronto([d], ["base"], args.k, esegui_con(s, lambda t: query or t))["base"][0]
+                    misure = dati["confronto"][nome]
+                    misure[[m["domanda"] for m in misure].index(testo)] = asdict(nuova)
+            dati["riepilogo_query_modello"] = riepilogo(dati["score_query_modello"])
+            senza = [r["domanda"] for r in dati["score_query_modello"] if not r.get("query")]
+            dati["intestazione"] += (
+                f"\n- Aggiornamento del {date.today().isoformat()} (commit `{_commit()}`): rifatta solo la query "
+                f"del modello per {len(args.aggiorna_query)} domande con timeout {timeout_query} s "
+                f"(`--aggiorna-query … --timeout-query {timeout_query}`); domande senza query del modello ora: "
+                f"{len(senza)} ({'; '.join(senza) or 'nessuna'})")
+        else:
+            alta = config.soglia_alta if args.alta is None else args.alta
+            bassa = config.soglia_bassa if args.bassa is None else args.bassa
+            if not 0 <= bassa <= alta <= 1:
+                raise ValueError(f"soglie non valide: bassa {bassa}, alta {alta} (serve 0 <= bassa <= alta <= 1)")
+            # 1. score con la domanda intera
+            righe = [riga_score(d, base(d.testo)) for d in domande]
+            # 2. score con la query che il modello passa a search_documents (tool calling)
+            query_modello: dict[str, str | None] = {}
+            righe_modello = []
+            for d in domande:
+                riga, query_modello[d.testo] = _riga_modello(d, llm_query, base)
+                righe_modello.append(riga)
+            # 3. confronto con/senza soglie
+            per_variante: dict[str, list[Misura]] = {}
+            for nome in args.configurazioni:
+                per_variante[f"{nome} senza soglie"] = esegui_confronto(domande, [nome], args.k, esegui_con(None))[nome]
+                per_variante[f"{nome} con soglie"] = esegui_confronto(domande, [nome], args.k,
+                                                                       esegui_con((alta, bassa)))[nome]
+            # la query del modello sostituisce la domanda (se non ha chiamato la ricerca: domanda intera)
+            traduci = lambda testo: query_modello.get(testo) or testo  # noqa: E731
+            per_variante["base, query del modello, senza soglie"] = esegui_confronto(
+                domande, ["base"], args.k, esegui_con(None, traduci))["base"]
+            per_variante["base, query del modello, con soglie"] = esegui_confronto(
+                domande, ["base"], args.k, esegui_con((alta, bassa), traduci))["base"]
+            senza_chiamata = sum(1 for q in query_modello.values() if not q)
+            intestazione = (
+                f"- Data: {date.today().isoformat()} · commit `{_commit()}`\n"
+                f"- Comando: `.\\.venv\\Scripts\\python.exe -m rag.calibrazione --domande {args.domande.as_posix()} "
+                f"--k {args.k} --alta {alta} --bassa {bassa} --configurazioni {' '.join(args.configurazioni)} "
+                f"--timeout-query {timeout_query} --uscita {args.uscita.as_posix()}`\n"
+                f"- Score = similarità coseno (`{config.modello_embedding}`, collezione `{config.collezione}`), "
+                f"modalità base, soglie disattivate, k = {args.k}\n"
+                f"- Query del modello: `{config.modello_chat}` con tool calling (descrizione e schema di "
+                f"search_documents, temperatura {config.llm_temperatura}, seed {config.llm_seed}, timeout "
+                f"{timeout_query} s); domande senza query del modello: {senza_chiamata}\n"
+                f"- Configurazioni con LLM: modalità {', '.join(args.configurazioni)} con i prompt di "
+                f"`rag/avanzata.py` al commit indicato")
+            dati = {"intestazione": intestazione, "soglie": {"alta": alta, "bassa": bassa},
+                    "score_domanda_intera": righe, "score_query_modello": righe_modello,
+                    "riepilogo_domanda_intera": riepilogo(righe), "riepilogo_query_modello": riepilogo(righe_modello),
+                    "confronto": {n: [asdict(m) for m in ms] for n, ms in per_variante.items()}}
     except (ValueError, OSError, ErroreConfigurazione, ErroreCollezione, ErroreEmbedding) as e:
         print(f"Errore: {e}", file=sys.stderr)
         return 1
     except ERRORI_QDRANT as e:
         print(f"Errore: Qdrant non raggiungibile su {config.qdrant_url} ({type(e).__name__})", file=sys.stderr)
         return 1
-    s, s_modello = riepilogo(righe), riepilogo(righe_modello)
-    senza_chiamata = sum(1 for q in query_modello.values() if not q)
-    testo = (f"# Calibrazione delle soglie (lezione 8)\n\n"
-             f"- Data: {date.today().isoformat()} · commit `{_commit()}`\n"
-             f"- Comando: `.\\.venv\\Scripts\\python.exe -m rag.calibrazione --domande {args.domande.as_posix()} "
-             f"--k {args.k} --alta {alta} --bassa {bassa} --configurazioni {' '.join(args.configurazioni)} "
-             f"--uscita {args.uscita.as_posix()}`\n"
-             f"- Score = similarità coseno (`{config.modello_embedding}`, collezione `{config.collezione}`), "
-             f"modalità base, soglie disattivate, k = {args.k}\n"
-             f"- Query del modello: `{config.modello_chat}` con tool calling (descrizione e schema di "
-             f"search_documents, temperatura {config.llm_temperatura}, seed {config.llm_seed}); domande in cui "
-             f"non ha chiamato la ricerca: {senza_chiamata}\n\n"
-             f"## Riepilogo: domanda intera e query del modello\n\n{tabella_due_riepiloghi(s, s_modello)}\n"
-             f"## Score con la domanda intera\n\n{tabella_score(righe, args.k)}\n"
-             f"## Score con la query formulata dal modello\n\n{tabella_score(righe_modello, args.k)}\n"
-             f"## Confronto con/senza soglie (alta {alta}, bassa {bassa})\n\n{confronto_soglie(per_variante, args.k)}")
-    args.uscita.parent.mkdir(parents=True, exist_ok=True)
-    args.uscita.write_text(testo, encoding="utf-8")
-    args.uscita.with_suffix(".json").write_text(json.dumps(
-        {"soglie": {"alta": alta, "bassa": bassa}, "score_domanda_intera": righe,
-         "score_query_modello": righe_modello, "riepilogo_domanda_intera": s, "riepilogo_query_modello": s_modello,
-         "confronto": {n: [asdict(m) for m in ms] for n, ms in per_variante.items()}},
-        ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    testo = _salva(dati, args.uscita, args.k)
     sys.stdout.reconfigure(encoding="utf-8")
     print(testo)
     print(f"Salvato in {args.uscita} e {args.uscita.with_suffix('.json')}")

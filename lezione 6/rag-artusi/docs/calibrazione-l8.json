@@ -1,4 +1,5 @@
 {
+  "intestazione": "- Data: 2026-11-18 · commit `83373fd`\n- Comando: `.\\.venv\\Scripts\\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --alta 0.6 --bassa 0.3 --configurazioni base entrambe --uscita docs/calibrazione-l8.md`\n- Score = similarità coseno (`text-embedding-nomic-embed-text-v1.5@q8_0`, collezione `artusi`), modalità base, soglie disattivate, k = 5\n- Query del modello: `google/gemma-4-e2b` con tool calling (descrizione e schema di search_documents, temperatura 0.0, seed 42); domande in cui non ha chiamato la ricerca: 3",
   "soglie": {
     "alta": 0.6,
     "bassa": 0.3

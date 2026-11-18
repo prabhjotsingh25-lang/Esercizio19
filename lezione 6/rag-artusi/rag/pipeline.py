@@ -17,6 +17,9 @@ from rag.config import Config
 from rag.embedder import Embedder
 from rag.llm import LLM
 from rag.ricerca import cerca
+from rag.soglie import applica, nota_esclusi
+
+DA_CONFIG = "config"  # soglie: quelle della configurazione (se SOGLIE_ATTIVE)
 
 NOTA_RERANKING_VUOTO = "il reranking non ha trovato passaggi pertinenti alla domanda"
 
@@ -33,8 +36,15 @@ class EsitoPipeline:
 
 
 def esegui(domanda: str, top_k: int, capitolo: str | None, *, client: QdrantClient, embedder: Embedder,
-           llm: LLM | None, config: Config, modalita: str | None = None) -> EsitoPipeline:
-    """Le eccezioni di Qdrant e dell'embedding passano al chiamante; quelle dell'LLM no (ripieghi)."""
+           llm: LLM | None, config: Config, modalita: str | None = None,
+           soglie: tuple[float, float] | None | str = DA_CONFIG) -> EsitoPipeline:
+    """Le eccezioni di Qdrant e dell'embedding passano al chiamante; quelle dell'LLM no (ripieghi).
+
+    `soglie` = (alta, bassa), None (disattivate) o DA_CONFIG. Si applicano al coseno migliore del
+    passaggio dopo la fusione e prima del reranking (vedi rag/soglie.py).
+    """
+    if soglie == DA_CONFIG:
+        soglie = (config.soglia_alta, config.soglia_bassa) if config.soglie_attive else None
     modalita = modalita or config.modalita_ricerca
     riscrittura = modalita in ("riscrittura", "entrambe")
     reranking = modalita in ("reranking", "entrambe")
@@ -48,6 +58,12 @@ def esegui(domanda: str, top_k: int, capitolo: str | None, *, client: QdrantClie
     per_query = top_k if modalita == "base" else max(top_k, config.candidati_per_query)
     liste = [cerca(q, per_query, capitolo, client=client, embedder=embedder, config=config) for q in query]
     candidati = da_lista(liste[0]) if len(liste) == 1 else fondi(liste, config.rrf_k)
+    esclusi = 0
+    if soglie is not None:
+        candidati, esclusi = applica(candidati, *soglie)
+        nota = nota_esclusi(esclusi, len(candidati), soglie[1])
+        if nota:
+            note.append(nota)
 
     if reranking:
         ordinati, nuovi = riordina(originale, candidati, llm, config.rerank_max_candidati,
@@ -61,4 +77,4 @@ def esegui(domanda: str, top_k: int, capitolo: str | None, *, client: QdrantClie
     note += [r.descrizione for r in ripieghi]
     chiamate = (llm.chiamate - chiamate_iniziali) if llm is not None else 0
     return EsitoPipeline(modalita=modalita, query_usate=query, candidati=candidati[:top_k], note=note,
-                         ripieghi=ripieghi, chiamate_llm=chiamate)
+                         ripieghi=ripieghi, chiamate_llm=chiamate, esclusi_soglia=esclusi)

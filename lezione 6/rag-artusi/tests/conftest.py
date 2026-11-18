@@ -26,6 +26,7 @@ def crea_config(**modifiche) -> Config:
         embedding_batch=32,
         corpus=CORPUS_REALE,
         testo_indicizzato="titolo_capitolo",
+        soglie_attive=False,  # i test delle soglie le attivano esplicitamente
     )
     valori.update(modifiche)
     return Config(**valori)

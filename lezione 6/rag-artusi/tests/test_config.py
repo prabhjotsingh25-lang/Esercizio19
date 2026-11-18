@@ -112,3 +112,31 @@ def test_ricerca_top_k_max_non_valido(valore):
 def test_ricerca_max_caratteri_zero():
     with pytest.raises(ErroreConfigurazione, match="RICERCA_MAX_CARATTERI"):
         carica_config({**OBBLIGATORIE, "RICERCA_MAX_CARATTERI": "0"})
+
+
+# --- Lezione 8 es. 3: modalità avanzate ---
+
+def test_modalita_e_llm_default():
+    c = carica_config(OBBLIGATORIE)
+    assert c.modalita_ricerca == "base"
+    assert c.modello_chat == "google/gemma-4-e2b"
+    assert (c.llm_temperatura, c.llm_seed, c.llm_reasoning_effort) == (0.0, 42, "none")
+    assert (c.llm_max_tokens, c.llm_timeout) == (300, 60)
+    assert (c.riscrittura_max_query, c.candidati_per_query, c.rerank_max_candidati) == (3, 10, 10)
+    assert (c.rerank_max_caratteri, c.rrf_k) == (400, 60)
+
+
+def test_seed_e_reasoning_vuoti_non_inviati():
+    c = carica_config({**OBBLIGATORIE, "LLM_SEED": "", "LLM_REASONING_EFFORT": ""})
+    assert c.llm_seed is None and c.llm_reasoning_effort is None
+
+
+@pytest.mark.parametrize("nome, valore", [
+    ("MODALITA_RICERCA", "tutte"), ("RISCRITTURA_MAX_QUERY", "4"), ("RISCRITTURA_MAX_QUERY", "0"),
+    ("CANDIDATI_PER_QUERY", "21"), ("RERANK_MAX_CANDIDATI", "0"), ("RERANK_MAX_CARATTERI", "0"),
+    ("RRF_K", "-1"), ("LLM_TEMPERATURA", "caldo"), ("LLM_TEMPERATURA", "3"), ("LLM_MAX_TOKENS", "0"),
+    ("LLM_TIMEOUT", "0"),
+])
+def test_valori_avanzati_non_validi(nome, valore):
+    with pytest.raises(ErroreConfigurazione, match=nome):
+        carica_config({**OBBLIGATORIE, nome: valore})

@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 OBBLIGATORIE = ("QDRANT_URL", "COLLEZIONE", "LMSTUDIO_URL", "MODELLO_EMBEDDING")
 STRATEGIE = ("paragrafi", "caratteri")
 FORMATI_TESTO = ("solo_testo", "titolo_capitolo")
+MODALITA = ("base", "riscrittura", "reranking", "entrambe")
 K_MASSIMO_CODICE = 20  # tetto imposto dal codice a RICERCA_TOP_K_MAX (= K_MASSIMO della ricerca)
 
 
@@ -37,6 +38,19 @@ class Config:
     ricerca_top_k_max: int = 10
     ricerca_max_caratteri: int = 800
     ricerca_log_file: str | None = None
+    # Lezione 8 es. 3: modalità avanzate (riscrittura, reranking) e LLM di LM Studio
+    modalita_ricerca: str = "base"
+    modello_chat: str = "google/gemma-4-e2b"
+    llm_temperatura: float = 0.0
+    llm_seed: int | None = 42
+    llm_reasoning_effort: str | None = "none"
+    llm_max_tokens: int = 300
+    llm_timeout: int = 60
+    riscrittura_max_query: int = 3
+    candidati_per_query: int = 10
+    rerank_max_candidati: int = 10
+    rerank_max_caratteri: int = 400
+    rrf_k: int = 60
 
 
 def _intero(env: Mapping[str, str], nome: str, default: int) -> int:
@@ -47,6 +61,31 @@ def _intero(env: Mapping[str, str], nome: str, default: int) -> int:
         return int(valore)
     except ValueError:
         raise ErroreConfigurazione(f"{nome} deve essere un numero intero, trovato {valore!r}") from None
+
+
+def _intero_tra(env: Mapping[str, str], nome: str, default: int, minimo: int, massimo: int | None = None) -> int:
+    valore = _intero(env, nome, default)
+    if valore < minimo or (massimo is not None and valore > massimo):
+        limite = f"tra {minimo} e {massimo}" if massimo is not None else f">= {minimo}"
+        raise ErroreConfigurazione(f"{nome} deve essere {limite}, trovato {valore}")
+    return valore
+
+
+def _seed(env: Mapping[str, str]) -> int | None:
+    if "LLM_SEED" in env and not env["LLM_SEED"].strip():
+        return None
+    return _intero(env, "LLM_SEED", 42)
+
+
+def _temperatura(env: Mapping[str, str]) -> float:
+    grezzo = env.get("LLM_TEMPERATURA", "").strip()
+    try:
+        valore = float(grezzo) if grezzo else 0.0
+    except ValueError:
+        raise ErroreConfigurazione(f"LLM_TEMPERATURA deve essere un numero, trovato {grezzo!r}") from None
+    if not 0 <= valore <= 2:
+        raise ErroreConfigurazione(f"LLM_TEMPERATURA deve essere tra 0 e 2, trovato {valore}")
+    return valore
 
 
 def carica_config(env: Mapping[str, str] | None = None) -> Config:
@@ -86,6 +125,27 @@ def carica_config(env: Mapping[str, str] | None = None) -> Config:
     max_caratteri = _intero(env, "RICERCA_MAX_CARATTERI", 800)
     if max_caratteri <= 0:
         raise ErroreConfigurazione("RICERCA_MAX_CARATTERI deve essere positivo")
+    modalita = env.get("MODALITA_RICERCA", "").strip().lower() or "base"
+    if modalita not in MODALITA:
+        raise ErroreConfigurazione(f"MODALITA_RICERCA {modalita!r} sconosciuta: valori ammessi {', '.join(MODALITA)}")
+    if "LLM_REASONING_EFFORT" in env:
+        reasoning = env["LLM_REASONING_EFFORT"].strip() or None
+    else:
+        reasoning = "none"
+    avanzate = dict(
+        modalita_ricerca=modalita,
+        modello_chat=env.get("MODELLO_CHAT", "").strip() or "google/gemma-4-e2b",
+        llm_temperatura=_temperatura(env),
+        llm_seed=_seed(env),
+        llm_reasoning_effort=reasoning,
+        llm_max_tokens=_intero_tra(env, "LLM_MAX_TOKENS", 300, 1),
+        llm_timeout=_intero_tra(env, "LLM_TIMEOUT", 60, 1),
+        riscrittura_max_query=_intero_tra(env, "RISCRITTURA_MAX_QUERY", 3, 1, 3),
+        candidati_per_query=_intero_tra(env, "CANDIDATI_PER_QUERY", 10, 1, K_MASSIMO_CODICE),
+        rerank_max_candidati=_intero_tra(env, "RERANK_MAX_CANDIDATI", 10, 1, K_MASSIMO_CODICE),
+        rerank_max_caratteri=_intero_tra(env, "RERANK_MAX_CARATTERI", 400, 1),
+        rrf_k=_intero_tra(env, "RRF_K", 60, 0),
+    )
     batch = _intero(env, "EMBEDDING_BATCH", 32)
     if batch <= 0:
         raise ErroreConfigurazione("EMBEDDING_BATCH deve essere positivo")
@@ -106,4 +166,5 @@ def carica_config(env: Mapping[str, str] | None = None) -> Config:
         ricerca_top_k_max=top_k_max,
         ricerca_max_caratteri=max_caratteri,
         ricerca_log_file=env.get("RICERCA_LOG_FILE", "").strip() or None,
+        **avanzate,
     )

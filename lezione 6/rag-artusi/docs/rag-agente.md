@@ -138,4 +138,55 @@ sotto il secondo.
   che il modello copia nelle query (non fatto: avrebbe cambiato l'esperimento a metà).
 
 ## Esercizio 4 — soglie di confidenza
-_Da completare dopo la calibrazione e l'approvazione dei valori._
+
+### Dove si applicano
+Sul **coseno migliore** del passaggio fra le query usate, **dopo la fusione RRF e prima del
+reranking** (specifica es. 4): lo score RRF dipende solo dai ranghi (1/(60+r)), non dalla
+somiglianza, e il reranking non deve vedere passaggi esclusi. In `base` le soglie filtrano i k
+risultati di Qdrant.
+
+### Calibrazione (score reali)
+Comando: `.\.venv\Scripts\python.exe -m rag.calibrazione --domande eval/domande_l8.yaml --k 5 --timeout-query 180 --uscita docs/calibrazione-l8.md`.
+Rapporto: `docs/calibrazione-l8.md` (+ `.json`). Gli score sono misurati in due modi (richiesta
+dell'utente): con la **domanda intera** e con la **query che gemma passa a `search_documents`**
+(tool calling con descrizione e schema del tool).
+
+| Gruppo | Domanda intera (min · mediana · max) | Query del modello (min · mediana · max) |
+|---|---|---|
+| Con risposta: top-1 | 0,715 · 0,766 · 0,821 | 0,734 · 0,766 · 0,823 |
+| Con risposta: score della fonte attesa | 0,715 · 0,754 · 0,817 | 0,734 · 0,766 · 0,821 |
+| Senza risposta: top-1 | 0,695 · 0,706 · 0,728 | 0,548 · 0,673 · 0,691 |
+
+- Con la domanda intera gli intervalli **si sovrappongono** (carbonara 0,728 sopra due domande con
+  risposta, 0,715 e 0,720): nessuna soglia separa.
+- Con la query del modello sono **separati** (0,691 sushi contro 0,734 baccalà): il modello accorcia
+  le domande senza risposta a poche parole («tiramisù» 0,548; «ricetta della carbonara» 0,673).
+- La query del modello c'è per **11 domande su 14**: per tre domande gemma ha risposto senza
+  chiamare la ricerca (gnocchi che si sciolgono; cappelletti; cacciucco + cappelletti). Le ultime
+  due erano andate in timeout a 60 s; rifatte con `--aggiorna-query … --timeout-query 180` non sono
+  andate in timeout ma il modello non ha chiamato la ricerca.
+- Con le soglie di partenza 0,6/0,3 nessun effetto: 70 passaggi su 70 «affidabile» con la domanda
+  intera, 0 astensioni.
+
+### Valori proposti: `SOGLIA_ALTA=0.73`, `SOGLIA_BASSA=0.70`
+Approvati dall'utente il 2026-11-18 a condizione che reggano anche dopo la correzione del prompt di
+riscrittura (verifica più sotto).
+Effetto calcolato sugli score registrati (in `base` le soglie sono un filtro su quegli score):
+
+| Soglie (alta/bassa) | Formulazione | Astensioni corrette | Astensioni errate | Fonti perse | Fonte in fascia «media» |
+|---|---|---|---|---|---|
+| **0,73 / 0,70** | domanda intera | 1/3 (sushi) | 0 | 0 | 2 |
+| **0,73 / 0,70** | query del modello | **3/3** | 0 | 0 | 0 |
+| 0,73 / 0,68 | query del modello | 2/3 | 0 | 0 | 0 |
+| 0,75 / 0,72 | domanda intera | 2/3 | **1** | **1** | 4 |
+
+- **Bassa 0,70**: sotto la fonte attesa più bassa misurata (0,715 / 0,734), quindi non perde
+  risposte; sopra il top-1 di tutte le domande senza risposta formulate dal modello (max 0,691).
+- **Alta 0,73**: sopra il top-1 più alto delle domande senza risposta in entrambe le formulazioni
+  (0,728): un passaggio di una domanda senza risposta non è mai «affidabile».
+
+**Limiti (da leggere prima di usarle):** le soglie sono calibrate su **14 domande** (11 con la
+query del modello), con **margine stretto** (0,691 → 0,70: 0,009); valgono **solo con query brevi
+formulate dal modello** (con la domanda intera non separano: tiramisù 0,706 e carbonara 0,728
+restano sopra la soglia bassa); vanno **ricalibrate se cambia il modello di embedding o il modello
+chat** (lo stesso comando, poi `--alta/--bassa` per provare i valori).

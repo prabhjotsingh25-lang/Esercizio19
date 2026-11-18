@@ -226,7 +226,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Configurazione non valida: {errore}", file=sys.stderr)
         return 2
     configura_log(config)
-    uvicorn.run(crea_app_da_configurazione(config), host=config.agente_host,
+    from assistente.server_esterni import ErroreServerMCP
+    try:
+        app = crea_app_da_configurazione(config)
+    except ErroreServerMCP as errore:
+        print(f"Server MCP non disponibili: {errore}", file=sys.stderr)
+        return 2
+    uvicorn.run(app, host=config.agente_host,
                 port=config.agente_porta, log_level=config.log_level.lower())
     return 0
 

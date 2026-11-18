@@ -35,6 +35,8 @@ services:
       AGENTE_PORTA: "8000"
       VARIANTE_STRUMENTI: locale
       NOTE_DB: /dati/note.sqlite
+      # Lezione 8: la ricerca (server stdio con il venv Windows) resta fuori dai container.
+      SERVER_MCP_FILE: ""
     volumes:
       - note:/dati
     # Nessuna porta pubblicata: lo chiama solo il back-end.
@@ -82,6 +84,8 @@ services:
       STRUMENTI_HTTP_URL: http://strumenti-http:8001
       STRUMENTI_MCP_URL: http://strumenti-mcp:8002/mcp
       NOTE_DB: /dati/note.sqlite
+      # Lezione 8: la ricerca (server stdio con il venv Windows) resta fuori dai container.
+      SERVER_MCP_FILE: ""
     volumes:
       - note:/dati  # le note sopravvivono ai container
     stdin_open: true

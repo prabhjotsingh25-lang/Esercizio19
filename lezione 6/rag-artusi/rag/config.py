@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 OBBLIGATORIE = ("QDRANT_URL", "COLLEZIONE", "LMSTUDIO_URL", "MODELLO_EMBEDDING")
 STRATEGIE = ("paragrafi", "caratteri")
 FORMATI_TESTO = ("solo_testo", "titolo_capitolo")
+K_MASSIMO_CODICE = 20  # tetto imposto dal codice a RICERCA_TOP_K_MAX (= K_MASSIMO della ricerca)
 
 
 class ErroreConfigurazione(Exception):
@@ -32,6 +33,10 @@ class Config:
     embedding_batch: int
     corpus: Path
     testo_indicizzato: str = "titolo_capitolo"
+    # Lezione 8: server di ricerca MCP
+    ricerca_top_k_max: int = 10
+    ricerca_max_caratteri: int = 800
+    ricerca_log_file: str | None = None
 
 
 def _intero(env: Mapping[str, str], nome: str, default: int) -> int:
@@ -75,6 +80,12 @@ def carica_config(env: Mapping[str, str] | None = None) -> Config:
         raise ErroreConfigurazione(
             f"TESTO_INDICIZZATO {formato!r} sconosciuto: valori ammessi {', '.join(FORMATI_TESTO)}"
         )
+    top_k_max = _intero(env, "RICERCA_TOP_K_MAX", 10)
+    if not 1 <= top_k_max <= K_MASSIMO_CODICE:
+        raise ErroreConfigurazione(f"RICERCA_TOP_K_MAX deve essere tra 1 e {K_MASSIMO_CODICE}, trovato {top_k_max}")
+    max_caratteri = _intero(env, "RICERCA_MAX_CARATTERI", 800)
+    if max_caratteri <= 0:
+        raise ErroreConfigurazione("RICERCA_MAX_CARATTERI deve essere positivo")
     batch = _intero(env, "EMBEDDING_BATCH", 32)
     if batch <= 0:
         raise ErroreConfigurazione("EMBEDDING_BATCH deve essere positivo")
@@ -92,4 +103,7 @@ def carica_config(env: Mapping[str, str] | None = None) -> Config:
         embedding_batch=batch,
         corpus=Path(env.get("CORPUS", "").strip() or "dati/artusi.txt"),
         testo_indicizzato=formato,
+        ricerca_top_k_max=top_k_max,
+        ricerca_max_caratteri=max_caratteri,
+        ricerca_log_file=env.get("RICERCA_LOG_FILE", "").strip() or None,
     )

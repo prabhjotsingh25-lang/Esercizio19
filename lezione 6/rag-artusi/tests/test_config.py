@@ -86,3 +86,29 @@ def test_testo_indicizzato_default_e_valori():
 def test_numero_non_valido():
     with pytest.raises(ErroreConfigurazione, match="CHUNK_DIMENSIONE"):
         carica_config({**OBBLIGATORIE, "CHUNK_DIMENSIONE": "tanti"})
+
+
+# --- Lezione 8: server di ricerca MCP ---
+
+def test_ricerca_default():
+    c = carica_config(OBBLIGATORIE)
+    assert c.ricerca_top_k_max == 10
+    assert c.ricerca_max_caratteri == 800
+    assert c.ricerca_log_file is None
+
+
+def test_ricerca_valori():
+    c = carica_config({**OBBLIGATORIE, "RICERCA_TOP_K_MAX": "7", "RICERCA_MAX_CARATTERI": "300",
+                       "RICERCA_LOG_FILE": "logs/ricerca.log"})
+    assert (c.ricerca_top_k_max, c.ricerca_max_caratteri, c.ricerca_log_file) == (7, 300, "logs/ricerca.log")
+
+
+@pytest.mark.parametrize("valore", ["0", "21", "dieci"])
+def test_ricerca_top_k_max_non_valido(valore):
+    with pytest.raises(ErroreConfigurazione, match="RICERCA_TOP_K_MAX"):
+        carica_config({**OBBLIGATORIE, "RICERCA_TOP_K_MAX": valore})
+
+
+def test_ricerca_max_caratteri_zero():
+    with pytest.raises(ErroreConfigurazione, match="RICERCA_MAX_CARATTERI"):
+        carica_config({**OBBLIGATORIE, "RICERCA_MAX_CARATTERI": "0"})

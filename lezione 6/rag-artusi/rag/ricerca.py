@@ -11,13 +11,13 @@ from dataclasses import dataclass
 
 from qdrant_client import QdrantClient, models
 
-from rag.config import Config, ErroreConfigurazione, carica_config
+from rag.config import K_MASSIMO_CODICE, Config, ErroreConfigurazione, carica_config
 from rag.corpus import CAPITOLI
 from rag.embedder import Embedder, EmbedderLMStudio, ErroreEmbedding
 from rag.indice import IN_AGGIORNAMENTO, ErroreCollezione, formato_salvato, verifica_compatibilita
 from rag.ingestion import ERRORI_QDRANT
 
-K_MASSIMO = 20
+K_MASSIMO = K_MASSIMO_CODICE
 
 
 @dataclass(frozen=True)

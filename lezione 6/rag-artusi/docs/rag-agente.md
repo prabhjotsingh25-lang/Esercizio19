@@ -186,16 +186,29 @@ Casi rispetto a base con il prompt corretto (`docs/confronto-l8-prompt-corretto.
 - **entrambe** — migliorati: baccalà (4 → 3), brodo + baccalà (1/2 → 2/2); peggiorati: le composte
   gnocchi + pollo e cacciucco + cappelletti (parti 2/2 → 1/2): il reranking ha tenuto un solo lato.
 
-Perché: le parole del contesto sono sparite, ma gemma ora copia **gli esempi del nuovo prompt**
-(«piatti, ingredienti, quantità, tempi») e produce query come «ingredienti tiramisù», «quantità
-sushi», «cuocere baccalà quantità», che allontanano la 510 nel caso del baccalà. Con il prompt
-corretto le query di una domanda composta sono giuste («farina gnocchi quantità», «vino pollo alla
-cacciatora»), ma è il reranking che poi tiene un solo lato. Latenza più bassa (21 s e 35 s): query
-più corte da generare.
+Domande che peggiorano rispetto a base con il prompt corretto, con ciò che è **osservato** nei file
+(`docs/confronto-l8-prompt-corretto.json`) e ciò che **non è verificato**:
+
+| Configurazione | Domanda | Variazione | Osservato | Causa |
+|---|---|---|---|---|
+| riscrittura | Per quanto tempo si deve cuocere il baccalà? | 510 dalla 4ª posizione a fuori dai primi 5 | query usate: originale + «baccalà tempo cottura», «cuocere baccalà quantità», «tempo cottura pesce salato»; primi 5: 118.1, 511.0, 506.2, 118.0, 512.0 | **non verificata**: si vede che la fusione premia altre ricette di baccalà, non perché la 510 scenda (non sono registrati i ranghi della 510 nelle singole liste) |
+| entrambe | Quanta farina serve per gli gnocchi di patate e che vino si usa nel pollo alla cacciatora? | parti 2/2 → 1/2 | query giuste per le due parti («farina gnocchi quantità», «vino pollo alla cacciatora»); con la sola riscrittura, stesse query, la 208.0 è **1ª** nella lista fusa; il reranking restituisce 89.0, 14.0, 231.1 (più un id duplicato scartato) | il **reranking scarta la 208.0**: osservato (dedotto dalle stesse query, perché la lista mandata al reranking non è salvata); **perché** la scarti non è verificato |
+| entrambe | Come si chiama il cacciucco sull'Adriatico e quanti cappelletti bastano a un mangiatore discreto? | parti 2/2 → 1/2 | con la sola riscrittura (stesse query) la 455.0 è 1ª nella lista fusa; il reranking restituisce 7.2, 349.1 | come sopra: il reranking scarta la 455.0, motivo non verificato |
+
+Si osserva anche che gemma ora copia **gli esempi del nuovo prompt** («piatti, ingredienti,
+quantità, tempi») nelle query («ingredienti tiramisù», «quantità sushi», «cuocere baccalà quantità»):
+è un fatto (sono nelle query usate); che sia la causa del peggioramento del baccalà è un'ipotesi non
+verificata. Latenza più bassa (21 s e 35 s per domanda contro 28 s e 44 s).
 
 ### Indicazione pratica
-`MODALITA_RICERCA=reranking` se la latenza è accettabile (è la sola configurazione senza
-peggioramenti in entrambe le prove), altrimenti `base`. La riscrittura, con qualunque dei due prompt,
+- **Configurazione attiva: `base`** (nessuna `MODALITA_RICERCA` nel `.env` = `base`, come in
+  `.env.example`): nessuna chiamata all'LLM, 0,6 s medi per ricerca.
+- **Scelta consigliata: `reranking`**, da attivare con `MODALITA_RICERCA=reranking`: MRR 1,000 contro
+  0,886, tutte le composte coperte (6/6 contro 5/6), nessun peggioramento rispetto a base, 1 ripiego
+  su 14 chiamate. **Costo misurato**: 1 chiamata a gemma per ricerca, latenza media **36,8 s** (max
+  41,3 s) contro **0,6 s** di base, cioè circa 36 s in più per ogni ricerca dell'agente, i cui turni
+  durano già 2-5 minuti su questo computer. Non si astiene da solo (0/3): le astensioni restano alle
+  soglie e al modello. La riscrittura, con qualunque dei due prompt,
 sposta i problemi invece di risolverli con un modello da 2B: il prompt va riscritto senza elenchi di
 esempi che il modello possa copiare, e va riprovato con questo stesso comando.
 
@@ -388,6 +401,20 @@ $env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente  # CLI con la 
 $env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es2-tracce"
 $env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --serie soglie --uscita "..\..\lezione 6\rag-artusi\docs\prove\l8-es4-tracce"
 ```
+
+## Criterio di completamento: cosa è provato
+- **Ogni citazione si ricollega a un passaggio ricevuto nel turno**: nelle 9 tracce reali (4
+  dell'es. 2, 3 + 2 ripetizioni dell'es. 4) il controllo nell'host non ha trovato **nessuna citazione
+  sconosciuta**; in 1 risposta su 4 basate su passaggi il modello non ha citato affatto (pollo, prima
+  esecuzione dell'es. 4).
+- **Una domanda senza risposta non produce informazioni inventate**: **provato a livello di agente
+  solo sul tiramisù**, in 2 tracce (es. 2 senza soglie: «Non ho trovato la ricetta del tiramisù nei
+  documenti disponibili.»; es. 4 con soglie, lista vuota: «Nel libro non ho trovato la ricetta del
+  tiramisù.»), entrambe senza citazioni. **Carbonara e sushi sono verificati solo a livello di
+  retrieval** (confronto e calibrazione: quali passaggi tornano, con quali score, se la lista è
+  vuota con le soglie), non con l'agente: non ci sono tracce dell'agente su queste due domande.
+- **Quale configurazione funziona meglio, a quale costo**: reranking (sopra, «Indicazione pratica»).
+- **Perché le soglie hanno quei valori**: sezione «Valori proposti» e «Limiti» dell'es. 4.
 
 ## Verifica finale
 - **Test offline**: `rag-artusi` 333 passati, `assistente-laboratorio` 542 passati (31 prove reali

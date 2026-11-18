@@ -64,11 +64,14 @@ def leggi_server(percorso: str) -> list[ServerMCP]:
         timeout = voce.get("timeout", TIMEOUT_PREDEFINITO)
         if not isinstance(timeout, int) or isinstance(timeout, bool) or timeout < 1:
             raise ErroreServerMCP(f'server MCP "{nome}": "timeout" deve essere un intero >= 1 (secondi)')
+        argomenti = voce.get("args", [])
+        if not isinstance(argomenti, list):
+            raise ErroreServerMCP(f'server MCP "{nome}": "args" deve essere una lista di stringhe')
         comando = voce.get("command")
         if comando and ("/" in comando or "\\" in comando):
             comando = _risolvi(base, comando)
         cwd = voce.get("cwd")
-        server.append(ServerMCP(nome=nome, command=comando, args=tuple(str(a) for a in voce.get("args", [])),
+        server.append(ServerMCP(nome=nome, command=comando, args=tuple(str(a) for a in argomenti),
                                 cwd=_risolvi(base, cwd) if cwd else None, url=voce.get("url"), timeout=timeout))
     return server
 

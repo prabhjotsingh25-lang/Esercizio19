@@ -24,12 +24,12 @@ def _unici(valori):
 
 
 def citazioni(testo: str) -> list[str]:
-    """Token numerici tra parentesi quadre (anche più d'uno, separati da virgola o punto e virgola)."""
+    """Token numerici tra parentesi quadre (anche più d'uno, separati da virgola o punto e virgola;
+    gli altri token della stessa parentesi sono ignorati)."""
     trovati = []
     for contenuto in _PARENTESI.findall(testo):
-        token = [t.strip() for t in re.split(r"[,;]", contenuto)]
-        if token and all(_ID.match(t) for t in token):
-            trovati.extend(token)
+        # ogni token numerico conta, anche in una parentesi mista: «[999.0, pag. 3]» → 999.0
+        trovati.extend(tok for tok in (x.strip() for x in re.split(r"[,;]", contenuto)) if _ID.match(tok))
     return _unici(trovati)
 
 

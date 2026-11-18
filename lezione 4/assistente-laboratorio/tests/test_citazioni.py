@@ -49,3 +49,9 @@ def test_ricerca_vuota():
 def test_riga_log():
     assert riga_log(ControlloCitazioni(["89.0", "89.1"], [], 1, 5)) == \
         "citazioni verificate=89.0,89.1 sconosciute=- ricerche=1 passaggi_ricevuti=5"
+
+
+def test_parentesi_mista_non_nasconde_una_citazione():
+    assert citazioni("Dosi [999.0, pag. 3] e [nota 2].") == ["999.0"]
+    c = controlla("Dosi [999.0, pag. 3].", [_risultato("89.0")])
+    assert c.sconosciute == ["999.0"]

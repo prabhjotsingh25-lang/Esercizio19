@@ -106,6 +106,7 @@ def test_comando_senza_percorso_resta_com_e(tmp_path):
     ({"mcpServers": {}}, "mcpServers"),
     ({"mcpServers": {"r": {"args": []}}}, "command"),
     ({"mcpServers": {"r": {"command": "python", "timeout": 0}}}, "timeout"),
+    ({"mcpServers": {"r": {"command": "python", "args": "-m rag.server_mcp"}}}, "args"),
 ])
 def test_file_non_valido(tmp_path, contenuto, messaggio):
     with pytest.raises(ErroreServerMCP, match=messaggio):

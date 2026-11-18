@@ -59,6 +59,7 @@ class Misura:
     ripieghi: list[str] = field(default_factory=list)
     query_usate: list[str] = field(default_factory=list)
     scores: list[float] = field(default_factory=list)
+    fasce: list[str] = field(default_factory=list)
 
 
 def carica_domande_l8(percorso: Path) -> list[DomandaL8]:
@@ -89,7 +90,8 @@ def misura(d: DomandaL8, esito: EsitoPipeline, latenza_ms: float) -> Misura:
                   ids=[c.id for c in esito.candidati], posizione=posizione, parti_coperte=coperte,
                   parti_totali=len(d.parti), astenuta=not esito.candidati, chiamate_llm=esito.chiamate_llm,
                   latenza_ms=round(latenza_ms, 1), ripieghi=[r.codice for r in esito.ripieghi],
-                  query_usate=list(esito.query_usate), scores=[round(c.score, 3) for c in esito.candidati])
+                  query_usate=list(esito.query_usate), scores=[round(c.score, 3) for c in esito.candidati],
+                  fasce=[c.fascia for c in esito.candidati])
 
 
 def metriche(misure: list[Misura]) -> dict:

@@ -42,16 +42,17 @@ CASI = (
 )
 
 
-# Es. 4: tre casi per le fasce di confidenza (domande scelte dopo la calibrazione, vedi
-# docs/rag-agente.md). Si eseguono con --serie soglie.
+# Es. 4: tre casi per le fasce di confidenza, scelti sugli score della calibrazione (soglie
+# 0,73/0,70): pollo 0,764 (affidabile); gnocchi che si sciolgono 0,720 con la domanda intera (media);
+# tiramisù 0,548 con la query del modello (tutto sotto la soglia bassa). Con --serie soglie.
 CASI_SOGLIE = (
     Caso("affidabile", "Che vino si usa per il pollo alla cacciatora?",
          "ricerca, passaggi affidabili, citazioni verificate, nessun «da verificare»", ricerca=True,
          citazioni="verificate", da_verificare=False),
-    Caso("da_verificare", "Come si fa un dolce di mandorle e zucchero?",
+    Caso("da_verificare", "Perché gli gnocchi possono sciogliersi nell'acqua?",
          "ricerca, passaggi di fascia media, risposta segnata «da verificare sulla fonte»", ricerca=True,
          citazioni="verificate", da_verificare=True),
-    Caso("senza_risposta_soglie", "Come si prepara il sushi?",
+    Caso("senza_risposta_soglie", "Qual è la ricetta del tiramisù?",
          "ricerca con lista vuota (sotto la soglia), astensione, nessuna citazione", ricerca=True,
          citazioni="nessuna"),
 )

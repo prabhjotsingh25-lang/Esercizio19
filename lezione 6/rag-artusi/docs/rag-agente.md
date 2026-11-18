@@ -31,6 +31,30 @@ Resoconto dei quattro esercizi. Tutti i numeri e le tracce vengono da esecuzioni
 5. **Reranking che sceglie meno di k passaggi**: il reranking listwise restituisce solo gli id
    pertinenti, quindi può dare meno di k passaggi; non si completano con altri candidati.
 
+## Scelte e scostamenti dalla consegna
+- **Client MCP dell'agente: adattatore scritto a mano, non `langchain-mcp-adapters`.** La consegna
+  parlava di langchain-mcp-adapters; l'agente delle lezioni 5-6 in realtà usava già un adattatore
+  proprio sopra il client FastMCP (`variante_mcp.py`). Il server di ricerca è agganciato estendendo
+  quello (`server_esterni.py`: discovery con `tools/list`, `StructuredTool` sincroni con lo schema
+  del server). Motivi (specifica es. 2, S2): nessuna dipendenza nuova, stessi messaggi d'errore, e
+  langchain-mcp-adapters produce tool asincroni mentre il grafo dell'agente è sincrono.
+- **Trasporto: stdio per la ricerca, HTTP per il server esistente.** Il server di ricerca è avviato
+  dall'agente via stdio (`StdioTransport`, `keep_alive=False`: un processo per chiamata, che costa
+  qualche secondo per ricerca); il server MCP delle lezioni precedenti resta su HTTP
+  (`STRUMENTI_MCP_URL`) e non è stato toccato. Il server di ricerca si avvia anche in HTTP
+  (`--http --porta`) per le prove manuali.
+- **Configurazione dei server**: un file nel formato standard `mcpServers` (`SERVER_MCP_FILE`), in
+  aggiunta agli strumenti della variante scelta, invece di una «configurazione MCP» unica che
+  l'agente non aveva.
+- **Nomi dei tool**: l'orologio dell'agente si chiama `ora_corrente` (non `get_current_time` come
+  nella consegna): è il nome esistente dalla lezione 5 e non è stato rinominato. Il tool di ricerca
+  si chiama `search_documents` come richiesto; gli argomenti sono in italiano dove la consegna li
+  dava in italiano (`filtro`).
+- **Router**: l'agente ha un router che rifiutava le domande sulle ricette; si aggiunge
+  `AMBITO_RICERCA` all'ambito solo quando la ricerca è configurata (specifica es. 2, S6).
+- **Docker Compose**: la ricerca resta spenta nei container (`SERVER_MCP_FILE: ""`), perché il
+  server stdio usa il venv Windows di `rag-artusi`.
+
 ## Esercizio 1 — il server MCP di ricerca
 `python -m rag.server_mcp` (stdio). Tool `search_documents(query, top_k=5, filtro=None)`, risultato
 `{modalita, query_usate, passaggi[], nota}`, resource `ricerca://filtri`, una riga di log per chiamata.
@@ -256,30 +280,48 @@ Calibrazione rilanciata con le soglie proposte e il prompt corretto (`docs/calib
 | entrambe senza soglie | 11/11 | 0/3 | 0 | non valutata 31 |
 | entrambe con soglie (nuove query) | 11/11 | 1/3 (sushi) | 0 | affidabile 16, media 9 |
 | base, query del modello, senza soglie | 11/11 | 0/3 | 0 | non valutata 70 |
-| base, query del modello, con soglie | 11/11 | 2/3 (tiramisù, sushi) | 0 | affidabile 28, media 22 |
+| base, query del modello, con soglie | 11/11 | 2/3 (tiramisù, sushi)² | 0 | affidabile 28, media 22 |
 
 Criteri di tenuta, tutti rispettati: **nessuna fonte persa** (11/11 con e senza soglie in ogni
 variante), **nessuna astensione errata**, **nessun passaggio di una domanda senza risposta in fascia
 «affidabile»** (tiramisù 0,704-0,706 e carbonara 0,702-0,728 restano in «media», cioè «da
 verificare»). In `entrambe` le soglie agiscono sul coseno migliore fra le query, e la domanda
 originale è sempre fra le query: per questo i suoi score contano come quelli della domanda intera.
-In questa esecuzione le query del modello per carbonara e sushi sono andate in timeout anche a 180 s
-(LM Studio più carico): in quella variante si è usata la domanda intera, quindi la carbonara (0,728)
-non si astiene; con la sua query misurata nella prima calibrazione («ricetta della carbonara»,
-0,673) sarebbe esclusa. Le soglie 0,73/0,70 sono state fissate come default (`.env.example`,
+² **Il 2/3 è su 3 domande senza risposta, ma solo una ha davvero la query del modello.** In questa
+esecuzione le chiamate di tool calling per carbonara e sushi sono andate in timeout anche a 180 s
+(la causa può essere il carico di LM Studio, non è stata verificata); per loro la variante usa la
+domanda intera:
+
+| Domanda senza risposta | Query usata in questa variante | Top-1 | Astenuta |
+|---|---|---|---|
+| Qual è la ricetta del tiramisù? | «tiramisù» (query del modello) | 0,548 | sì |
+| Qual è la ricetta della carbonara? | domanda intera (timeout) | 0,728 | no |
+| Come si prepara il sushi? | domanda intera (timeout) | 0,695 | sì |
+
+Nella prima calibrazione tutte e tre avevano la query del modello («tiramisù» 0,548, «ricetta della
+carbonara» 0,673, «come si prepara il sushi» 0,691): con 0,73/0,70 si asterrebbero tutte e tre
+(3/3). Quel 3/3 è **calcolato** applicando le soglie agli score registrati (in `base` le soglie sono
+un filtro su quegli score), non eseguito con le soglie attive; quella esecuzione aveva le soglie di
+partenza 0,6/0,3. Le soglie 0,73/0,70 sono state fissate come default (`.env.example`,
 `rag/config.py`, commit `70a5276`).
 
 ### Limiti (da leggere prima di usare le soglie)
 - **Pochi dati**: calibrate su **14 domande**, e solo **11 su 14** hanno la query del modello: per
   «Quanti cappelletti bastano a un mangiatore moderato?», «Perché gli gnocchi possono sciogliersi
   nell'acqua?» e la composta «cacciucco + cappelletti» gemma **non ha chiamato la ricerca** nella
-  chiamata di calibrazione (anche rifatta con 180 s di timeout per le prime due che erano andate in
-  timeout). Nella verifica anche carbonara e sushi sono andate in timeout a 180 s.
+  chiamata di calibrazione (per cappelletti e composta la prima chiamata era andata in timeout a 60 s;
+  rifatte con 180 s non sono andate in timeout, ma gemma non ha chiamato la ricerca). Nella verifica
+  anche carbonara e sushi sono andate in timeout a 180 s: i timeout **possono dipendere dal carico di
+  LM Studio** (nelle stesse ore giravano altre prove), la causa non è stata verificata.
 - **Margine stretto**: fra il top-1 più alto delle domande senza risposta formulate dal modello
   (0,691, sushi) e la soglia bassa (0,70) ci sono **0,009**; fra la soglia bassa e la fonte attesa
   più bassa ci sono 0,015 (0,715, domanda intera).
 - **Valide solo con query brevi del modello**: con la domanda intera non separano (tiramisù 0,706 e
   carbonara 0,728 restano sopra la soglia bassa, in fascia «media»).
+- **Fascia «media» non riportata dall'agente**: nelle tracce, 0 risposte su 2 basate su passaggi
+  «media» hanno scritto «da verificare» (gnocchi che si sciolgono, due esecuzioni). Il **campione è
+  minimo** (2 esecuzioni di una sola domanda): basta per dire che la regola non è affidabile con
+  gemma-4-e2b, non per misurarne la frequenza.
 - **Da ricalibrare** se cambia il modello di embedding o il modello chat (stesso comando, poi
   `--alta/--bassa` per provare valori candidati).
 - **`non_valutata`**: con `SOGLIE_ATTIVE=false` i passaggi hanno `fascia: "non_valutata"`, che la
@@ -353,7 +395,9 @@ $env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m assistente.prove_rag --se
   1234 (LM Studio) e 6333 (Qdrant): **0 tentativi di connessione**.
 - **Git**: `.env` (entrambi i progetti), `dati/`, `logs/` e `server_mcp.json` sono ignorati
   (`git check-ignore`); i commit del branch `feat/rag-agente` sono tutti Conventional Commits.
-- **Revisione indipendente** del branch contro i criteri di accettazione: tutti `ok` tranne le
+- **Revisione indipendente** del branch contro i criteri di accettazione, fatta da un **sub-agente
+  automatico** (un'altra istanza di Claude, senza il contesto della conversazione, in sola lettura;
+  non una revisione umana): tutti `ok` tranne le
   tracce dell'es. 4 (allora non finite) e i difetti poi corretti (`95b78c4`, `a0007bb`, `fa3d2d2`):
   nota del reranking duplicata quando le soglie escludono tutto, citazione inventata nascosta in una
   parentesi mista, `args` non lista accettato, ricerca attiva per default in `.env.example`, errore
